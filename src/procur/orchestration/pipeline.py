@@ -303,14 +303,9 @@ class SaaSProcurementPipeline:
         intake = BuyerIntakeOrchestrator(buyer_agent)
         request, questions = intake.run(raw_text, policy_summary, clarification_answers)
 
-        seed_records = load_seed_catalog(self.seeds_path)
-        picker = VendorPicker(services.compliance_service)
-        selections = picker.pick(request, seed_records, top_n=top_n)
-
-        negotiation_manager = NegotiationManager(buyer_agent, services)
-        negotiation_results = negotiation_manager.run(request, selections)
-        offers = {vendor_id: result.offer for vendor_id, result in negotiation_results.items()}
-        audit_payload = services.audit_service.export_sessions(request.request_id)
+        selections, negotiation_results, audit_payload, offers = self._execute(
+            buyer_agent, services, request, top_n=top_n
+        )
 
         presentation = PresentationBuilder(buyer_agent)
         bundles = presentation.build(offers)
@@ -320,7 +315,14 @@ class SaaSProcurementPipeline:
 
         return {
             "request": intake.summarize(request),
-            "clarification_questions": [question.question for question in questions],
+            "clarification_questions": [
+                {
+                    "field": question.field,
+                    "question": question.question,
+                    "required": question.required,
+                }
+                for question in questions
+            ],
             "shortlist": [
                 {
                     "vendor_id": selection.record.seed_id,
@@ -333,6 +335,24 @@ class SaaSProcurementPipeline:
             "bundles": bundles,
             "vendors": vendor_summary,
             "audit": self._json_safe(audit_payload),
+        }
+
+    def _execute(
+        self,
+        buyer_agent: BuyerAgent,
+        services: PipelineServices,
+        request: Request,
+        *,
+        top_n: int,
+    ) -> Dict[str, NegotiationResult]:
+        seed_records = load_seed_catalog(self.seeds_path)
+        picker = VendorPicker(services.compliance_service)
+        selections = picker.pick(request, seed_records, top_n=top_n)
+        negotiation_manager = NegotiationManager(buyer_agent, services)
+        negotiation_results = negotiation_manager.run(request, selections)
+        audit_payload = services.audit_service.export_sessions(request.request_id)
+        return selections, negotiation_results, audit_payload, {
+            vendor_id: result.offer for vendor_id, result in negotiation_results.items()
         }
 
     # region factories
