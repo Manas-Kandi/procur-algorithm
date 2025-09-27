@@ -22,7 +22,12 @@ class ScoringService:
         self.discount_rate = discount_rate
 
     def compute_tco(self, components: OfferComponents) -> float:
-        base = components.unit_price * components.quantity * (components.term_months / 12)
+        # Defensive programming against None values
+        unit_price = components.unit_price or 0.0
+        quantity = components.quantity or 1
+        term_months = components.term_months or 12
+
+        base = unit_price * quantity * (term_months / 12)
         fees = sum(components.one_time_fees.values())
 
         payment_term_days = {

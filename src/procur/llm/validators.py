@@ -35,21 +35,35 @@ def guarded_completion(
     retries: int = 2,
 ) -> T:
     last_error: Optional[Exception] = None
-    for _ in range(retries + 1):
-        response = generator()
-        content = response.get("content")
-        if not isinstance(content, str):
-            last_error = LLMValidationError("LLM response missing content")
-            continue
+    for attempt in range(retries + 1):
         try:
-            payload = json.loads(content)
-        except json.JSONDecodeError as exc:
-            last_error = exc
-            continue
-        try:
-            return parser(payload)
-        except LLMValidationError as exc:
-            last_error = exc
+            response = generator()
+            content = response.get("content")
+            if not isinstance(content, str):
+                last_error = LLMValidationError("LLM response missing content")
+                continue
+            try:
+                payload = json.loads(content)
+            except json.JSONDecodeError as exc:
+                last_error = LLMValidationError(f"Failed to parse JSON: {str(exc)}")
+                continue
+            try:
+                return parser(payload)
+            except LLMValidationError as exc:
+                last_error = exc
+                continue
+        except RuntimeError as exc:
+            # This catches the LLM client failures (network timeouts, etc.)
+            last_error = LLMValidationError(f"LLM request failed: {str(exc)}")
+            if attempt < retries:
+                print(f"LLM validation failed (attempt {attempt + 1}/{retries + 1}), retrying...")
+                continue
+            break
+        except Exception as exc:
+            # Catch any other unexpected errors
+            last_error = LLMValidationError(f"Unexpected error: {str(exc)}")
+            break
+
     if last_error:
         raise LLMValidationError(str(last_error))
     raise LLMValidationError("Unknown LLM validation failure")

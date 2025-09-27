@@ -138,7 +138,8 @@ class NegotiationEngine:
         
         if is_buyer:
             # Buyer utility: lower cost = higher utility
-            cost_utility = max(0, 1 - (tco / (request.budget_max * 1.2)))
+            budget_max = request.budget_max or float('inf')
+            cost_utility = max(0, 1 - (tco / (budget_max * 1.2)))
             
             # Term preference (shorter terms preferred)
             term_utility = max(0, 1 - (offer.term_months - 12) / 24)
@@ -370,7 +371,7 @@ class NegotiationEngine:
             # Close if gap is small enough (absolute or percentage)
             if price_gap < policy.finalize_gap_abs:
                 return True, "converged_absolute"
-            if price_gap / current_offer.unit_price < policy.finalize_gap_pct:
+            if current_offer.unit_price > 0 and price_gap / current_offer.unit_price < policy.finalize_gap_pct:
                 return True, "converged_percentage"
         
         # Accept if within budget and reasonable utility
@@ -382,7 +383,8 @@ class NegotiationEngine:
                 return True, "acceptable_after_rounds"
                 
         # Close if we've hit stalemate and offer is reasonable
-        if self.detect_stalemate(state) and tco <= request.budget_max * 1.1:
+        budget_max = request.budget_max or float('inf')
+        if self.detect_stalemate(state) and tco <= budget_max * 1.1:
             return True, "stalemate_reasonable"
             
         return False, "continue_negotiating"
@@ -527,6 +529,8 @@ class NegotiationEngine:
 
     def feasible_with_trades(self, request: Request, vendor: VendorProfile, policy: ExchangePolicy) -> bool:
         """Test feasibility including trade scenarios (not just price-only ZOPA)"""
+        if request.quantity <= 0:
+            return False
         budget_per_unit = request.budget_max / request.quantity
         tier_key = str(request.quantity)
         list_price = vendor.price_tiers.get(tier_key, vendor.guardrails.price_floor * 1.2)
@@ -536,7 +540,7 @@ class NegotiationEngine:
         max_term_discount = max(policy.term_trade.values(), default=0.0)
         max_payment_discount = max((v for v in policy.payment_trade.values() if v > 0), default=0.0)
         total_value_offset = sum(policy.value_add_offsets.values())
-        max_value_offset = total_value_offset / request.quantity if request.quantity else 0.0
+        max_value_offset = total_value_offset / request.quantity if request.quantity > 0 else 0.0
         
         reachable_min_price = max(
             seller_floor,
@@ -545,11 +549,14 @@ class NegotiationEngine:
         
         # ZOPA test with trades
         gap = reachable_min_price - budget_per_unit
-        return gap <= policy.finalize_gap_abs / request.quantity  # Allow reasonable gap
+        gap_per_unit = policy.finalize_gap_abs / request.quantity if request.quantity > 0 else policy.finalize_gap_abs
+        return gap <= gap_per_unit  # Allow reasonable gap
     
     def seed_bundles(self, request: Request, vendor: VendorProfile, policy: ExchangePolicy) -> List[OfferBundle]:
         """Generate 3 opening bundles that respect policy - MUST produce ≥1"""
         bundles = []
+        if request.quantity <= 0:
+            return bundles
         tier_key = str(request.quantity)
         list_price = vendor.price_tiers.get(tier_key, vendor.guardrails.price_floor * 1.2)
         budget_per_unit = request.budget_max / request.quantity
@@ -601,7 +608,8 @@ class NegotiationEngine:
         valid_bundles = []
         for bundle in bundles:
             tco = self.calculate_tco_for_bundle(bundle, request)
-            if tco <= request.budget_max * 1.1:  # Allow 10% budget flexibility
+            budget_max = request.budget_max or float('inf')
+            if tco <= budget_max * 1.1:  # Allow 10% budget flexibility
                 valid_bundles.append(bundle)
         
         # Deadman switch: if no bundles pass, choose least violating
@@ -641,7 +649,7 @@ class NegotiationEngine:
         gap = abs(buyer_price - seller_price) * quantity
         
         if (gap <= policy.finalize_gap_abs or 
-            gap / (buyer_price * quantity) <= policy.finalize_gap_pct):
+            (buyer_price * quantity) > 0 and gap / (buyer_price * quantity) <= policy.finalize_gap_pct):
             
             mid_price = (buyer_price + seller_price) / 2
             term_months, payment_terms = current_terms

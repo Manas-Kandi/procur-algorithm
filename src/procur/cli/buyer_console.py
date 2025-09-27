@@ -118,27 +118,38 @@ def summarize_results(result: Dict[str, object]) -> None:
 
 
 def interactive_main() -> None:
-    pipeline = build_live_pipeline()
-    print("Welcome to Procur CLI! Describe your procurement request below.\n")
-    raw_text = prompt_user("Describe your need: ")
-    policy_summary = prompt_user("Policy summary (enter to skip): ") or ""
+    try:
+        pipeline = build_live_pipeline()
+        print("Welcome to Procur CLI! Describe your procurement request below.\n")
+        raw_text = prompt_user("Describe your need: ")
+        policy_summary = prompt_user("Policy summary (enter to skip): ") or ""
 
-    clarification_answers: Dict[str, str] = {}
-    result = pipeline.run(raw_text, policy_summary, None)
-    questions = result.get("clarification_questions", [])
-
-    while questions:
-        print("\nWe need a bit more detail:")
-        for question in questions:
-            value = prompt_user(f"- {question['question']} ")
-            clarification_answers[question["field"]] = value
-        result = pipeline.run(raw_text, policy_summary, clarification_answers)
+        clarification_answers: Dict[str, str] = {}
+        print("Processing your request...")
+        result = pipeline.run(raw_text, policy_summary, None)
         questions = result.get("clarification_questions", [])
 
-    summarize_results(result)
+        while questions:
+            print("\nWe need a bit more detail:")
+            for question in questions:
+                value = prompt_user(f"- {question['question']} ")
+                clarification_answers[question["field"]] = value
+            print("Processing additional details...")
+            result = pipeline.run(raw_text, policy_summary, clarification_answers)
+            questions = result.get("clarification_questions", [])
 
-    print("\nDone. You can review the JSON payload below if needed:\n")
-    print(json.dumps(result, indent=2))
+        summarize_results(result)
+
+        print("\nDone. You can review the JSON payload below if needed:\n")
+        print(json.dumps(result, indent=2))
+
+    except KeyboardInterrupt:
+        print("\nOperation cancelled by user.")
+        raise SystemExit(0)
+    except Exception as e:
+        print(f"\nError occurred: {str(e)}")
+        print("Please check your network connection and API key configuration.")
+        raise SystemExit(1)
 
 
 if __name__ == "__main__":  # pragma: no cover - entry point

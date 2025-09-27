@@ -242,7 +242,7 @@ class BuyerAgent:
 
         opponent_model = OpponentModel(
             price_floor_estimate=(vendor.guardrails.price_floor or anchor_price) * 0.9,
-            price_ceiling_estimate=(anchor_price or request.budget_max or 0.0) * 1.1,
+            price_ceiling_estimate=(anchor_price or request.budget_max or 1000.0) * 1.1,
         )
         plan.opponent_model = opponent_model
         return VendorNegotiationState(
@@ -416,7 +416,7 @@ class BuyerAgent:
         if vendor.guardrails.price_floor:
             floor = vendor.guardrails.price_floor
             tags.append("floor_known")
-            if request.budget_max and request.quantity:
+            if request.budget_max and request.quantity > 0:
                 budget_per_unit = request.budget_max / request.quantity
                 ratio = budget_per_unit / max(floor, 1.0)
                 if ratio <= 1.05:

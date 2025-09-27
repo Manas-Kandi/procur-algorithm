@@ -75,6 +75,12 @@ class BuyerIntakeOrchestrator:
         clarification_answers: Optional[Dict[str, str]] = None,
     ) -> Tuple[Request, List[ClarificationQuestion]]:
         request = self.buyer_agent.intake_request(raw_text, policy_summary)
+
+        # Ensure budget_max is never None - apply fallback if LLM didn't set it
+        if request.budget_max is None:
+            quantity = request.quantity or 100
+            request = request.model_copy(update={'budget_max': quantity * 1200.0})  # $1200 per user default
+
         questions = self.generate_questions(request)
         if clarification_answers:
             request = self.apply_answers(request, clarification_answers)
@@ -147,7 +153,7 @@ class VendorPicker:
         requested_features = [
             item.lower() for item in request.specs.get("features", request.must_haves)
         ]
-        budget_per_unit = request.budget_max / request.quantity if request.budget_max else None
+        budget_per_unit = request.budget_max / request.quantity if request.budget_max and request.quantity > 0 else None
 
         for record in records:
             vendor_profile = record.to_vendor_profile()
