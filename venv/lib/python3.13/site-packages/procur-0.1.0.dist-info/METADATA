@@ -1,0 +1,13 @@
+Metadata-Version: 2.4
+Name: procur
+Version: 0.1.0
+Summary: Agent-as-a-Service procurement automation platform
+Author-email: Procur Team <team@procur.ai>
+Requires-Python: >=3.11
+Requires-Dist: pydantic>=2.5
+Requires-Dist: pydantic-settings>=2.0
+Requires-Dist: typing-extensions>=4.9
+Requires-Dist: openai>=1.0
+Provides-Extra: dev
+Requires-Dist: pytest>=7.4; extra == "dev"
+Requires-Dist: rich>=13.7; extra == "dev"

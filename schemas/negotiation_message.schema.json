@@ -1,0 +1,75 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "NegotiationMessage",
+  "type": "object",
+  "required": ["actor", "round", "proposal", "machine_rationale", "next_step_hint"],
+  "properties": {
+    "actor": {
+      "type": "string",
+      "enum": ["buyer_agent", "seller_agent"]
+    },
+    "round": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "proposal": {
+      "type": "object",
+      "required": ["unit_price", "currency", "quantity", "term_months", "payment_terms"],
+      "properties": {
+        "unit_price": {"type": "number", "minimum": 0},
+        "currency": {"type": "string"},
+        "quantity": {"type": "integer", "minimum": 1},
+        "term_months": {"type": "integer", "minimum": 1},
+        "delivery_window_days": {
+          "type": ["array", "null"],
+          "items": {"type": "integer", "minimum": 0},
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "payment_terms": {
+          "type": "string",
+          "enum": ["Net15", "Net30", "Net45", "Milestones", "Deposit"]
+        },
+        "warranty_support": {
+          "type": "object",
+          "additionalProperties": {"type": "string"}
+        },
+        "one_time_fees": {
+          "type": "object",
+          "additionalProperties": {"type": "number"}
+        },
+        "exclusions": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "notes": {"type": ["string", "null"]}
+      }
+    },
+    "justification_bullets": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "machine_rationale": {
+      "type": "object",
+      "required": ["score_components", "constraints_respected", "concession_taken"],
+      "properties": {
+        "score_components": {
+          "type": "object",
+          "additionalProperties": {"type": "number"}
+        },
+        "constraints_respected": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "concession_taken": {
+          "type": "string",
+          "enum": ["price", "term", "payment", "delivery", "warranty", "value_add", "none"]
+        }
+      }
+    },
+    "next_step_hint": {
+      "type": "string",
+      "enum": ["accept", "counter", "request_info", "escalate"]
+    }
+  }
+}
