@@ -243,6 +243,7 @@ class RegressionHarness:
             quantity=data.quantity,
             budget_max=data.budget_total,
             must_haves=data.must_haves,
+            compliance_requirements=data.compliance_requirements,
             policy_context=policy_context,
             timeline=timeline,
         )

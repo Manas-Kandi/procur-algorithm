@@ -75,6 +75,7 @@ class NegotiationTester:
             quantity=quantity,
             budget_max=budget,
             must_haves=["soc2", "api_access"],
+            compliance_requirements=["soc2"],
             nice_to_haves=["sso", "mobile_app"]
         )
     

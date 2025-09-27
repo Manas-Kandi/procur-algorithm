@@ -1,0 +1,107 @@
+[
+  {
+    "id": "apollo-crm",
+    "name": "ApolloCRM",
+    "category": "saas/crm",
+    "pricing": {
+      "list_price": 1200.0,
+      "floor": 980.0,
+      "tiers": {"50": 1180.0, "100": 1120.0, "200": 1050.0}
+    },
+    "payment_terms": ["NET30", "NET45", "NET15"],
+    "compliance": ["SOC2", "ISO27001", "GDPR"],
+    "features": ["api", "mobile", "analytics", "sso"],
+    "regions": ["us-east", "eu-west"],
+    "support": {"tier": "24/7", "sla": 99.9},
+    "behavior_profile": "term_elastic",
+    "exchange": {
+      "term_trade": {"12": 0.03, "24": 0.05, "36": 0.07},
+      "payment_trade": {"NET15": 0.008, "NET45": -0.004},
+      "value_add_offsets": {"training_credits": 1500.0, "premium_support": 2000.0}
+    }
+  },
+  {
+    "id": "zen-payroll",
+    "name": "ZenPayroll",
+    "category": "saas/hr",
+    "pricing": {
+      "list_price": 25.0,
+      "floor": 18.0,
+      "tiers": {"50": 23.0, "100": 21.0, "500": 19.0}
+    },
+    "payment_terms": ["NET30", "NET15"],
+    "compliance": ["SOC2", "ISO27001", "PCI-DSS", "CCPA"],
+    "features": ["api", "payroll", "benefits", "mobile"],
+    "regions": ["us-west", "us-east"],
+    "support": {"tier": "business_hours", "sla": 99.5},
+    "behavior_profile": "payment_flexible",
+    "exchange": {
+      "term_trade": {"12": 0.02, "24": 0.035},
+      "payment_trade": {"NET15": 0.01},
+      "value_add_offsets": {"training_credits": 1000.0}
+    }
+  },
+  {
+    "id": "sentinel-secure",
+    "name": "SentinelSecure",
+    "category": "saas/security",
+    "pricing": {
+      "list_price": 1500.0,
+      "floor": 1200.0,
+      "tiers": {"25": 1400.0, "100": 1325.0, "250": 1250.0}
+    },
+    "payment_terms": ["NET30", "NET45"],
+    "compliance": ["SOC2", "ISO27001", "FedRAMP", "HIPAA"],
+    "features": ["siem", "soar", "managed_services"],
+    "regions": ["us-east", "us-gov", "eu-central"],
+    "support": {"tier": "premium", "sla": 99.99},
+    "behavior_profile": "price_sticky",
+    "exchange": {
+      "term_trade": {"12": 0.025, "24": 0.04},
+      "payment_trade": {"NET45": -0.002},
+      "value_add_offsets": {"threat_hunting_hours": 3000.0}
+    }
+  },
+  {
+    "id": "atlas-analytics",
+    "name": "AtlasAnalytics",
+    "category": "saas/analytics",
+    "pricing": {
+      "list_price": 900.0,
+      "floor": 720.0,
+      "tiers": {"100": 860.0, "250": 820.0, "500": 780.0}
+    },
+    "payment_terms": ["NET30", "MILESTONES"],
+    "compliance": ["SOC2", "GDPR"],
+    "features": ["api", "dashboards", "ml", "data-warehouse"],
+    "regions": ["us-east", "ap-southeast", "eu-west"],
+    "support": {"tier": "enterprise", "sla": 99.7},
+    "behavior_profile": "value_add_friendly",
+    "exchange": {
+      "term_trade": {"12": 0.03, "24": 0.055},
+      "payment_trade": {"MILESTONES": 0.0},
+      "value_add_offsets": {"training_credits": 2500.0, "data_engineer_hours": 4000.0}
+    }
+  },
+  {
+    "id": "global-erp",
+    "name": "GlobalERP Cloud",
+    "category": "saas/erp",
+    "pricing": {
+      "list_price": 1800.0,
+      "floor": 1400.0,
+      "tiers": {"100": 1700.0, "250": 1600.0, "500": 1500.0}
+    },
+    "payment_terms": ["NET30", "NET45", "MILESTONES"],
+    "compliance": ["SOC2", "ISO27001", "GDPR", "HIPAA"],
+    "features": ["api", "modules-finance", "modules-hr", "workflow"],
+    "regions": ["us-east", "us-west", "eu-central", "ap-northeast"],
+    "support": {"tier": "24/7", "sla": 99.95},
+    "behavior_profile": "balanced",
+    "exchange": {
+      "term_trade": {"12": 0.028, "24": 0.045, "36": 0.065},
+      "payment_trade": {"NET45": -0.003, "MILESTONES": 0.005},
+      "value_add_offsets": {"implementation_credits": 5000.0}
+    }
+  }
+]

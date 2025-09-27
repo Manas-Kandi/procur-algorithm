@@ -101,8 +101,10 @@ class BuyerAgent:
     ) -> List[VendorProfile]:
         shortlisted: List[VendorProfile] = []
         for vendor in vendors:
+            assessment = self.compliance_service.assess_vendor(request, vendor)
             findings = self.compliance_service.evaluate_vendor(request, vendor)
-            if any(finding.blocking for finding in findings):
+            blocking = assessment.blocking or any(finding.blocking for finding in findings)
+            if blocking:
                 continue
             shortlisted.append(vendor)
         return shortlisted
@@ -126,9 +128,11 @@ class BuyerAgent:
         offers: Dict[str, Offer] = {}
         for vendor in vendors:
             state = self._build_state(request, vendor)
+            compliance_assessment = self.compliance_service.assess_vendor(request, vendor)
             compliance_findings = self.compliance_service.evaluate_vendor(request, vendor)
-            compliance_messages = [finding.message for finding in compliance_findings]
+            compliance_messages = compliance_assessment.summaries()
             scenario_tags = self._scenario_tags(request, vendor)
+            state.compliance_summary = compliance_messages
 
             seller_agent = SellerAgent(
                 vendor=vendor,
@@ -231,6 +235,10 @@ class BuyerAgent:
         tier_key = str(request.quantity)
         anchor_price = vendor.price_tiers.get(tier_key, request.budget_max or 0.0)
         plan.anchors["price"] = anchor_price * 0.9 if anchor_price else request.budget_min or 0.0
+
+        exchange_override = getattr(vendor, "_exchange_policy", None)
+        if exchange_override:
+            plan.exchange_policy = exchange_override
 
         opponent_model = OpponentModel(
             price_floor_estimate=(vendor.guardrails.price_floor or anchor_price) * 0.9,
@@ -399,6 +407,8 @@ class BuyerAgent:
         tags = [f"category:{request.type.value}", f"qty:{self._bucket_quantity(request.quantity)}"]
         if request.must_haves:
             tags.extend(f"must:{tag.lower()}" for tag in request.must_haves)
+        if request.compliance_requirements:
+            tags.extend(f"comp:{req.lower()}" for req in request.compliance_requirements)
         tier_key = str(request.quantity)
         list_price = vendor.price_tiers.get(tier_key)
         if list_price:
@@ -441,6 +451,7 @@ class BuyerAgent:
             "estimated_floor": opponent_floor,
             "round": round_number,
             "guardrails": vendor.guardrails.model_dump(),
+            "compliance_summary": state.compliance_summary,
             "opening_bundle": {
                 "price": bundle.price,
                 "term_months": bundle.term_months,
@@ -820,6 +831,7 @@ class BuyerAgent:
         return {
             "rounds_completed": float(state.round),
             "savings": savings,
+            "compliance": state.compliance_summary,
         }
 
     def bundle_and_explain(self, offers: Dict[str, Offer]) -> Dict[str, Dict[str, List[str]]]:

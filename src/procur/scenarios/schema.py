@@ -10,6 +10,7 @@ class ScenarioRequest(BaseModel):
     quantity: int
     budget_total: float
     must_haves: List[str] = Field(default_factory=list)
+    compliance_requirements: List[str] = Field(default_factory=list)
     timeline_days: Optional[int] = None
 
 

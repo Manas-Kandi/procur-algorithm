@@ -24,6 +24,6 @@ class VendorProfile(BaseModel):
     lead_time_brackets: Dict[str, tuple[int, int]] = Field(default_factory=dict)
     price_tiers: Dict[str, float] = Field(default_factory=dict)
     guardrails: VendorGuardrails = Field(default_factory=VendorGuardrails)
-    reliability_stats: Dict[str, float] = Field(default_factory=dict)
+    reliability_stats: Dict[str, object] = Field(default_factory=dict)
     risk_level: RiskLevel = RiskLevel.MEDIUM
     contact_endpoints: Dict[str, str] = Field(default_factory=dict)

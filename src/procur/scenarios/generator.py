@@ -13,6 +13,7 @@ def build_scenario(
     quantity: int,
     budget_total: float,
     must_haves: Optional[Iterable[str]] = None,
+    compliance_requirements: Optional[Iterable[str]] = None,
     seller_name: str,
     list_price: float,
     price_floor: float,
@@ -33,6 +34,7 @@ def build_scenario(
             quantity=quantity,
             budget_total=budget_total,
             must_haves=list(must_haves or []),
+            compliance_requirements=list(compliance_requirements or []),
         ),
         seller=ScenarioSeller(
             name=seller_name,
@@ -62,6 +64,7 @@ def scenario_from_ratio(
     term_options: Iterable[int] = (12, 24, 36),
     payment_options: Iterable[str] = ("NET30", "NET15", "NET45"),
     tags: Optional[List[str]] = None,
+    compliance_requirements: Optional[Iterable[str]] = None,
 ) -> Scenario:
     price_floor = round(list_price * floor_ratio, 2)
     budget_total = round(list_price * budget_ratio * quantity, 2)
@@ -71,6 +74,7 @@ def scenario_from_ratio(
         category=category,
         quantity=quantity,
         budget_total=budget_total,
+        compliance_requirements=compliance_requirements,
         seller_name="Vendor",
         list_price=list_price,
         price_floor=price_floor,

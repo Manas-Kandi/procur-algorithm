@@ -111,6 +111,7 @@ class VendorNegotiationState:
     opponent_model: Optional[OpponentModel] = None
     stalemate_rounds: int = 0
     plan: Optional[NegotiationPlan] = None
+    compliance_summary: List[str] = field(default_factory=list)
 
 
 class NegotiationEngine:

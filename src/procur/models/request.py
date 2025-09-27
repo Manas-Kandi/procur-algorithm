@@ -34,6 +34,7 @@ class Request(BaseModel):
     currency: str = "USD"
     timeline: Optional[str] = None
     must_haves: List[str] = Field(default_factory=list)
+    compliance_requirements: List[str] = Field(default_factory=list)
     data_sensitivity: Optional[str] = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
