@@ -23,6 +23,7 @@ from ..services import (
     RetrievalService,
     ScoringService,
 )
+from ..services.vendor_matching import VendorMatcher
 from ..services.compliance_service import ComplianceAssessment
 from ..services.scoring_service import ScoreWeights
 
@@ -147,30 +148,28 @@ class VendorPicker:
 
     def __init__(self, compliance_service: ComplianceService) -> None:
         self.compliance_service = compliance_service
+        self.matcher = VendorMatcher()
 
     def pick(self, request: Request, records: Iterable[SeedVendorRecord], top_n: int = 5) -> List[VendorSelection]:
         scored: List[VendorSelection] = []
-        requested_features = [
-            item.lower() for item in request.specs.get("features", request.must_haves)
-        ]
         budget_per_unit = request.budget_max / request.quantity if request.budget_max and request.quantity > 0 else None
 
         for record in records:
+            # Use enhanced matching with category gating
+            match_result = self.matcher.evaluate_vendor(request, record)
+
+            # Skip vendors that don't match category
+            if not match_result.category_match:
+                continue
+
+            # Skip vendors with very poor feature scores
+            if match_result.feature_score < 0.3:
+                continue
+
             vendor_profile = record.to_vendor_profile()
             assessment = self.compliance_service.assess_vendor(request, vendor_profile)
-            compliance_matches = len(
-                set(req.lower() for req in request.compliance_requirements)
-                & set(item.lower() for item in record.compliance)
-            )
-            compliance_total = len(request.compliance_requirements) or 1
-            compliance_score = compliance_matches / compliance_total
 
-            feature_matches = (
-                len(set(requested_features) & set(record.features)) if requested_features else 0
-            )
-            feature_total = len(requested_features) or 1
-            feature_score = feature_matches / feature_total
-
+            # Price scoring
             if budget_per_unit:
                 price_target = budget_per_unit
                 list_price = record.list_price
@@ -179,23 +178,40 @@ class VendorPicker:
             else:
                 price_score = 0.6
 
+            # Enhanced scoring with proper weights
             score = (
-                0.5 * compliance_score
-                + 0.3 * feature_score
-                + 0.2 * price_score
+                0.5 * match_result.feature_score +      # Feature match is most important
+                0.3 * match_result.compliance_score +   # Compliance is critical
+                0.2 * price_score                       # Price fit
             )
+
+            # Heavy penalty for blocking compliance issues
+            if assessment.blocking:
+                score *= 0.1
+
             reasons = [
-                f"Compliance match {compliance_matches}/{compliance_total}",
-                f"Feature match {feature_matches}/{feature_total}",
+                f"Compliance match {int(match_result.compliance_score * len(request.compliance_requirements))}/{len(request.compliance_requirements) or 1}",
+                f"Feature match {match_result.feature_hits}/{match_result.total_features}",
                 f"List price ${record.list_price:.2f} vs budget {budget_per_unit or 'n/a'}",
             ]
+
+            if match_result.missing_features:
+                reasons.append(f"Missing: {', '.join(match_result.missing_features[:2])}")
+
             if assessment.blocking:
                 reasons.append("⚠️ Missing blocking compliance requirement")
-                score *= 0.2
+
             scored.append(VendorSelection(record=record, score=score, reasons=reasons))
 
+        # Sort by score and take top N
         scored.sort(key=lambda entry: entry.score, reverse=True)
-        return scored[: top_n]
+
+        # Filter out very low scores (< 0.4) unless we have too few vendors
+        viable_vendors = [v for v in scored if v.score >= 0.4]
+        if len(viable_vendors) >= 3:
+            scored = viable_vendors
+
+        return scored[:top_n]
 
 
 class NegotiationManager:

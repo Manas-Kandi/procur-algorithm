@@ -359,34 +359,59 @@ class NegotiationEngine:
         """Determine if we should accept current offer and close deal with reason"""
         if not current_offer:
             return False, "no_offer"
-            
+
         tco = self.calculate_tco(current_offer)
         policy = state.plan.exchange_policy if state.plan else ExchangePolicy()
-        
-        # Check convergence conditions
+
+        # HARD GATE 1: Never accept if budget exceeded
+        budget_max = request.budget_max or float('inf')
+        if tco > budget_max:
+            return False, "budget_exceeded"
+
+        # HARD GATE 2: Never accept if policy violations exist
+        try:
+            policy_result = self.policy_engine.validate_offer(current_offer, request)
+            if not policy_result.valid:
+                return False, "policy_violation"
+        except:
+            # If policy validation fails, err on the side of caution
+            pass
+
+        # HARD GATE 3: Check vendor floor constraints
+        if hasattr(state, 'vendor') and state.vendor and hasattr(state.vendor, 'guardrails'):
+            if state.vendor.guardrails.price_floor and current_offer.unit_price < state.vendor.guardrails.price_floor:
+                return False, "below_vendor_floor"
+
+        # Check convergence conditions - only accept if all hard gates pass
         if state.opponent_model and len(state.opponent_model.last_offers) >= 2:
             recent_offers = state.opponent_model.last_offers[-2:]
             price_gap = abs(recent_offers[-1].unit_price - recent_offers[-2].unit_price)
-            
-            # Close if gap is small enough (absolute or percentage)
-            if price_gap < policy.finalize_gap_abs:
+
+            # Check if this looks like a rejection pattern (price going UP)
+            if len(recent_offers) >= 2 and recent_offers[-1].unit_price > recent_offers[-2].unit_price:
+                # This is likely a rejection, not convergence - don't accept unless we have multiple rounds
+                if state.round < 3:
+                    return False, "seller_rejection_detected"
+
+            # Close if gap is small enough (absolute or percentage) AND price is moving in our favor
+            if price_gap < policy.finalize_gap_abs and recent_offers[-1].unit_price <= recent_offers[-2].unit_price:
                 return True, "converged_absolute"
-            if current_offer.unit_price > 0 and price_gap / current_offer.unit_price < policy.finalize_gap_pct:
+            if (current_offer.unit_price > 0 and
+                price_gap / current_offer.unit_price < policy.finalize_gap_pct and
+                recent_offers[-1].unit_price <= recent_offers[-2].unit_price):
                 return True, "converged_percentage"
-        
+
         # Accept if within budget and reasonable utility
-        if tco <= request.budget_max:
-            utility = self.calculate_utility(current_offer, request, is_buyer=True)
-            if utility >= 0.7:  # Accept if 70%+ utility
-                return True, "acceptable_utility"
-            if utility >= 0.6 and state.round >= 6:  # Lower bar after many rounds
-                return True, "acceptable_after_rounds"
-                
-        # Close if we've hit stalemate and offer is reasonable
-        budget_max = request.budget_max or float('inf')
-        if self.detect_stalemate(state) and tco <= budget_max * 1.1:
+        utility = self.calculate_utility(current_offer, request, is_buyer=True)
+        if utility >= 0.7:  # Accept if 70%+ utility
+            return True, "acceptable_utility"
+        if utility >= 0.6 and state.round >= 6:  # Lower bar after many rounds
+            return True, "acceptable_after_rounds"
+
+        # Close if we've hit stalemate but ONLY if within budget
+        if self.detect_stalemate(state) and tco <= budget_max:
             return True, "stalemate_reasonable"
-            
+
         return False, "continue_negotiating"
 
     def enforce_offer_diversity(self, new_bundle: OfferBundle, state: VendorNegotiationState) -> OfferBundle:
@@ -436,6 +461,7 @@ class NegotiationEngine:
         for bundle in bundles:
             mock_offer = OfferComponents(
                 unit_price=bundle.price,
+                currency=current_offer.currency,
                 quantity=current_offer.quantity,
                 term_months=bundle.term_months,
                 payment_terms=bundle.payment_terms

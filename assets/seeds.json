@@ -10,7 +10,7 @@
     },
     "payment_terms": ["NET30", "NET45", "NET15"],
     "compliance": ["SOC2", "ISO27001", "GDPR"],
-    "features": ["api", "mobile", "analytics", "sso"],
+    "features": ["api", "mobile", "analytics", "sso", "crm", "leads", "contacts", "pipeline", "lead_management", "contact_management", "pipeline_tracking"],
     "regions": ["us-east", "eu-west"],
     "support": {"tier": "24/7", "sla": 99.9},
     "behavior_profile": "term_elastic",
