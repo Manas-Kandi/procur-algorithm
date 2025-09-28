@@ -21,6 +21,9 @@ class CandidateEvaluation(BaseModel):
     policy_violations: List[str] = Field(default_factory=list)
     guardrail_alerts: List[str] = Field(default_factory=list)
     rationale: List[str] = Field(default_factory=list)
+    buyer_breakdown: Dict[str, float] = Field(default_factory=dict)
+    seller_breakdown: Dict[str, float] = Field(default_factory=dict)
+    tco_breakdown: Dict[str, float] = Field(default_factory=dict)
 
 
 class RoundMemory(BaseModel):

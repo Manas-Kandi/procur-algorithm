@@ -3,12 +3,21 @@ from __future__ import annotations
 import math
 import random
 from dataclasses import dataclass, field
+from decimal import Decimal
 from enum import Enum
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 from ..models import Request, VendorProfile, Offer, OfferComponents, PaymentTerms, NegotiationDecision
 from .policy_engine import PolicyEngine, PolicyResult
 from .scoring_service import ScoringService
+from .evaluation import (
+    TCOInputs,
+    compute_tco,
+    compute_buyer_utility,
+    compute_seller_utility,
+    UtilityBreakdown,
+    detect_zopa,
+)
 
 
 class NegotiationStrategy(Enum):
@@ -114,6 +123,11 @@ class VendorNegotiationState:
     compliance_summary: List[str] = field(default_factory=list)
     outcome_state: Optional[str] = None
     outcome_reason: Optional[str] = None
+    fsm_state: str = "init"
+    concessions: Optional[ConcessionEngine] = None
+    min_concession_price: Optional[float] = None
+    concession_notes: List[str] = field(default_factory=list)
+    match_summary: Optional[object] = None
 
 
 class NegotiationEngine:
@@ -123,12 +137,24 @@ class NegotiationEngine:
         self.policy_engine = policy_engine
         self.scoring_service = scoring_service
 
-    def calculate_tco(self, offer: OfferComponents) -> float:
-        """Delegate to scoring service for consistent TCO calculations."""
-        return self.scoring_service.compute_tco(offer)
+    def _offer_to_tco_inputs(self, offer: OfferComponents) -> TCOInputs:
+        one_time_positive = sum(value for value in offer.one_time_fees.values() if value >= 0)
+        credits = -sum(value for value in offer.one_time_fees.values() if value < 0)
+        return TCOInputs(
+            unit_price=Decimal(str(offer.unit_price or 0.0)),
+            seats=offer.quantity or 1,
+            term_months=offer.term_months or 12,
+            one_time_fees=Decimal(str(one_time_positive)),
+            credits=Decimal(str(credits)),
+            payment_prepaid=False,
+            prepay_discount_rate=Decimal(str(getattr(offer, "prepay_discount_rate", 0.0))),
+        )
 
-    def calculate_tco_breakdown(self, offer: OfferComponents) -> ScoringService.TCOBreakdown:
-        return self.scoring_service.compute_tco_breakdown(offer)
+    def calculate_tco_breakdown(self, offer: OfferComponents):
+        return compute_tco(self._offer_to_tco_inputs(offer))
+
+    def calculate_tco(self, offer: OfferComponents) -> float:
+        return float(self.calculate_tco_breakdown(offer).total)
 
     def calculate_utility(
         self,
@@ -225,7 +251,7 @@ class NegotiationEngine:
         round_num = state.round
         plan = state.plan
 
-        if plan and state.stalemate_rounds >= 2:
+        if plan and state.stalemate_rounds >= MAX_STALLED_ROUNDS:
             next_lever = self.next_concession(plan, state)
             state.stalemate_rounds = 0
             return self._strategy_for_lever(next_lever)
@@ -244,22 +270,40 @@ class NegotiationEngine:
             return NegotiationStrategy.PRICE_PRESSURE
 
     def detect_stalemate(self, state: VendorNegotiationState) -> bool:
-        """Detect if negotiation is stuck"""
-        if len(state.history) < 4:
+        """Detect if negotiation is stuck with minimal utility/TCO improvement"""
+        if len(state.history) < MAX_STALLED_ROUNDS:
             return False
-            
-        # Check if last 2 rounds had no meaningful progress
-        recent_offers = state.history[-4:]
-        if len(recent_offers) >= 4:
-            price_changes = []
+
+        # Check if last MAX_STALLED_ROUNDS rounds had minimal progress
+        recent_offers = state.history[-MAX_STALLED_ROUNDS:]
+        if len(recent_offers) >= MAX_STALLED_ROUNDS:
+            utility_changes = []
+            tco_changes = []
+
             for i in range(1, len(recent_offers)):
-                price_change = abs(recent_offers[i].components.unit_price - recent_offers[i-1].components.unit_price)
-                price_changes.append(price_change)
-            
-            # If average price change is less than $10, consider stalemate
-            avg_change = sum(price_changes) / len(price_changes) if price_changes else 0
-            return avg_change < 10
-            
+                prev_offer = recent_offers[i-1]
+                curr_offer = recent_offers[i]
+
+                # Track utility improvement
+                utility_change = abs(curr_offer.score.utility - prev_offer.score.utility)
+                utility_changes.append(utility_change)
+
+                # Track TCO improvement (lower is better, so we look for decreases)
+                prev_tco = self.calculate_tco(prev_offer.components)
+                curr_tco = self.calculate_tco(curr_offer.components)
+                tco_improvement = max(0, prev_tco - curr_tco)  # Positive if TCO decreased
+                tco_changes.append(tco_improvement)
+
+            # If average utility improvement and TCO improvement are both less than ε, consider stalemate
+            avg_utility_change = sum(utility_changes) / len(utility_changes) if utility_changes else 0
+            avg_tco_improvement = sum(tco_changes) / len(tco_changes) if tco_changes else 0
+
+            # ε thresholds for considering progress stalled
+            utility_epsilon = 0.01  # 1% utility improvement
+            tco_epsilon = 50.0     # $50 TCO improvement
+
+            return avg_utility_change < utility_epsilon and avg_tco_improvement < tco_epsilon
+
         return False
 
     def update_opponent_model(self, model: OpponentModel, new_offer: OfferComponents, previous_offer: Optional[OfferComponents]):
@@ -421,38 +465,68 @@ class NegotiationEngine:
         if not current_offer:
             return False, "no_offer"
 
-        tco = self.calculate_tco(current_offer)
-        policy = state.plan.exchange_policy if state.plan else ExchangePolicy()
+        # Compute TCO breakdown, buyer and seller utilities
+        tco_breakdown = self.scoring_service.compute_tco_breakdown(current_offer)
 
-        # HARD GATE 1: Never accept if budget exceeded
-        budget_max = request.budget_max or float('inf')
-        if tco > budget_max:
+        summary = getattr(state, "match_summary", None)
+        feature_score = summary.feature.score if summary else 0.0
+        compliance_score = summary.compliance.score if summary else 0.0
+        sla_score = summary.sla_score if summary else 0.0
+        budget_per_unit = 0.0
+        if request.budget_max and request.quantity:
+            budget_per_unit = request.budget_max / request.quantity
+
+        buyer_bd = compute_buyer_utility(
+            unit_price=current_offer.unit_price,
+            budget_per_unit=budget_per_unit,
+            feature_score=feature_score,
+            compliance_score=compliance_score,
+            sla_score=sla_score,
+        )
+
+        list_price = state.vendor.price_tiers.get(str(request.quantity), current_offer.unit_price)
+        floor_price = state.vendor.guardrails.price_floor or current_offer.unit_price
+        seller_bd = compute_seller_utility(
+            proposed_price=current_offer.unit_price,
+            list_price=list_price,
+            floor_price=floor_price,
+            min_accept_threshold=SELLER_ACCEPT_THRESHOLD,
+        )
+
+        # Before transitioning to ACCEPTED, enforce all invariants:
+
+        # 1. Budget compliance
+        if request.budget_max and float(tco_breakdown.total) > request.budget_max:
             return False, "budget_exceeded"
 
-        # HARD GATE 2: Never accept if policy violations exist
+        # 2. Buyer utility threshold
+        if buyer_bd.buyer_utility < BUYER_ACCEPT_THRESHOLD:
+            return False, "buyer_utility_too_low"
+
+        # 3. Seller utility threshold
+        if seller_bd.seller_utility < SELLER_ACCEPT_THRESHOLD:
+            return False, "seller_utility_too_low"
+
+        # 4. Policy compliance
         try:
             policy_result = self.policy_engine.validate_offer(current_offer, request)
             if not policy_result.valid:
                 return False, "policy_violation"
         except:
-            # If policy validation fails, err on the side of caution
-            pass
+            return False, "policy_validation_failed"
 
-        # HARD GATE 3: Check vendor floor constraints
-        if hasattr(state, 'vendor') and state.vendor and hasattr(state.vendor, 'guardrails'):
-            if state.vendor.guardrails.price_floor and current_offer.unit_price < state.vendor.guardrails.price_floor:
-                return False, "below_vendor_floor"
+        # 5. Guardrails check (in production mode)
+        # This would check required guardrails like vendor bank verification
+        # For now, we'll check basic vendor floor constraints
+        if state.vendor.guardrails.price_floor and current_offer.unit_price < state.vendor.guardrails.price_floor:
+            return False, "below_vendor_floor"
 
-        # Check convergence conditions - only accept if all hard gates pass
+        # If all invariants pass, check convergence conditions
+        policy = state.plan.exchange_policy if state.plan else ExchangePolicy()
+
         if state.opponent_model and len(state.opponent_model.last_offers) >= 2:
             recent_offers = state.opponent_model.last_offers[-2:]
             price_gap = abs(recent_offers[-1].unit_price - recent_offers[-2].unit_price)
-
-            # Check if this looks like a rejection pattern (price going UP)
-            if len(recent_offers) >= 2 and recent_offers[-1].unit_price > recent_offers[-2].unit_price:
-                # This is likely a rejection, not convergence - don't accept unless we have multiple rounds
-                if state.round < 3:
-                    return False, "seller_rejection_detected"
 
             # Close if gap is small enough (absolute or percentage) AND price is moving in our favor
             if price_gap < policy.finalize_gap_abs and recent_offers[-1].unit_price <= recent_offers[-2].unit_price:
@@ -462,18 +536,8 @@ class NegotiationEngine:
                 recent_offers[-1].unit_price <= recent_offers[-2].unit_price):
                 return True, "converged_percentage"
 
-        # Accept if within budget and reasonable utility
-        utility = self.calculate_utility(current_offer, request, vendor=state.vendor, is_buyer=True)
-        if utility >= 0.7:  # Accept if 70%+ utility
-            return True, "acceptable_utility"
-        if utility >= 0.6 and state.round >= 6:  # Lower bar after many rounds
-            return True, "acceptable_after_rounds"
-
-        # Close if we've hit stalemate but ONLY if within budget
-        if self.detect_stalemate(state) and tco <= budget_max:
-            return True, "stalemate_reasonable"
-
-        return False, "continue_negotiating"
+        # Accept if all thresholds met
+        return True, "utility_threshold"
 
     def enforce_offer_diversity(self, new_bundle: OfferBundle, state: VendorNegotiationState) -> OfferBundle:
         """Ensure offers are diverse and show monotonic progress"""
@@ -623,23 +687,25 @@ class NegotiationEngine:
         budget_per_unit = request.budget_max / request.quantity
         tier_key = str(request.quantity)
         list_price = vendor.price_tiers.get(tier_key, vendor.guardrails.price_floor * 1.2)
-        seller_floor = vendor.guardrails.price_floor
-        
-        # Calculate reachable minimum price via give-get levers
-        max_term_discount = max(policy.term_trade.values(), default=0.0)
-        max_payment_discount = max((v for v in policy.payment_trade.values() if v > 0), default=0.0)
-        total_value_offset = sum(policy.value_add_offsets.values())
-        max_value_offset = total_value_offset / request.quantity if request.quantity > 0 else 0.0
-        
-        reachable_min_price = max(
-            seller_floor,
-            list_price - (list_price * (max_term_discount + max_payment_discount)) - max_value_offset
+        seller_floor = vendor.guardrails.price_floor or list_price
+
+        concessions = ConcessionEngine(
+            {
+                "term_trade": policy.term_trade,
+                "payment_trade": {term.value: pct for term, pct in policy.payment_trade.items()},
+                "value_add_offsets": policy.value_add_offsets,
+            }
         )
-        
-        # ZOPA test with trades
-        gap = reachable_min_price - budget_per_unit
-        gap_per_unit = policy.finalize_gap_abs / request.quantity if request.quantity > 0 else policy.finalize_gap_abs
-        return gap <= gap_per_unit  # Allow reasonable gap
+        best_price, _ = concessions.best_effective_price(
+            list_price=list_price,
+            floor_price=seller_floor,
+            seats=request.quantity,
+        )
+        return detect_zopa(
+            buyer_budget_per_unit=budget_per_unit,
+            seller_floor=seller_floor,
+            concessions_min_price=best_price,
+        )
     
     def seed_bundles(self, request: Request, vendor: VendorProfile, policy: ExchangePolicy) -> List[OfferBundle]:
         """Generate 3 opening bundles that respect policy - MUST produce ≥1"""
@@ -947,3 +1013,156 @@ class NegotiationEngine:
             PaymentTerms.DEPOSIT: 1.0,
         }
         return mapping.get(payment_terms, 0.7)
+class NegotiationLifecycle(Enum):
+    INIT = "init"
+    NEGOTIATING = "negotiating"
+    NO_ZOPA = "no_zopa"
+    ACCEPTED = "accepted"
+    DROPPED = "dropped"
+    REPLAN_REQUIRED = "replan_required"
+
+
+BUYER_ACCEPT_THRESHOLD = 0.94
+SELLER_ACCEPT_THRESHOLD = 0.20
+MAX_STALLED_ROUNDS = 3
+
+
+class ConcessionEngine:
+    """Utility to convert vendor concessions to monetary impacts."""
+
+    def __init__(self, record_metadata: Dict[str, object]) -> None:
+        self.term_trade: Dict[int, float] = {
+            int(k): float(v) for k, v in record_metadata.get("term_trade", {}).items()
+        }
+        self.payment_trade: Dict[str, float] = {
+            str(k): float(v) for k, v in record_metadata.get("payment_trade", {}).items()
+        }
+        self.value_add_offsets: Dict[str, float] = {
+            str(k): float(v) for k, v in record_metadata.get("value_add_offsets", {}).items()
+        }
+
+    def best_effective_price(
+        self,
+        *,
+        list_price: float,
+        floor_price: float,
+        seats: int,
+    ) -> Tuple[float, List[str]]:
+        """Evaluate combinations of levers to find the best effective price."""
+        best_price = list_price
+        best_applied: List[str] = []
+
+        # Generate all possible combinations
+        combinations = self._generate_combinations(list_price, seats)
+
+        for combo_price, combo_applied in combinations:
+            if combo_price >= floor_price and combo_price < best_price:
+                best_price = combo_price
+                best_applied = combo_applied
+
+        return best_price, best_applied
+
+    def _generate_combinations(self, list_price: float, seats: int) -> List[Tuple[float, List[str]]]:
+        """Generate all valid combinations of concessions."""
+        combinations = []
+
+        # Start with no concessions
+        combinations.append((list_price, []))
+
+        # Single lever concessions
+        # Payment concessions only
+        for term, discount in self.payment_trade.items():
+            if discount > 0:
+                price = list_price * (1 - discount)
+                applied = [f"payment:{term}:{discount:.2%}"]
+                combinations.append((price, applied))
+
+        # Term concessions only
+        for delta, discount in self.term_trade.items():
+            if discount > 0:
+                price = list_price * (1 - discount)
+                applied = [f"term:+{delta}:{discount:.2%}"]
+                combinations.append((price, applied))
+
+        # Value-add credits only
+        if seats > 0 and self.value_add_offsets:
+            total_credit = sum(self.value_add_offsets.values())
+            per_seat_credit = total_credit / seats
+            price = list_price - per_seat_credit
+            applied = [f"value_add:${total_credit:.2f}"]
+            combinations.append((price, applied))
+
+        # Combined lever concessions
+        # Payment + Term combinations
+        for term_key, payment_discount in self.payment_trade.items():
+            if payment_discount <= 0:
+                continue
+            for delta, term_discount in self.term_trade.items():
+                if term_discount <= 0:
+                    continue
+                # Apply both discounts (multiplicative)
+                price = list_price * (1 - payment_discount) * (1 - term_discount)
+                applied = [
+                    f"payment:{term_key}:{payment_discount:.2%}",
+                    f"term:+{delta}:{term_discount:.2%}"
+                ]
+                combinations.append((price, applied))
+
+        # Payment + Value-add combinations
+        if seats > 0 and self.value_add_offsets:
+            total_credit = sum(self.value_add_offsets.values())
+            per_seat_credit = total_credit / seats
+            for term_key, payment_discount in self.payment_trade.items():
+                if payment_discount <= 0:
+                    continue
+                # Apply payment discount and subtract value-add credit
+                price = (list_price * (1 - payment_discount)) - per_seat_credit
+                applied = [
+                    f"payment:{term_key}:{payment_discount:.2%}",
+                    f"value_add:${total_credit:.2f}"
+                ]
+                combinations.append((price, applied))
+
+        # Term + Value-add combinations
+        if seats > 0 and self.value_add_offsets:
+            total_credit = sum(self.value_add_offsets.values())
+            per_seat_credit = total_credit / seats
+            for delta, term_discount in self.term_trade.items():
+                if term_discount <= 0:
+                    continue
+                # Apply term discount and subtract value-add credit
+                price = (list_price * (1 - term_discount)) - per_seat_credit
+                applied = [
+                    f"term:+{delta}:{term_discount:.2%}",
+                    f"value_add:${total_credit:.2f}"
+                ]
+                combinations.append((price, applied))
+
+        # Triple combinations (Payment + Term + Value-add)
+        if seats > 0 and self.value_add_offsets:
+            total_credit = sum(self.value_add_offsets.values())
+            per_seat_credit = total_credit / seats
+
+            # Limit to top combinations to keep search manageable
+            top_payment_options = sorted(
+                [(k, v) for k, v in self.payment_trade.items() if v > 0],
+                key=lambda x: x[1], reverse=True
+            )[:2]  # Top 2 payment options
+
+            top_term_options = sorted(
+                [(k, v) for k, v in self.term_trade.items() if v > 0],
+                key=lambda x: x[1], reverse=True
+            )[:2]  # Top 2 term options
+
+            for term_key, payment_discount in top_payment_options:
+                for delta, term_discount in top_term_options:
+                    # Apply all three: payment discount, term discount, and value-add credit
+                    price = (list_price * (1 - payment_discount) * (1 - term_discount)) - per_seat_credit
+                    applied = [
+                        f"payment:{term_key}:{payment_discount:.2%}",
+                        f"term:+{delta}:{term_discount:.2%}",
+                        f"value_add:${total_credit:.2f}"
+                    ]
+                    combinations.append((price, applied))
+
+        return combinations

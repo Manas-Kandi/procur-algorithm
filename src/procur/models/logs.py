@@ -13,6 +13,9 @@ class UtilitySnapshot(BaseModel):
     buyer_utility: float
     seller_utility: float
     tco: float
+    buyer_components: Dict[str, float] = Field(default_factory=dict)
+    seller_components: Dict[str, float] = Field(default_factory=dict)
+    tco_breakdown: Dict[str, float] = Field(default_factory=dict)
 
 
 class MoveLog(BaseModel):

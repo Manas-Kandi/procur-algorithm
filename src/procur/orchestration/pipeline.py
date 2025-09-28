@@ -24,7 +24,7 @@ from ..services import (
     ScoringService,
 )
 from ..services.negotiation_engine import ExchangePolicy
-from ..services.vendor_matching import VendorMatcher
+from ..services.vendor_matching import evaluate_vendor_against_request, VendorMatchSummary
 from ..services.compliance_service import ComplianceAssessment
 from ..services.scoring_service import ScoreWeights
 from ..utils.pricing import annualize_value, normalize_budget_total, price_fit_ratio
@@ -50,6 +50,7 @@ class VendorSelection:
     record: SeedVendorRecord
     score: float
     reasons: List[str]
+    summary: Optional[VendorMatchSummary] = None
 
 
 @dataclass
@@ -330,80 +331,111 @@ class VendorPicker:
 
     def __init__(self, compliance_service: ComplianceService) -> None:
         self.compliance_service = compliance_service
-        self.matcher = VendorMatcher()
+        self._skip_reasons: List[Dict[str, object]] = []
+
+    @property
+    def skip_reasons(self) -> List[Dict[str, object]]:
+        return list(self._skip_reasons)
 
     def pick(self, request: Request, records: Iterable[SeedVendorRecord], top_n: int = 5) -> List[VendorSelection]:
         scored: List[VendorSelection] = []
-        raw_budget_per_unit = (
-            request.budget_max / request.quantity if request.budget_max and request.quantity > 0 else None
-        )
-        normalized_cadence = request.specs.get("_normalized_cadence")
-        cadence_for_budget = normalized_cadence or request.billing_cadence or request.specs.get("billing_cadence")
-        budget_per_unit_annual = annualize_value(raw_budget_per_unit, cadence_for_budget)
+        self._skip_reasons = []
+
+        # Use the normalized budget per-seat that's already annualized
+        budget_per_unit_annual = None
+        if request.budget_max and request.quantity:
+            # request.budget_max is already normalized to per_seat_per_year
+            budget_per_unit_annual = request.budget_max / request.quantity
 
         for record in records:
-            # Use enhanced matching with category gating
-            match_result = self.matcher.evaluate_vendor(request, record)
-
-            # Skip vendors that don't match category
-            if not match_result.category_match:
-                continue
-
-            # Skip vendors with very poor feature scores
-            if match_result.feature_score < 0.3:
-                continue
-
-            vendor_profile = record.to_vendor_profile()
-            assessment = self.compliance_service.assess_vendor(request, vendor_profile)
-
-            # Price scoring with gating
-            list_price_annual = record.list_price
-            if budget_per_unit_annual:
-                price_score = price_fit_ratio(budget_per_unit_annual, list_price_annual)
-                if price_score < 0.3:
-                    continue
-            else:
-                price_score = 0.6
-
-            # Enhanced scoring with proper weights
-            score = (
-                0.5 * match_result.feature_score +      # Feature match is most important
-                0.3 * match_result.compliance_score +   # Compliance is critical
-                0.2 * price_score                       # Price fit
+            # Use only evaluate_vendor_against_request to compute VendorMatchSummary
+            summary = evaluate_vendor_against_request(
+                request,
+                record,
+                budget_per_unit=budget_per_unit_annual,
             )
 
-            # Heavy penalty for blocking compliance issues
-            if assessment.blocking:
-                score *= 0.1
+            # Gate vendors: category_match == True, feature.score > 0, compliance.blocking == False
+            if not summary.category_match:
+                self._skip_reasons.append({
+                    "vendor_id": record.seed_id,
+                    "name": record.name,
+                    "reason": "category_mismatch",
+                    "category": record.category,
+                    "request_category": summary.request_category,
+                })
+                continue
+            if summary.feature.score == 0.0:
+                self._skip_reasons.append({
+                    "vendor_id": record.seed_id,
+                    "name": record.name,
+                    "reason": "features_insufficient",
+                    "missing_features": summary.feature.missing,
+                })
+                continue
+            if summary.compliance.blocking:
+                self._skip_reasons.append({
+                    "vendor_id": record.seed_id,
+                    "name": record.name,
+                    "reason": "compliance_blocking",
+                    "missing_compliance": [
+                        {
+                            "framework": status.framework,
+                            "evidence": status.evidence,
+                            "score": status.score,
+                            "verified": status.verified,
+                        }
+                        for status in summary.compliance.frameworks
+                    ],
+                })
+                continue
 
-            compliance_total = len(request.compliance_requirements) or 1
-            feature_total = match_result.total_features or len(request.must_haves) or 1
+            # Use summary.composite_score() for ranking
+            composite_score = summary.composite_score()
+            if composite_score <= 0:
+                self._skip_reasons.append({
+                    "vendor_id": record.seed_id,
+                    "name": record.name,
+                    "reason": "score_non_positive",
+                    "details": {
+                        "composite_score": composite_score,
+                        "feature_score": summary.feature.score,
+                        "compliance_score": summary.compliance.score,
+                        "price_fit": summary.price_fit,
+                    },
+                })
+                continue
+
+            # Build reasons from summary only
             reasons = [
-                f"Compliance match {int(match_result.compliance_score * compliance_total)}/{compliance_total}",
-                f"Feature match {match_result.feature_hits}/{feature_total}",
+                f"Feature score {summary.feature.score:.2f}",
+                f"Compliance score {summary.compliance.score:.2f}",
+                f"Price fit {summary.price_fit:.2f} — annual list ${record.list_price:.2f} vs budget ${budget_per_unit_annual or 'n/a'}"
             ]
 
-            if budget_per_unit_annual:
-                reasons.append(
-                    f"Price fit {price_score:.2f} — annual list ${list_price_annual:.2f} vs budget ${budget_per_unit_annual:.2f}"
-                )
-            else:
-                reasons.append(f"Annual list price ${list_price_annual:.2f}")
+            if summary.feature.missing:
+                reasons.append(f"Missing: {', '.join(summary.feature.missing)}")
 
-            if match_result.missing_features:
-                reasons.append(f"Missing: {', '.join(match_result.missing_features[:2])}")
+            # Check for blocking compliance separately and add warning if needed
+            # Append one VendorSelection per vendor, not two
+            scored.append(
+                VendorSelection(record=record, score=composite_score, reasons=reasons, summary=summary)
+            )
 
-            if assessment.blocking:
-                reasons.append("⚠️ Missing blocking compliance requirement")
-
-            scored.append(VendorSelection(record=record, score=score, reasons=reasons))
-
-        # Sort by score and take top N
-        scored.sort(key=lambda entry: entry.score, reverse=True)
+        # Sort by score and take top N (deterministic ordering)
+        scored.sort(key=lambda entry: (entry.score, entry.record.seed_id), reverse=True)
 
         # Filter out very low scores (< 0.4) unless we have too few vendors
         viable_vendors = [v for v in scored if v.score >= 0.4]
         if len(viable_vendors) >= 3:
+            demoted = [entry for entry in scored if entry.score < 0.4]
+            for entry in demoted:
+                self._skip_reasons.append({
+                    "vendor_id": entry.record.seed_id,
+                    "name": entry.record.name,
+                    "reason": "score_below_threshold",
+                    "details": {"score": entry.score},
+                })
             scored = viable_vendors
 
         return scored[:top_n]
@@ -433,6 +465,8 @@ class NegotiationManager:
             # Attach per-seed metadata for downstream plan adjustments
             setattr(vendor_profile, "_exchange_policy", selection.record.exchange_policy)
             setattr(vendor_profile, "_seed_metadata", selection.record.raw)
+            if selection.summary:
+                setattr(vendor_profile, "_match_summary", selection.summary)
 
             exchange_policy = getattr(vendor_profile, "_exchange_policy", None)
             if not self.buyer_agent.negotiation_engine.feasible_with_trades(
@@ -576,6 +610,16 @@ class SaaSProcurementPipeline:
         seed_records = load_seed_catalog(self.seeds_path)
         picker = VendorPicker(services.compliance_service)
         selections = picker.pick(request, seed_records, top_n=top_n)
+        if not selections:
+            services.audit_service.record_event(
+                request.request_id,
+                "shortlist_empty",
+                {
+                    "skipped_vendors": picker.skip_reasons,
+                    "request_must_haves": request.must_haves,
+                    "request_compliance": request.compliance_requirements,
+                },
+            )
         negotiation_manager = NegotiationManager(buyer_agent, services)
         negotiation_results = negotiation_manager.run(request, selections)
         audit_payload = services.audit_service.export_sessions(request.request_id)

@@ -30,8 +30,15 @@ from ..services.negotiation_engine import (
     NegotiationStrategy,
     OpponentModel,
     VendorNegotiationState,
+    SellerStrategy,
+    NegotiationLifecycle,
+    ConcessionEngine,
+    BUYER_ACCEPT_THRESHOLD,
+    SELLER_ACCEPT_THRESHOLD,
 )
-from ..services.negotiation_engine import SellerStrategy
+from ..services.evaluation import detect_zopa
+from ..services.evaluation import compute_buyer_utility, compute_seller_utility, UtilityBreakdown
+from ..services.vendor_matching import VendorMatchSummary
 from ..llm import (
     LLMClient,
     guarded_completion,
@@ -111,7 +118,7 @@ class BuyerAgent:
 
     def plan_negotiation(self, request: Request) -> NegotiationPlan:
         anchors = {"price": request.budget_min or 0.0}
-        stop_conditions = {"utility": 0.6, "risk": 0.5}
+        stop_conditions = {"utility": BUYER_ACCEPT_THRESHOLD, "risk": 0.5}
         allowed_concessions = list(self.config.concession_ladder)
         return NegotiationPlan(
             anchors=anchors,
@@ -167,6 +174,15 @@ class BuyerAgent:
             close_reason = ""
             max_rounds = state.plan.exchange_policy.max_rounds
             round_result: Dict[str, object] = {}
+
+            if state.fsm_state == NegotiationLifecycle.NO_ZOPA.value:
+                outcome = "no_zopa"
+                close_reason = state.outcome_reason or "buyer_budget_below_floor"
+                state.outcome_state = outcome
+                state.outcome_reason = close_reason
+                max_rounds = 0
+            elif state.fsm_state == NegotiationLifecycle.INIT.value:
+                state.fsm_state = NegotiationLifecycle.NEGOTIATING.value
 
             for round_number in range(1, max_rounds + 1):
                 round_result = self._run_round(
@@ -241,19 +257,79 @@ class BuyerAgent:
         plan.anchors["price"] = anchor_price * 0.9 if anchor_price else request.budget_min or 0.0
 
         exchange_override = getattr(vendor, "_exchange_policy", None)
+        concessions_engine = None
         if exchange_override:
             plan.exchange_policy = exchange_override
+            concessions_engine = ConcessionEngine(
+                {
+                    "term_trade": exchange_override.term_trade,
+                    "payment_trade": {term.value: pct for term, pct in exchange_override.payment_trade.items()},
+                    "value_add_offsets": exchange_override.value_add_offsets,
+                }
+            )
 
         opponent_model = OpponentModel(
             price_floor_estimate=(vendor.guardrails.price_floor or anchor_price) * 0.9,
             price_ceiling_estimate=(anchor_price or request.budget_max or 1000.0) * 1.1,
         )
         plan.opponent_model = opponent_model
-        return VendorNegotiationState(
+        state = VendorNegotiationState(
             vendor=vendor,
             opponent_model=opponent_model,
             plan=plan,
+            concessions=concessions_engine,
         )
+        state.fsm_state = NegotiationLifecycle.INIT.value
+
+        budget_per_unit = None
+        if request.budget_max and request.quantity:
+            budget_per_unit = request.budget_max / request.quantity
+        floor_price = vendor.guardrails.price_floor or anchor_price or 0.0
+
+        # Derive real list price for the request
+        list_price = anchor_price
+        if vendor.price_tiers and request.quantity:
+            # Pick the best eligible tier for request.quantity
+            tier_key = str(request.quantity)
+            list_price = vendor.price_tiers.get(tier_key)
+            if list_price is None:
+                # Find the closest tier or use standard per-seat list price
+                available_tiers = {int(k): v for k, v in vendor.price_tiers.items() if k.isdigit()}
+                if available_tiers:
+                    closest_qty = min(available_tiers.keys(), key=lambda x: abs(x - request.quantity))
+                    list_price = available_tiers[closest_qty]
+                else:
+                    list_price = anchor_price or floor_price
+
+        min_concession_price = None
+        if concessions_engine and request.quantity and list_price:
+            min_price, _ = concessions_engine.best_effective_price(
+                list_price=list_price,
+                floor_price=floor_price,
+                seats=request.quantity,
+            )
+            min_concession_price = min_price
+            state.min_concession_price = min_price
+
+        state.match_summary = getattr(vendor, "_match_summary", None)
+
+        # For ZOPA check, pass seller_floor as vendor's explicit floor if present; else the opponent model's floor estimate
+        seller_floor = vendor.guardrails.price_floor
+        if seller_floor is None and opponent_model:
+            seller_floor = opponent_model.price_floor_estimate
+        if seller_floor is None:
+            seller_floor = floor_price
+
+        if budget_per_unit is not None and not detect_zopa(
+            buyer_budget_per_unit=budget_per_unit,
+            seller_floor=seller_floor,
+            concessions_min_price=min_concession_price,
+        ):
+            state.fsm_state = NegotiationLifecycle.NO_ZOPA.value
+            state.outcome_state = "no_zopa"
+            state.outcome_reason = "buyer_budget_below_floor"
+
+        return state
 
     def _baseline_offer(self, request: Request, vendor: VendorProfile) -> OfferComponents:
         tier_key = str(request.quantity)
@@ -373,19 +449,34 @@ class BuyerAgent:
     ) -> CandidateEvaluation:
         cloned_offer = components.model_copy(deep=True)
         tco_breakdown = self.negotiation_engine.calculate_tco_breakdown(cloned_offer)
-        tco = tco_breakdown.total
-        buyer_util = self.negotiation_engine.calculate_utility(
-            cloned_offer,
-            request,
-            vendor=vendor,
-            is_buyer=True,
+        tco = float(tco_breakdown.total)
+
+        summary: Optional[VendorMatchSummary] = getattr(vendor, "_match_summary", None)
+        feature_score = summary.feature.score if summary else 0.0
+        compliance_score = summary.compliance.score if summary else 0.0
+        sla_score = summary.sla_score if summary else 0.0
+        budget_per_unit = 0.0
+        if request.budget_max and request.quantity:
+            budget_per_unit = request.budget_max / request.quantity
+
+        buyer_breakdown = compute_buyer_utility(
+            unit_price=cloned_offer.unit_price,
+            budget_per_unit=budget_per_unit,
+            feature_score=feature_score,
+            compliance_score=compliance_score,
+            sla_score=sla_score,
         )
-        seller_util = self.negotiation_engine.calculate_utility(
-            cloned_offer,
-            request,
-            vendor=vendor,
-            is_buyer=False,
+
+        list_price = vendor.price_tiers.get(str(request.quantity), cloned_offer.unit_price)
+        floor_price = vendor.guardrails.price_floor or cloned_offer.unit_price
+        seller_info = compute_seller_utility(
+            proposed_price=cloned_offer.unit_price,
+            list_price=list_price,
+            floor_price=floor_price,
+            min_accept_threshold=SELLER_ACCEPT_THRESHOLD,
         )
+        seller_util = seller_info.seller_utility
+        buyer_util = buyer_breakdown.buyer_utility
 
         policy_result = policy_result or self.policy_engine.validate_offer(
             request,
@@ -398,14 +489,14 @@ class BuyerAgent:
         valid = policy_result.valid and not any(alert.blocking for alert in guardrail_alerts)
 
         rationale_list = list(rationale or [])
-        payment_delta = -tco_breakdown.payment_adjustment
+        payment_delta = float(tco_breakdown.prepay_adj)
         payment_note = ""
-        if tco_breakdown.payment_adjustment != 0:
+        if tco_breakdown.prepay_adj != 0:
             payment_note = " (discount rate 12%)"
         rationale_list.append(
             "TCO breakdown: "
-            f"base ${tco_breakdown.base_cost:,.2f} + fees ${tco_breakdown.one_time_fees:,.2f} "
-            f"- credits ${tco_breakdown.value_credits:,.2f} "
+            f"base ${float(tco_breakdown.base):,.2f} + fees ${float(tco_breakdown.one_time_fees):,.2f} "
+            f"- credits ${float(tco_breakdown.credits):,.2f} "
             f"+ payment adj {payment_delta:+,.2f}{payment_note} = ${tco:,.2f}"
         )
 
@@ -419,6 +510,15 @@ class BuyerAgent:
             policy_violations=[violation.message for violation in policy_result.violations],
             guardrail_alerts=[alert.message for alert in guardrail_alerts],
             rationale=rationale_list,
+            buyer_breakdown=buyer_breakdown.as_dict(),
+            seller_breakdown={"seller_margin": seller_info.seller_margin, "seller_utility": seller_info.seller_utility},
+            tco_breakdown={
+                "base": float(tco_breakdown.base),
+                "one_time_fees": float(tco_breakdown.one_time_fees),
+                "credits": float(tco_breakdown.credits),
+                "prepay_adj": float(tco_breakdown.prepay_adj),
+                "total": float(tco_breakdown.total),
+            },
         )
 
     def _bucket_quantity(self, quantity: int) -> str:
@@ -663,19 +763,6 @@ class BuyerAgent:
         guardrail_alerts = self.guardrail_service.vet_offer(state.vendor, buyer_components)
 
         self.negotiation_engine.record_offer(state, buyer_offer)
-        buyer_tco = self.negotiation_engine.calculate_tco(buyer_components)
-        buyer_utility = self.negotiation_engine.calculate_utility(
-            buyer_components,
-            request,
-            vendor=state.vendor,
-            is_buyer=True,
-        )
-        seller_projection = self.negotiation_engine.calculate_utility(
-            buyer_components,
-            request,
-            vendor=state.vendor,
-            is_buyer=False,
-        )
 
         buyer_rationale: List[str]
         if negotiation_message:
@@ -684,7 +771,6 @@ class BuyerAgent:
         else:
             buyer_rationale = [
                 f"Strategy {strategy.value}",
-                f"Bundle utility {buyer_utility:.3f}",
                 "LLM fallback engaged",
             ]
             machine_rationale = MachineRationale(
@@ -706,11 +792,22 @@ class BuyerAgent:
             rationale=buyer_rationale,
             is_buyer_proposal=True,
         )
+        buyer_tco = selected_evaluation.tco
+        buyer_utility = selected_evaluation.buyer_utility
+        seller_projection = selected_evaluation.seller_utility or 0.0
         rejected_evaluations = [
             eval_item
             for eval_item in candidate_evaluations
             if not self._offers_equal(eval_item.offer, selected_evaluation.offer)
         ]
+        if not negotiation_message:
+            buyer_rationale.append(f"Bundle utility {buyer_utility:.3f}")
+
+        forced_drop = False
+        if not selected_evaluation.valid:
+            state.outcome_state = "policy_blocked"
+            state.outcome_reason = "blocking_policy_or_guardrail"
+            forced_drop = True
 
         delta_utility = (
             selected_evaluation.buyer_utility - prev_buyer_utility
@@ -741,6 +838,9 @@ class BuyerAgent:
                 policy_notes=self._policy_notes(policy_result.violations),
                 guardrail_notes=self._guardrail_notes(guardrail_alerts),
                 compliance_notes=compliance_notes,
+                buyer_breakdown=selected_evaluation.buyer_breakdown,
+                seller_breakdown=selected_evaluation.seller_breakdown,
+                tco_breakdown=selected_evaluation.tco_breakdown,
             )
 
         if state.opponent_model:
@@ -780,19 +880,22 @@ class BuyerAgent:
             )
 
         seller_lever = self._seller_lever(seller_strategy)
-        seller_tco = self.negotiation_engine.calculate_tco(seller_offer.components)
-        seller_utility = self.negotiation_engine.calculate_utility(
-            seller_offer.components,
+
+        # Build seller evaluation first before using it
+        seller_evaluation = self._build_candidate_evaluation(
             request,
-            vendor=state.vendor,
-            is_buyer=False,
-        )
-        buyer_view = self.negotiation_engine.calculate_utility(
+            state.vendor,
             seller_offer.components,
-            request,
-            vendor=state.vendor,
-            is_buyer=True,
+            seller_lever,
+            policy_result=seller_policy,
+            guardrail_alerts=seller_guardrails,
+            rationale=[f"Strategy {seller_strategy.value}"] + seller_exchange_notes,
+            is_buyer_proposal=False,
         )
+
+        seller_tco = seller_evaluation.tco
+        seller_utility = seller_evaluation.seller_utility or 0.0
+        buyer_view = seller_evaluation.buyer_utility
 
         if self.audit_service:
             self.audit_service.record_move(
@@ -810,10 +913,15 @@ class BuyerAgent:
                 policy_notes=self._policy_notes(seller_policy.violations),
                 guardrail_notes=self._guardrail_notes(seller_guardrails),
                 compliance_notes=compliance_notes,
+                buyer_breakdown=seller_evaluation.buyer_breakdown,
+                seller_breakdown=seller_evaluation.seller_breakdown,
+                tco_breakdown=seller_evaluation.tco_breakdown,
             )
 
 
         decision = self.negotiation_engine.decide_next_move(plan, state, seller_offer)
+        if forced_drop:
+            decision = NegotiationDecision.DROP
         should_close, reason = self.negotiation_engine.should_close_deal(state, seller_offer.components, request)
 
         if decision == NegotiationDecision.DROP:
@@ -821,12 +929,14 @@ class BuyerAgent:
             reason = "buyer_drop"
             state.outcome_state = "dropped"
             state.outcome_reason = reason
+            state.fsm_state = NegotiationLifecycle.DROPPED.value
         elif should_close:
             if previous_offer and abs(seller_offer.components.unit_price - previous_offer.unit_price) < 1e-2:
                 state.outcome_state = "accepted_no_concession"
             else:
                 state.outcome_state = "accepted"
             state.outcome_reason = reason
+            state.fsm_state = NegotiationLifecycle.ACCEPTED.value
 
         blocking_buyer = any(v.blocking for v in policy_result.violations)
         blocking_seller = any(v.blocking for v in seller_policy.violations)
@@ -835,18 +945,12 @@ class BuyerAgent:
             should_close = True
             reason = "policy_blocked"
 
-        seller_evaluation = self._build_candidate_evaluation(
-            request,
-            state.vendor,
-            seller_offer.components,
-            seller_lever,
-            policy_result=seller_policy,
-            guardrail_alerts=seller_guardrails,
-            rationale=[f"Strategy {seller_strategy.value}"] + seller_exchange_notes,
-            is_buyer_proposal=False,
-        )
         seller_delta_utility = seller_evaluation.seller_utility - seller_projection
         seller_delta_tco = buyer_tco - seller_evaluation.tco
+
+        if not selected_evaluation.valid:
+            state.outcome_state = "policy_blocked"
+            state.outcome_reason = "blocking_policy_or_guardrail"
 
         if self.memory_service:
             buyer_round_memory = RoundMemory(
@@ -890,17 +994,66 @@ class BuyerAgent:
         vendor: VendorProfile,
         offer: Optional[Offer],
         state: VendorNegotiationState,
-    ) -> Dict[str, float]:
+    ) -> Dict[str, object]:
         tier_key = str(request.quantity)
         list_price = vendor.price_tiers.get(tier_key, offer.components.unit_price if offer else 0.0)
         clearing_price = offer.components.unit_price if offer else list_price
         savings = max((list_price - clearing_price) * request.quantity, 0.0)
+
+        # Compute final TCO breakdown and utilities if offer exists
+        final_tco_breakdown = {}
+        final_buyer_utility = 0.0
+        final_seller_utility = 0.0
+
+        if offer:
+            tco_breakdown = self.scoring_service.compute_tco_breakdown(offer.components)
+            final_tco_breakdown = tco_breakdown.as_dict()
+
+            # Compute final utilities
+            summary = getattr(state, "match_summary", None)
+            feature_score = summary.feature.score if summary else 0.0
+            compliance_score = summary.compliance.score if summary else 0.0
+            sla_score = summary.sla_score if summary else 0.0
+            budget_per_unit = 0.0
+            if request.budget_max and request.quantity:
+                budget_per_unit = request.budget_max / request.quantity
+
+            buyer_bd = compute_buyer_utility(
+                unit_price=offer.components.unit_price,
+                budget_per_unit=budget_per_unit,
+                feature_score=feature_score,
+                compliance_score=compliance_score,
+                sla_score=sla_score,
+            )
+            final_buyer_utility = buyer_bd.buyer_utility
+
+            seller_bd = compute_seller_utility(
+                proposed_price=offer.components.unit_price,
+                list_price=list_price,
+                floor_price=vendor.guardrails.price_floor or offer.components.unit_price,
+                min_accept_threshold=SELLER_ACCEPT_THRESHOLD,
+            )
+            final_seller_utility = seller_bd.seller_utility
+
+        # ZOPA basis information
+        budget_per_unit = (request.budget_max / request.quantity) if request.budget_max and request.quantity else None
+        seller_floor = vendor.guardrails.price_floor
+        min_concession_price = state.min_concession_price
+
         return {
             "rounds_completed": float(state.round),
             "savings": savings,
             "compliance": state.compliance_summary,
             "outcome_state": state.outcome_state,
             "outcome_reason": state.outcome_reason,
+            "final_tco_breakdown": final_tco_breakdown,
+            "final_buyer_utility": final_buyer_utility,
+            "final_seller_utility": final_seller_utility,
+            "zopa_basis": {
+                "buyer_budget_per_unit": budget_per_unit,
+                "seller_floor": seller_floor,
+                "min_concession_price": min_concession_price,
+            }
         }
 
     def bundle_and_explain(self, offers: Dict[str, Offer]) -> Dict[str, Dict[str, List[str]]]:

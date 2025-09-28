@@ -39,6 +39,9 @@ class AuditTrailService:
         policy_notes: Optional[Iterable[str]] = None,
         guardrail_notes: Optional[Iterable[str]] = None,
         compliance_notes: Optional[Iterable[str]] = None,
+        buyer_breakdown: Optional[Dict[str, float]] = None,
+        seller_breakdown: Optional[Dict[str, float]] = None,
+        tco_breakdown: Optional[Dict[str, float]] = None,
     ) -> None:
         session = self.start_session(request_id, vendor_id)
         move = MoveLog(
@@ -51,6 +54,9 @@ class AuditTrailService:
                 buyer_utility=buyer_utility,
                 seller_utility=seller_utility,
                 tco=tco,
+                buyer_components=dict(buyer_breakdown or {}),
+                seller_components=dict(seller_breakdown or {}),
+                tco_breakdown=dict(tco_breakdown or {}),
             ),
             decision=decision,
             policy_notes=list(policy_notes or []),
