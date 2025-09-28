@@ -3,15 +3,26 @@ from __future__ import annotations
 import json
 import re
 from dataclasses import dataclass, field
+from datetime import datetime
 from enum import Enum
 from pathlib import Path
 from typing import Callable, Dict, Iterable, List, Optional, Tuple
+from base64 import b64encode
+import logging
 
 from ..agents import BuyerAgent, BuyerAgentConfig
 from ..data import SeedVendorRecord, load_seed_catalog
-from datetime import datetime
 
+from ..analytics import ProcurementAnalytics
+from ..config import ProcurementConfig
+from ..integrations import (
+    DocuSignIntegration,
+    ERPIntegration,
+    SlackIntegration,
+    VendorDataScraper,
+)
 from ..models import Offer, OfferComponents, Request, RequestType, VendorProfile
+from ..models.enums import PaymentTerms
 from ..services import (
     AuditTrailService,
     ComplianceService,
@@ -24,6 +35,7 @@ from ..services import (
     ScoringService,
 )
 from ..services.negotiation_engine import ExchangePolicy, ConcessionEngine
+from ..services.contract_generator import ContractGenerator, ContractGenerationError
 from ..services.vendor_matching import evaluate_vendor_against_request, VendorMatchSummary
 from ..services.compliance_service import ComplianceAssessment
 from ..services.scoring_service import ScoreWeights
@@ -33,7 +45,7 @@ from ..utils.input_sanitizer import (
     sanitize_comma_separated_features,
     sanitize_simple_list,
 )
-
+logger = logging.getLogger(__name__)
 
 @dataclass
 class PipelineServices:
@@ -613,10 +625,55 @@ class SaaSProcurementPipeline:
 
     def __init__(
         self,
-        seeds_path: str | Path,
+        seeds_path: str | Path | None = None,
+        *,
+        config: ProcurementConfig | None = None,
+        vendor_scraper: VendorDataScraper | None = None,
+        analytics: ProcurementAnalytics | None = None,
+        contract_generator: ContractGenerator | None = None,
+        slack_integration: SlackIntegration | None = None,
+        docusign_integration: DocuSignIntegration | None = None,
+        erp_integration: ERPIntegration | None = None,
         buyer_agent_factory: Optional[Callable[[], Tuple[BuyerAgent, PipelineServices]]] = None,
     ) -> None:
-        self.seeds_path = Path(seeds_path)
+        self.config = config or ProcurementConfig()
+        resolved_path = Path(seeds_path) if seeds_path else self.config.seed_path
+        self.seeds_path = resolved_path.expanduser().resolve()
+        self.vendor_scraper = vendor_scraper or (
+            VendorDataScraper() if self.config.enable_live_enrichment else None
+        )
+        self.analytics = analytics if analytics is not None else (
+            ProcurementAnalytics() if self.config.analytics_enabled else None
+        )
+        self.contract_generator = contract_generator or ContractGenerator(
+            template_path=Path(self.config.contract_template_path).expanduser().resolve()
+            if self.config.contract_template_path
+            else None
+        )
+        self.slack_integration = slack_integration or (
+            SlackIntegration(
+                webhook_url=self.config.slack_webhook_url,
+                bot_token=self.config.slack_bot_token,
+            )
+            if (self.config.slack_webhook_url or self.config.slack_bot_token)
+            else None
+        )
+        self.docusign_integration = docusign_integration or (
+            DocuSignIntegration(
+                api_base=self.config.docusign_api_base,
+                integration_key=self.config.docusign_integration_key,
+            )
+            if self.config.docusign_integration_key
+            else None
+        )
+        self.erp_integration = erp_integration or (
+            ERPIntegration(
+                api_base=self.config.erp_api_base,
+                api_key=self.config.erp_api_key,
+            )
+            if self.config.erp_api_base and self.config.erp_api_key
+            else None
+        )
         self._buyer_agent_factory = buyer_agent_factory or self._default_buyer_agent_factory
 
     def run(
@@ -648,6 +705,14 @@ class SaaSProcurementPipeline:
         vendor_summary = [self._json_safe(summary) for summary in vendor_summary]
         bundles = self._json_safe(bundles)
 
+        contracts = self._generate_contracts(request, negotiation_results)
+        encoded_contracts = {
+            vendor_id: b64encode(content).decode("utf-8")
+            for vendor_id, content in contracts.items()
+        }
+        analytics_payload = self._build_analytics_payload(negotiation_results)
+        integration_report = self._dispatch_integrations(request, negotiation_results, contracts)
+
         return {
             "request": intake.summarize(request),
             "clarification_questions": [
@@ -671,6 +736,9 @@ class SaaSProcurementPipeline:
             "vendors": vendor_summary,
             "audit": self._json_safe(audit_payload),
             "shortlist_notice": shortlist_notice,
+            "contracts": encoded_contracts,
+            "analytics": analytics_payload,
+            "integrations": integration_report,
         }
 
     def _execute(
@@ -682,6 +750,29 @@ class SaaSProcurementPipeline:
         top_n: int,
     ) -> Tuple[List[VendorSelection], Dict[str, NegotiationResult], Dict[str, dict], Dict[str, Offer], Optional[Dict[str, object]]]:
         seed_records = load_seed_catalog(self.seeds_path)
+        if self.vendor_scraper and self.config.enable_live_enrichment:
+            category = self._resolve_category(request)
+            scraped_profiles = self.vendor_scraper.scrape_g2_data(category)
+            enriched_profiles = [
+                self.vendor_scraper.enrich_with_compliance_data(profile)
+                for profile in scraped_profiles
+            ]
+            refreshed_profiles: List[VendorProfile] = []
+            for profile in enriched_profiles:
+                try:
+                    refreshed_profiles.append(
+                        self.vendor_scraper.update_pricing_from_websites(profile.vendor_id)
+                    )
+                except Exception:
+                    refreshed_profiles.append(profile)
+            enriched_records = self._profiles_to_seed_records(refreshed_profiles)
+            if enriched_records:
+                existing_ids = {record.seed_id for record in seed_records}
+                for record in enriched_records:
+                    if record.seed_id in existing_ids:
+                        continue
+                    seed_records.append(record)
+                    existing_ids.add(record.seed_id)
         picker = VendorPicker(services.compliance_service)
         selections = picker.pick(request, seed_records, top_n=top_n)
         shortlist_notice: Optional[Dict[str, object]] = None
@@ -737,16 +828,28 @@ class SaaSProcurementPipeline:
     # region factories
     def _default_buyer_agent_factory(self) -> Tuple[BuyerAgent, PipelineServices]:
         policy_engine = PolicyEngine()
-        compliance_service = ComplianceService(mandatory_certifications=["soc2"])
+        compliance_service = ComplianceService(
+            mandatory_certifications=[cert.lower() for cert in self.config.mandatory_certifications]
+        )
         guardrail_service = GuardrailService(run_mode="simulation")
-        scoring_service = ScoringService(weights=ScoreWeights())
-        negotiation_engine = NegotiationEngine(policy_engine, scoring_service)
+        scoring_service = ScoringService(weights=self.config.to_score_weights())
+        stalled_rounds = max(2, min(self.config.max_negotiation_rounds // 2, 5))
+        negotiation_engine = NegotiationEngine(
+            policy_engine,
+            scoring_service,
+            buyer_accept_threshold=self.config.buyer_accept_threshold,
+            seller_accept_threshold=self.config.seller_accept_threshold,
+            max_stalled_rounds=stalled_rounds,
+        )
         explainability_service = ExplainabilityService()
         audit_service = AuditTrailService()
         memory_service = MemoryService()
         retrieval_service = RetrievalService()
 
         llm_client = self._mock_llm_client()
+
+        buyer_config = BuyerAgentConfig()
+        setattr(buyer_config, "max_rounds", self.config.max_negotiation_rounds)
 
         buyer_agent = BuyerAgent(
             policy_engine=policy_engine,
@@ -756,7 +859,7 @@ class SaaSProcurementPipeline:
             negotiation_engine=negotiation_engine,
             explainability_service=explainability_service,
             llm_client=llm_client,
-            config=BuyerAgentConfig(),
+            config=buyer_config,
             audit_service=audit_service,
             memory_service=memory_service,
             retrieval_service=retrieval_service,
@@ -849,6 +952,150 @@ class SaaSProcurementPipeline:
 
     # endregion
 
+    def _generate_contracts(
+        self,
+        request: Request,
+        negotiations: Dict[str, NegotiationResult],
+    ) -> Dict[str, bytes]:
+        if not self.contract_generator:
+            return {}
+        contracts: Dict[str, bytes] = {}
+        for vendor_id, result in negotiations.items():
+            offer = result.offer
+            if not offer or not offer.accepted:
+                continue
+            try:
+                contracts[vendor_id] = self.contract_generator.generate_contract(offer, request)
+            except ContractGenerationError as exc:
+                logger.warning("Contract generation failed for %s: %s", vendor_id, exc)
+            except Exception as exc:  # pragma: no cover - defensive
+                logger.warning("Unexpected contract error for %s: %s", vendor_id, exc)
+        return contracts
+
+    def _build_analytics_payload(self, negotiations: Dict[str, NegotiationResult]) -> Dict[str, object]:
+        if not negotiations or not self.analytics:
+            return {}
+        values = list(negotiations.values())
+        payload = {
+            "savings": self.analytics.generate_savings_report(values),
+            "compliance": self.analytics.compliance_coverage_analysis(values),
+            "performance_by_category": self.analytics.negotiation_performance_by_category(values),
+        }
+        return self._json_safe(payload)
+
+    def _dispatch_integrations(
+        self,
+        request: Request,
+        negotiations: Dict[str, NegotiationResult],
+        contracts: Dict[str, bytes],
+    ) -> Dict[str, object]:
+        report: Dict[str, object] = {}
+        if not negotiations:
+            return report
+
+        if self.slack_integration:
+            events: List[Dict[str, object]] = []
+            for result in negotiations.values():
+                offer = result.offer
+                if offer.accepted:
+                    try:
+                        self.slack_integration.notify_negotiation_complete(offer)
+                        events.append({"vendor_id": offer.vendor_id, "status": "sent"})
+                    except Exception as exc:  # pragma: no cover - network issues
+                        events.append({"vendor_id": offer.vendor_id, "error": str(exc)})
+            if events:
+                report["slack"] = events
+
+        if self.erp_integration:
+            purchase_orders: List[Dict[str, object]] = []
+            for result in negotiations.values():
+                offer = result.offer
+                if offer.accepted:
+                    try:
+                        po_id = self.erp_integration.create_purchase_order(offer)
+                        purchase_orders.append({"vendor_id": offer.vendor_id, "po_id": po_id})
+                    except Exception as exc:  # pragma: no cover - network issues
+                        purchase_orders.append({"vendor_id": offer.vendor_id, "error": str(exc)})
+            if purchase_orders:
+                report["erp"] = purchase_orders
+
+        if self.docusign_integration:
+            envelopes: List[Dict[str, object]] = []
+            signers = request.policy_context.approval_chain if request.policy_context else []
+            for vendor_id, content in contracts.items():
+                if not signers:
+                    continue
+                try:
+                    envelope_id = self.docusign_integration.send_for_signature(content, signers)
+                    envelopes.append({"vendor_id": vendor_id, "envelope_id": envelope_id})
+                except Exception as exc:  # pragma: no cover - network issues
+                    envelopes.append({"vendor_id": vendor_id, "error": str(exc)})
+            if envelopes:
+                report["docusign"] = envelopes
+
+        return report
+
+    def _resolve_category(self, request: Request) -> str:
+        specs = request.specs or {}
+        if "_category_override" in specs:
+            return str(specs["_category_override"])
+        if "category" in specs:
+            return str(specs["category"])
+        if "type" in specs:
+            return str(specs["type"])
+        if request.must_haves:
+            return request.must_haves[0].lower()
+        return "saas"
+
+    def _profiles_to_seed_records(self, profiles: Iterable[VendorProfile]) -> List[SeedVendorRecord]:
+        records: List[SeedVendorRecord] = []
+        for profile in profiles:
+            tiers = {str(key): float(value) for key, value in profile.price_tiers.items()}
+            list_price = min(tiers.values()) if tiers else profile.guardrails.price_floor or 0.0
+            if list_price <= 0:
+                list_price = 100.0
+            floor_price = profile.guardrails.price_floor or max(list_price * 0.7, 1.0)
+            payment_terms = self._normalize_payment_terms(profile.guardrails.payment_terms_allowed)
+            behavior = "balanced"
+            if profile.reliability_stats:
+                behavior = str(profile.reliability_stats.get("behavior_profile", "balanced"))
+            record = SeedVendorRecord(
+                seed_id=profile.vendor_id,
+                name=profile.name,
+                category=next(iter(profile.capability_tags), "saas"),
+                list_price=float(list_price),
+                floor_price=float(floor_price),
+                payment_terms=payment_terms,
+                compliance=[cert.lower() for cert in profile.certifications],
+                features=[tag.lower() for tag in profile.capability_tags],
+                regions=list(profile.regions),
+                support=profile.reliability_stats or {"tier": "standard"},
+                behavior_profile=behavior,
+                price_tiers=tiers or {"100": float(list_price)},
+                exchange_policy=ExchangePolicy(),
+                billing_cadence=profile.billing_cadence or "per_seat_per_year",
+                raw={"source": "scraped", "vendor_id": profile.vendor_id},
+            )
+            records.append(record)
+        return records
+
+    def _normalize_payment_terms(self, terms: Iterable[str]) -> List[PaymentTerms]:
+        normalized: List[PaymentTerms] = []
+        for value in terms:
+            try:
+                normalized.append(PaymentTerms(value))
+            except ValueError:
+                cleaned = value.replace(" ", "").replace("-", "").upper()
+                for candidate in PaymentTerms:
+                    if candidate.value.replace(" ", "").replace("-", "").upper() == cleaned:
+                        normalized.append(candidate)
+                        break
+                else:
+                    normalized.append(PaymentTerms.NET_30)
+        if not normalized:
+            normalized.append(PaymentTerms.NET_30)
+        return normalized
+
     def _json_safe(self, payload):
         if isinstance(payload, dict):
             return {key: self._json_safe(value) for key, value in payload.items()}
@@ -858,6 +1105,8 @@ class SaaSProcurementPipeline:
             return payload.isoformat()
         if isinstance(payload, Enum):
             return payload.value
+        if isinstance(payload, bytes):
+            return b64encode(payload).decode("utf-8")
         return payload
 
 

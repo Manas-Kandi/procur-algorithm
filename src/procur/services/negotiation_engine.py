@@ -3,6 +3,7 @@ from __future__ import annotations
 import math
 import random
 from dataclasses import dataclass, field
+from datetime import datetime
 from decimal import Decimal
 from enum import Enum
 from typing import Dict, List, Optional, Tuple
@@ -62,6 +63,15 @@ class OfferBundle:
     value_adds: Dict[str, float]
     tco: float = 0
     utility: float = 0
+
+
+@dataclass
+class CompetingOffer:
+    """Comparable offer from another vendor used for leverage."""
+
+    vendor_id: str
+    unit_price: float
+    total_cost: float
 
 
 @dataclass
@@ -129,14 +139,101 @@ class VendorNegotiationState:
     estimated_min_concession_price: Optional[float] = None
     concession_notes: List[str] = field(default_factory=list)
     match_summary: Optional[object] = None
+    competing_offers: List[CompetingOffer] = field(default_factory=list)
 
+
+class AdvancedNegotiationStrategies:
+    """Optional advanced tactics layered on top of the core engine."""
+
+    def __init__(self, engine: "NegotiationEngine") -> None:
+        self.engine = engine
+
+    # ------------------------------------------------------------------
+    # Tactical levers
+    # ------------------------------------------------------------------
+    def competitor_leveraging(self, state: VendorNegotiationState) -> Optional[NegotiationStrategy]:
+        """Recommend a strategy when stronger competing offers exist."""
+        if not state.competing_offers:
+            return None
+        if state.best_offer is None:
+            return None
+
+        best_competitor = min(state.competing_offers, key=lambda offer: offer.total_cost)
+        best_price = best_competitor.unit_price
+        current_price = state.best_offer.components.unit_price
+
+        # Require a meaningful delta (≥5%) before escalating
+        if current_price <= 0:
+            return None
+        price_gap = (current_price - best_price) / current_price
+        if price_gap >= 0.05:
+            note = (
+                f"Leverage competitor {best_competitor.vendor_id} (${best_price:,.2f})"
+                f" vs current ${current_price:,.2f}"
+            )
+            state.concession_notes.append(note)
+            return NegotiationStrategy.PRICE_PRESSURE
+        return None
+
+    def volume_discounting(self, request: Request) -> float:
+        """Calculate additional discount based on deal volume."""
+        if request.quantity >= 500:
+            return 0.20
+        if request.quantity >= 250:
+            return 0.18
+        if request.quantity > 100:
+            return 0.15
+        return 0.0
+
+    def seasonal_timing(self, vendor: VendorProfile) -> float:
+        """Increase leverage near quarter/year end when vendors chase targets."""
+        if self.is_end_of_quarter():
+            return 0.10
+        if self.is_end_of_year():
+            return 0.12
+        return 0.0
+
+    # ------------------------------------------------------------------
+    # Utility helpers
+    # ------------------------------------------------------------------
+    @staticmethod
+    def is_end_of_quarter() -> bool:
+        today = datetime.utcnow()
+        return today.month in {3, 6, 9, 12} and today.day >= 20
+
+    @staticmethod
+    def is_end_of_year() -> bool:
+        today = datetime.utcnow()
+        return today.month == 12 and today.day >= 10
+
+    def combined_discount(self, request: Request, vendor: VendorProfile) -> float:
+        volume = self.volume_discounting(request)
+        seasonal = self.seasonal_timing(vendor)
+        return min(volume + seasonal, 0.30)
 
 class NegotiationEngine:
     """Enhanced negotiation engine with sophisticated algorithms."""
 
-    def __init__(self, policy_engine: PolicyEngine, scoring_service: ScoringService) -> None:
+    def __init__(
+        self,
+        policy_engine: PolicyEngine,
+        scoring_service: ScoringService,
+        *,
+        buyer_accept_threshold: float = 0.75,
+        seller_accept_threshold: float = 0.10,
+        max_stalled_rounds: int = 3,
+    ) -> None:
         self.policy_engine = policy_engine
         self.scoring_service = scoring_service
+        self.buyer_accept_threshold = buyer_accept_threshold
+        self.seller_accept_threshold = seller_accept_threshold
+        self.max_stalled_rounds = max_stalled_rounds
+        # Keep module-level constants in sync for legacy consumers
+        global BUYER_ACCEPT_THRESHOLD, SELLER_ACCEPT_THRESHOLD, MAX_STALLED_ROUNDS
+        BUYER_ACCEPT_THRESHOLD = buyer_accept_threshold
+        SELLER_ACCEPT_THRESHOLD = seller_accept_threshold
+        MAX_STALLED_ROUNDS = max_stalled_rounds
+        self.advanced_strategies = AdvancedNegotiationStrategies(self)
 
     def _offer_to_tco_inputs(self, offer: OfferComponents) -> TCOInputs:
         one_time_positive = sum(value for value in offer.one_time_fees.values() if value >= 0)
@@ -253,11 +350,15 @@ class NegotiationEngine:
         round_num = state.round
         plan = state.plan
 
-        if plan and state.stalemate_rounds >= MAX_STALLED_ROUNDS:
+        advanced = self.advanced_strategies.competitor_leveraging(state)
+        if advanced:
+            return advanced
+
+        if plan and state.stalemate_rounds >= self.max_stalled_rounds:
             next_lever = self.next_concession(plan, state)
             state.stalemate_rounds = 0
             return self._strategy_for_lever(next_lever)
-        
+
         if round_num == 1:
             return NegotiationStrategy.PRICE_ANCHOR
         elif round_num == 2 and state.opponent_model and state.opponent_model.consecutive_no_price_moves > 0:
@@ -273,12 +374,12 @@ class NegotiationEngine:
 
     def detect_stalemate(self, state: VendorNegotiationState) -> bool:
         """Detect if negotiation is stuck with minimal utility/TCO improvement"""
-        if len(state.history) < MAX_STALLED_ROUNDS:
+        if len(state.history) < self.max_stalled_rounds:
             return False
 
         # Check if last MAX_STALLED_ROUNDS rounds had minimal progress
-        recent_offers = state.history[-MAX_STALLED_ROUNDS:]
-        if len(recent_offers) >= MAX_STALLED_ROUNDS:
+        recent_offers = state.history[-self.max_stalled_rounds:]
+        if len(recent_offers) >= self.max_stalled_rounds:
             utility_changes = []
             tco_changes = []
 
@@ -348,9 +449,26 @@ class NegotiationEngine:
         """Generate target bundle based on strategy with consistency enforcement"""
         base_price = current_offer.unit_price
         policy = state.plan.exchange_policy if state.plan else ExchangePolicy()
+        leverage_discount = self.advanced_strategies.combined_discount(request, state.vendor)
+        discount_noted = False
+
+        def apply_extra(price: float) -> float:
+            nonlocal discount_noted
+            if leverage_discount <= 0:
+                return price
+            adjusted = price * (1 - leverage_discount)
+            if not discount_noted:
+                state.concession_notes.append(
+                    f"Applied advanced leverage discount {leverage_discount:.0%}"
+                )
+                discount_noted = True
+            floor_price = state.vendor.guardrails.price_floor or 0.0
+            minimum = floor_price if floor_price else adjusted
+            return max(adjusted, minimum)
 
         if strategy == NegotiationStrategy.PRICE_ANCHOR:
             target_price = base_price * 0.85  # Aggressive anchor
+            target_price = min(target_price, apply_extra(base_price))
             return OfferBundle(
                 price=target_price,
                 term_months=current_offer.term_months,
@@ -363,6 +481,7 @@ class NegotiationEngine:
             new_term = max(current_offer.term_months + 12, 24)  # Force increase
             price_reduction = self._term_discount(policy, current_offer.term_months, new_term)
             target_price = base_price * (1 - price_reduction)
+            target_price = apply_extra(target_price)
             
             return OfferBundle(
                 price=max(target_price, base_price * 0.90),  # Floor at 10% reduction
@@ -375,6 +494,7 @@ class NegotiationEngine:
             # Apply deterministic exchange rate for faster payment
             discount = self._payment_discount(policy, PaymentTerms.NET_15)
             target_price = base_price * (1 - discount)
+            target_price = apply_extra(target_price)
             return OfferBundle(
                 price=target_price,
                 term_months=current_offer.term_months,
@@ -398,14 +518,14 @@ class NegotiationEngine:
         elif strategy == NegotiationStrategy.ULTIMATUM:
             floor_estimate = state.opponent_model.price_floor_estimate if state.opponent_model else base_price * 0.8
             return OfferBundle(
-                price=max(floor_estimate + 25, base_price * 0.92),
+                price=max(apply_extra(floor_estimate + 25), base_price * 0.92),
                 term_months=12,
                 payment_terms=PaymentTerms.NET_30,
                 value_adds={}
             )
         else:  # Default incremental with minimum step
             price_reduction = max(policy.min_step_abs, base_price * 0.08)
-            target_price = base_price - price_reduction
+            target_price = apply_extra(base_price - price_reduction)
             return OfferBundle(
                 price=target_price,
                 term_months=current_offer.term_months,
@@ -492,7 +612,7 @@ class NegotiationEngine:
             proposed_price=current_offer.unit_price,
             list_price=list_price,
             floor_price=floor_price,
-            min_accept_threshold=SELLER_ACCEPT_THRESHOLD,
+            min_accept_threshold=self.seller_accept_threshold,
         )
 
         # Before transitioning to ACCEPTED, enforce all invariants:
@@ -502,11 +622,11 @@ class NegotiationEngine:
             return False, "budget_exceeded"
 
         # 2. Buyer utility threshold
-        if buyer_bd.buyer_utility < BUYER_ACCEPT_THRESHOLD:
+        if buyer_bd.buyer_utility < self.buyer_accept_threshold:
             return False, "buyer_utility_too_low"
 
         # 3. Seller utility threshold
-        if seller_bd.seller_utility < SELLER_ACCEPT_THRESHOLD:
+        if seller_bd.seller_utility < self.seller_accept_threshold:
             return False, "seller_utility_too_low"
 
         # 4. Policy compliance

@@ -9,6 +9,7 @@ from .negotiation_engine import NegotiationEngine, NegotiationPlan, VendorNegoti
 from .policy_engine import PolicyEngine, PolicyResult, PolicyViolation
 from .retrieval_service import RetrievalService, RetrievalResult
 from .scoring_service import ScoringService, ScoreWeights
+from .contract_generator import ContractGenerator, ContractGenerationError
 
 __all__ = [
     "ComplianceService",
@@ -28,4 +29,6 @@ __all__ = [
     "RetrievalResult",
     "ScoringService",
     "ScoreWeights",
+    "ContractGenerator",
+    "ContractGenerationError",
 ]

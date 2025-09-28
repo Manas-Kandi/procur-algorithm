@@ -33,8 +33,7 @@ from ..services.negotiation_engine import (
     SellerStrategy,
     NegotiationLifecycle,
     ConcessionEngine,
-    BUYER_ACCEPT_THRESHOLD,
-    SELLER_ACCEPT_THRESHOLD,
+    CompetingOffer,
 )
 from ..services.evaluation import detect_zopa
 from ..services.evaluation import compute_buyer_utility, compute_seller_utility, UtilityBreakdown
@@ -118,7 +117,10 @@ class BuyerAgent:
 
     def plan_negotiation(self, request: Request) -> NegotiationPlan:
         anchors = {"price": request.budget_min or 0.0}
-        stop_conditions = {"utility": BUYER_ACCEPT_THRESHOLD, "risk": 0.5}
+        stop_conditions = {
+            "utility": self.negotiation_engine.buyer_accept_threshold,
+            "risk": 0.5,
+        }
         allowed_concessions = list(self.config.concession_ladder)
         return NegotiationPlan(
             anchors=anchors,
@@ -133,8 +135,14 @@ class BuyerAgent:
         vendors: List[VendorProfile],
     ) -> Dict[str, Offer]:
         offers: Dict[str, Offer] = {}
+        competing_context = self._build_competing_offers(request, vendors)
         for vendor in vendors:
-            state = self._build_state(request, vendor)
+            competitor_set = [
+                offer
+                for offer in competing_context
+                if offer.vendor_id != vendor.vendor_id
+            ]
+            state = self._build_state(request, vendor, competitor_set)
             compliance_assessment = self.compliance_service.assess_vendor(request, vendor)
             compliance_findings = self.compliance_service.evaluate_vendor(request, vendor)
             compliance_messages = compliance_assessment.summaries()
@@ -266,7 +274,30 @@ class BuyerAgent:
 
         return offers
 
-    def _build_state(self, request: Request, vendor: VendorProfile) -> VendorNegotiationState:
+    def _build_competing_offers(
+        self,
+        request: Request,
+        vendors: Iterable[VendorProfile],
+    ) -> List[CompetingOffer]:
+        competing: List[CompetingOffer] = []
+        for vendor in vendors:
+            baseline = self._baseline_offer(request, vendor)
+            total_cost = self.negotiation_engine.calculate_tco(baseline)
+            competing.append(
+                CompetingOffer(
+                    vendor_id=vendor.vendor_id,
+                    unit_price=baseline.unit_price,
+                    total_cost=total_cost,
+                )
+            )
+        return competing
+
+    def _build_state(
+        self,
+        request: Request,
+        vendor: VendorProfile,
+        competing_offers: Optional[List[CompetingOffer]] = None,
+    ) -> VendorNegotiationState:
         plan = self.plan_negotiation(request)
         tier_key = str(request.quantity)
         anchor_price = vendor.price_tiers.get(tier_key, request.budget_max or 0.0)
@@ -335,6 +366,9 @@ class BuyerAgent:
             seller_floor = opponent_model.price_floor_estimate
         if seller_floor is None:
             seller_floor = floor_price
+
+        if competing_offers:
+            state.competing_offers = competing_offers
 
         if budget_per_unit is not None and not detect_zopa(
             buyer_budget_per_unit=budget_per_unit,
@@ -489,7 +523,7 @@ class BuyerAgent:
             proposed_price=cloned_offer.unit_price,
             list_price=list_price,
             floor_price=floor_price,
-            min_accept_threshold=SELLER_ACCEPT_THRESHOLD,
+            min_accept_threshold=self.negotiation_engine.seller_accept_threshold,
         )
         seller_util = seller_info.seller_utility
         buyer_util = buyer_breakdown.buyer_utility
@@ -1066,7 +1100,7 @@ class BuyerAgent:
                 proposed_price=offer.components.unit_price,
                 list_price=list_price,
                 floor_price=vendor.guardrails.price_floor or offer.components.unit_price,
-                min_accept_threshold=SELLER_ACCEPT_THRESHOLD,
+                min_accept_threshold=self.negotiation_engine.seller_accept_threshold,
             )
             final_seller_utility = seller_bd.seller_utility
 
