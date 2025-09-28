@@ -1,51 +1,23 @@
-"""Integrations with third-party data sources and collaboration tools."""
+"""Integrations with third-party tools.
 
-from .base_scraper import BaseScraper, VendorData, ScrapingConfig
-from .g2_scraper import G2Scraper
-from .pricing_scraper import PricingScraper
-from .compliance_scraper import ComplianceScraper
-from .data_validator import VendorDataValidator, QualityReport
-from .enrichment_pipeline import VendorEnrichmentPipeline, EnrichmentConfig
-from .cache_manager import CacheManager
+This module keeps imports lightweight so optional dependencies like ``aiohttp``
+or ``slack_sdk`` are only required when the corresponding integrations are used.
+"""
 
-# Legacy imports (if vendor_scraper and tooling exist)
-try:
+__all__: list[str] = []
+
+# Optional data scraper (depends on ``httpx`` & ``beautifulsoup4``)
+try:  # pragma: no cover - optional dependency
     from .vendor_scraper import VendorDataScraper
-except ImportError:
-    VendorDataScraper = None
 
-try:
-    from .tooling import DocuSignIntegration, ERPIntegration, SlackIntegration
-except ImportError:
-    DocuSignIntegration = None
-    ERPIntegration = None
-    SlackIntegration = None
-
-__all__ = [
-    # Core scraping infrastructure
-    "BaseScraper",
-    "VendorData",
-    "ScrapingConfig",
-
-    # Specific scrapers
-    "G2Scraper",
-    "PricingScraper",
-    "ComplianceScraper",
-
-    # Data validation and quality
-    "VendorDataValidator",
-    "QualityReport",
-
-    # Orchestration and pipeline
-    "VendorEnrichmentPipeline",
-    "EnrichmentConfig",
-
-    # Caching and performance
-    "CacheManager",
-]
-
-# Add legacy components if available
-if VendorDataScraper is not None:
     __all__.append("VendorDataScraper")
-if SlackIntegration is not None:
+except ImportError:  # pragma: no cover - optional dependency
+    VendorDataScraper = None  # type: ignore
+
+# Optional collaboration integrations (depend on ``httpx``)
+try:  # pragma: no cover - optional dependency
+    from .tooling import DocuSignIntegration, ERPIntegration, SlackIntegration
+
     __all__.extend(["SlackIntegration", "DocuSignIntegration", "ERPIntegration"])
+except ImportError:  # pragma: no cover - optional dependency
+    SlackIntegration = DocuSignIntegration = ERPIntegration = None  # type: ignore

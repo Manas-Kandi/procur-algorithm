@@ -5,7 +5,10 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, Optional
 
-from jinja2 import Template
+try:  # pragma: no cover - optional dependency
+    from jinja2 import Template  # type: ignore
+except ImportError:  # pragma: no cover - optional dependency
+    Template = None  # type: ignore[assignment]
 
 from ..models import Offer, Request
 
@@ -26,16 +29,8 @@ class ContractGenerator:
     template_path: Optional[Path] = None
     template_variables: Optional[Dict[str, object]] = None
 
-    def _load_template(self) -> Template:
-        if self.template_path:
-            template_text = self.template_path.read_text(encoding="utf-8")
-        else:
-            template_text = self._default_template()
-        return Template(template_text)
-
     def generate_contract(self, offer: Offer, request: Request) -> bytes:
         """Render a PDF contract for the negotiated offer."""
-        template = self._load_template()
         components = offer.components
         context = {
             "vendor_name": offer.vendor_id,
@@ -54,8 +49,27 @@ class ContractGenerator:
         if self.template_variables:
             context.update(self.template_variables)
 
-        html = template.render(**context)
+        html = self._render_html(context)
         return self._render_pdf(html)
+
+    def _render_html(self, context: Dict[str, object]) -> str:
+        if Template is not None:
+            template = self._load_template()
+            return template.render(**context)
+        if self.template_path:
+            raise ContractGenerationError(
+                "Custom contract templates require the 'jinja2' package to be installed"
+            )
+        return self._basic_html(context)
+
+    def _load_template(self) -> Template:
+        if Template is None:  # pragma: no cover - guarded by caller
+            raise ContractGenerationError("jinja2 is not installed")
+        if self.template_path:
+            template_text = self.template_path.read_text(encoding="utf-8")
+        else:
+            template_text = self._default_template()
+        return Template(template_text)
 
     def _render_pdf(self, html: str) -> bytes:
         if pdfkit is None:
@@ -65,6 +79,27 @@ class ContractGenerator:
             return pdfkit.from_string(html, False)
         except Exception as exc:  # pragma: no cover - pdfkit internal errors
             raise ContractGenerationError("Failed to render contract PDF") from exc
+
+    def _basic_html(self, context: Dict[str, object]) -> str:
+        return (
+            "<!DOCTYPE html><html lang=\"en\">"
+            "<head><meta charset=\"utf-8\" /><title>Software License Agreement</title></head>"
+            "<body>"
+            f"<h1>Software License Agreement</h1>"
+            f"<p><strong>Vendor:</strong> {context.get('vendor_name')}</p>"
+            f"<p><strong>Customer:</strong> {context.get('customer_name')}</p>"
+            f"<p><strong>Agreement Date:</strong> {context.get('date')}</p>"
+            "<hr />"
+            f"<p><strong>Price:</strong> ${context.get('price', 0):,.2f} per {context.get('billing_cycle')}</p>"
+            f"<p><strong>Term:</strong> {context.get('term_months')} months</p>"
+            f"<p><strong>Quantity:</strong> {context.get('quantity')}</p>"
+            f"<p><strong>Currency:</strong> {context.get('currency')}</p>"
+            f"<p><strong>Payment Terms:</strong> {context.get('payment_terms')}</p>"
+            f"<p><strong>SLA:</strong> {context.get('sla_terms')}</p>"
+            f"<p>This agreement was generated for request {context.get('request_id')}.</p>"
+            f"<p>{context.get('notes', '')}</p>"
+            "</body></html>"
+        )
 
     @staticmethod
     def _default_template() -> str:

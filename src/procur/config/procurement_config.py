@@ -4,7 +4,10 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-import yaml
+try:  # pragma: no cover - optional dependency
+    import yaml  # type: ignore
+except ImportError:  # pragma: no cover - optional dependency
+    yaml = None
 
 from ..services.scoring_service import ScoreWeights
 
@@ -59,6 +62,10 @@ class ProcurementConfig:
         config_path = Path(path)
         if not config_path.exists():
             raise FileNotFoundError(f"Configuration file '{config_path}' not found")
+        if yaml is None:
+            raise ProcurementConfigError(
+                "Loading from YAML requires the 'pyyaml' package."
+            )
         try:
             payload = yaml.safe_load(config_path.read_text(encoding="utf-8")) or {}
         except yaml.YAMLError as exc:  # pragma: no cover - PyYAML specific
