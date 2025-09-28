@@ -23,11 +23,16 @@ from ..services import (
     RetrievalService,
     ScoringService,
 )
-from ..services.negotiation_engine import ExchangePolicy
+from ..services.negotiation_engine import ExchangePolicy, ConcessionEngine
 from ..services.vendor_matching import evaluate_vendor_against_request, VendorMatchSummary
 from ..services.compliance_service import ComplianceAssessment
 from ..services.scoring_service import ScoreWeights
 from ..utils.pricing import annualize_value, normalize_budget_total, price_fit_ratio
+from ..utils.input_sanitizer import (
+    collect_allowed_feature_canonicals,
+    sanitize_comma_separated_features,
+    sanitize_simple_list,
+)
 
 
 @dataclass
@@ -74,6 +79,8 @@ class BuyerIntakeOrchestrator:
         self._budget_hint = (
             "Typical CRM pricing ranges from roughly $200 to $1,200 per seat annually."
         )
+        self._input_prefixes = ("processing your request...",)
+        self._allowed_features = collect_allowed_feature_canonicals()
 
     def run(
         self,
@@ -140,16 +147,37 @@ class BuyerIntakeOrchestrator:
 
     def apply_answers(self, request: Request, answers: Dict[str, str]) -> Request:
         payload = request.model_dump()
+        sanitized_inputs = dict(payload.get("specs", {}).get("_sanitized_inputs", {}))
         for field, value in answers.items():
+            if field == "must_haves":
+                tokens, metadata = sanitize_comma_separated_features(
+                    value,
+                    remove_prefixes=self._input_prefixes,
+                    allowed_features=self._allowed_features,
+                )
+                payload["must_haves"] = tokens
+                sanitized_inputs["must_haves"] = metadata
+                continue
             tokens = [item.strip() for item in value.split(",") if item.strip()]
             if field == "must_haves":
                 payload["must_haves"] = tokens
             elif field == "compliance_requirements":
-                payload["compliance_requirements"] = [token.upper() for token in tokens]
+                cleaned, metadata = sanitize_simple_list(
+                    value, remove_prefixes=self._input_prefixes
+                )
+                payload["compliance_requirements"] = [token.upper() for token in cleaned]
+                if metadata["removed_prefixes"] or metadata["dropped_tokens"]:
+                    sanitized_inputs["compliance_requirements"] = metadata
             elif field == "specs.features":
+                features, metadata = sanitize_comma_separated_features(
+                    value,
+                    remove_prefixes=self._input_prefixes,
+                    allowed_features=self._allowed_features,
+                )
                 specs = dict(payload.get("specs", {}))
-                specs["features"] = tokens
+                specs["features"] = features
                 payload["specs"] = specs
+                sanitized_inputs["specs.features"] = metadata
             elif field == "billing_cadence":
                 cadence = value.strip().lower()
                 if cadence in {"monthly", "per month", "month", "per-seat per month", "per seat per month"}:
@@ -182,6 +210,10 @@ class BuyerIntakeOrchestrator:
                     payload["budget_max"] = total
                 if total is not None and total > 0:
                     payload.setdefault("budget_min", None)
+        if sanitized_inputs:
+            specs = dict(payload.get("specs", {}))
+            specs["_sanitized_inputs"] = sanitized_inputs
+            payload["specs"] = specs
         return Request.model_validate(payload)
 
     def _parse_budget_answer(
@@ -469,10 +501,45 @@ class NegotiationManager:
                 setattr(vendor_profile, "_match_summary", selection.summary)
 
             exchange_policy = getattr(vendor_profile, "_exchange_policy", None)
+            policy = exchange_policy or ExchangePolicy()
             if not self.buyer_agent.negotiation_engine.feasible_with_trades(
-                request, vendor_profile, exchange_policy or ExchangePolicy()
+                request, vendor_profile, policy
             ):
-                note = "No viable price band under current budget — negotiation skipped"
+                budget_per_unit = (
+                    (request.budget_max / request.quantity)
+                    if request.budget_max and request.quantity
+                    else None
+                )
+                seller_floor = vendor_profile.guardrails.price_floor
+                estimated_min_price = None
+                if request.quantity:
+                    concessions = ConcessionEngine(
+                        {
+                            "term_trade": policy.term_trade,
+                            "payment_trade": {
+                                term.value: pct for term, pct in policy.payment_trade.items()
+                            },
+                            "value_add_offsets": policy.value_add_offsets,
+                        }
+                    )
+                    list_price = selection.record.list_price
+                    floor_price = seller_floor or list_price
+                    estimated_min_price, _ = concessions.best_effective_price(
+                        list_price=list_price,
+                        floor_price=floor_price,
+                        seats=request.quantity,
+                    )
+
+                if seller_floor and budget_per_unit and seller_floor > budget_per_unit:
+                    note = (
+                        f"Seller floor ${seller_floor:.2f} exceeds budget ${budget_per_unit:.2f} — negotiation skipped"
+                    )
+                elif estimated_min_price and budget_per_unit and estimated_min_price > budget_per_unit:
+                    note = (
+                        f"Best projected price with concessions ${estimated_min_price:.2f} exceeds budget ${budget_per_unit:.2f}"
+                    )
+                else:
+                    note = "No evidence of viable price band under current budget"
                 if note not in selection.reasons:
                     selection.reasons.append(note)
                 continue
@@ -565,7 +632,13 @@ class SaaSProcurementPipeline:
         request, questions = intake.run(raw_text, policy_summary, clarification_answers)
         request = intake.normalize_budget(request)
 
-        selections, negotiation_results, audit_payload, offers = self._execute(
+        (
+            selections,
+            negotiation_results,
+            audit_payload,
+            offers,
+            shortlist_notice,
+        ) = self._execute(
             buyer_agent, services, request, top_n=top_n
         )
 
@@ -597,6 +670,7 @@ class SaaSProcurementPipeline:
             "bundles": bundles,
             "vendors": vendor_summary,
             "audit": self._json_safe(audit_payload),
+            "shortlist_notice": shortlist_notice,
         }
 
     def _execute(
@@ -606,10 +680,39 @@ class SaaSProcurementPipeline:
         request: Request,
         *,
         top_n: int,
-    ) -> Dict[str, NegotiationResult]:
+    ) -> Tuple[List[VendorSelection], Dict[str, NegotiationResult], Dict[str, dict], Dict[str, Offer], Optional[Dict[str, object]]]:
         seed_records = load_seed_catalog(self.seeds_path)
         picker = VendorPicker(services.compliance_service)
         selections = picker.pick(request, seed_records, top_n=top_n)
+        shortlist_notice: Optional[Dict[str, object]] = None
+
+        if not selections and picker.skip_reasons and all(
+            reason.get("reason") == "category_mismatch" for reason in picker.skip_reasons
+        ):
+            category_inference = request.specs.get("_category_inference", {}) if request.specs else {}
+            suggested = category_inference.get("final")
+            before = category_inference.get("before")
+            if suggested and suggested != before:
+                specs = dict(request.specs)
+                specs["_category_override"] = suggested
+                request = request.model_copy(update={"specs": specs})
+                services.audit_service.record_event(
+                    request.request_id,
+                    "category_autocorrected",
+                    {
+                        "from": before,
+                        "to": suggested,
+                        "signals": category_inference.get("signals", {}),
+                    },
+                )
+                shortlist_notice = {
+                    "message": f"Category auto-corrected from '{before}' to '{suggested}' based on feature signals",
+                    "from": before,
+                    "to": suggested,
+                }
+                picker = VendorPicker(services.compliance_service)
+                selections = picker.pick(request, seed_records, top_n=top_n)
+
         if not selections:
             services.audit_service.record_event(
                 request.request_id,
@@ -623,9 +726,13 @@ class SaaSProcurementPipeline:
         negotiation_manager = NegotiationManager(buyer_agent, services)
         negotiation_results = negotiation_manager.run(request, selections)
         audit_payload = services.audit_service.export_sessions(request.request_id)
-        return selections, negotiation_results, audit_payload, {
-            vendor_id: result.offer for vendor_id, result in negotiation_results.items()
-        }
+        return (
+            selections,
+            negotiation_results,
+            audit_payload,
+            {vendor_id: result.offer for vendor_id, result in negotiation_results.items()},
+            shortlist_notice,
+        )
 
     # region factories
     def _default_buyer_agent_factory(self) -> Tuple[BuyerAgent, PipelineServices]:

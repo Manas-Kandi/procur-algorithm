@@ -73,12 +73,16 @@ FEATURE_SYNONYMS: Mapping[str, Sequence[str]] = {
 }
 
 
-def _normalise_feature(token: str) -> str:
+def normalize_feature_token(token: str) -> str:
     lowered = token.lower().strip().replace("_", " ").replace("-", " ")
     lowered = " ".join(lowered.split())
     for canonical, variants in FEATURE_SYNONYMS.items():
-        if lowered in variants:
+        norm_canonical = canonical.lower().strip()
+        if lowered == norm_canonical:
             return canonical
+        for variant in variants:
+            if lowered == variant.lower().strip().replace("_", " ").replace("-", " "):
+                return canonical
     return lowered
 
 
@@ -94,8 +98,8 @@ def compute_feature_score(
     vendor_features: Iterable[str],
     optional_features: Optional[Mapping[str, float]] = None,
 ) -> FeatureMatchResult:
-    vendor_norm = {_normalise_feature(feat) for feat in vendor_features}
-    required_norm = [_normalise_feature(feat) for feat in must_haves]
+    vendor_norm = {normalize_feature_token(feat) for feat in vendor_features}
+    required_norm = [normalize_feature_token(feat) for feat in must_haves]
 
     matched: List[str] = []
     missing: List[str] = []
@@ -119,7 +123,7 @@ def compute_feature_score(
             achieved = sum(
                 optional_features[key]
                 for key in optional_features
-                if _normalise_feature(key) in vendor_norm
+                if normalize_feature_token(key) in vendor_norm
             )
             optional_score = achieved / total_weight
         else:

@@ -126,7 +126,7 @@ class VendorNegotiationState:
     outcome_reason: Optional[str] = None
     fsm_state: str = "init"
     concessions: Optional[ConcessionEngine] = None
-    min_concession_price: Optional[float] = None
+    estimated_min_concession_price: Optional[float] = None
     concession_notes: List[str] = field(default_factory=list)
     match_summary: Optional[object] = None
 
@@ -1037,6 +1037,7 @@ class NegotiationLifecycle(Enum):
 
 
 BUYER_ACCEPT_THRESHOLD = 0.75
+# Allow sellers to clear deals even at absolute floor while still tracking minimal utility
 SELLER_ACCEPT_THRESHOLD = 0.10
 MAX_STALLED_ROUNDS = 3
 

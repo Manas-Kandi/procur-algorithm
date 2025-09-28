@@ -220,18 +220,34 @@ class BuyerAgent:
                 outcome = state.outcome_state
 
             if final_offer:
+                outcome_marker = state.outcome_state or outcome
+                if outcome_marker in {"accepted", "accepted_no_concession"}:
+                    final_offer.accepted = True
                 offers[vendor.vendor_id] = final_offer
 
             if self.audit_service:
                 summary = self._build_summary(request, vendor, final_offer, state)
                 summary["outcome"] = state.outcome_state or outcome
                 summary["reason"] = state.outcome_reason or close_reason
+                summary["fsm_state"] = state.fsm_state
                 self.audit_service.finalize_session(
                     request_id=request.request_id,
                     vendor_id=vendor.vendor_id,
                     outcome=state.outcome_state or outcome,
                     summary=summary,
                 )
+                if (state.outcome_state or outcome) in {"accepted", "accepted_no_concession"}:
+                    self.audit_service.record_event(
+                        request.request_id,
+                        "vendor.negotiation_accepted",
+                        {
+                            "vendor_id": vendor.vendor_id,
+                            "final_offer": final_offer.components.model_dump() if final_offer else {},
+                            "savings": summary.get("savings"),
+                            "buyer_utility": summary.get("final_buyer_utility"),
+                            "seller_utility": summary.get("final_seller_utility"),
+                        },
+                    )
             if self.memory_service:
                 summary = self._build_summary(request, vendor, final_offer, state)
                 self.memory_service.finalize_session(
@@ -301,15 +317,15 @@ class BuyerAgent:
                 else:
                     list_price = anchor_price or floor_price
 
-        min_concession_price = None
+        estimated_min_concession_price = None
         if concessions_engine and request.quantity and list_price:
             min_price, _ = concessions_engine.best_effective_price(
                 list_price=list_price,
                 floor_price=floor_price,
                 seats=request.quantity,
             )
-            min_concession_price = min_price
-            state.min_concession_price = min_price
+            estimated_min_concession_price = min_price
+            state.estimated_min_concession_price = min_price
 
         state.match_summary = getattr(vendor, "_match_summary", None)
 
@@ -323,7 +339,7 @@ class BuyerAgent:
         if budget_per_unit is not None and not detect_zopa(
             buyer_budget_per_unit=budget_per_unit,
             seller_floor=seller_floor,
-            concessions_min_price=min_concession_price,
+            concessions_min_price=estimated_min_concession_price,
         ):
             state.fsm_state = NegotiationLifecycle.NO_ZOPA.value
             state.outcome_state = "no_zopa"
@@ -491,13 +507,16 @@ class BuyerAgent:
         rationale_list = list(rationale or [])
         payment_delta = float(tco_breakdown.prepay_adj)
         payment_note = ""
-        if tco_breakdown.prepay_adj != 0:
+        if abs(tco_breakdown.prepay_adj) > 1e-6:
             payment_note = " (discount rate 12%)"
+        payment_delta_str = (
+            f"{payment_delta:+,.2f}" if abs(payment_delta) > 1e-6 else f"{payment_delta:,.2f}"
+        )
         rationale_list.append(
             "TCO breakdown: "
             f"base ${float(tco_breakdown.base):,.2f} + fees ${float(tco_breakdown.one_time_fees):,.2f} "
             f"- credits ${float(tco_breakdown.credits):,.2f} "
-            f"+ payment adj {payment_delta:+,.2f}{payment_note} = ${tco:,.2f}"
+            f"+ payment adj {payment_delta_str}{payment_note} = ${tco:,.2f}"
         )
 
         return CandidateEvaluation(
@@ -1005,16 +1024,25 @@ class BuyerAgent:
         tier_key = str(request.quantity)
         list_price = vendor.price_tiers.get(tier_key, offer.components.unit_price if offer else 0.0)
         clearing_price = offer.components.unit_price if offer else list_price
-        savings = max((list_price - clearing_price) * request.quantity, 0.0)
 
-        # Compute final TCO breakdown and utilities if offer exists
+        list_offer_components = OfferComponents(
+            unit_price=list_price,
+            currency=offer.components.currency if offer else request.currency,
+            quantity=request.quantity,
+            term_months=offer.components.term_months if offer else 12,
+            payment_terms=offer.components.payment_terms if offer else PaymentTerms.NET_30,
+        )
+        list_tco_breakdown = self.scoring_service.compute_tco_breakdown(list_offer_components)
+
         final_tco_breakdown = {}
         final_buyer_utility = 0.0
         final_seller_utility = 0.0
+        final_tco = float(list_tco_breakdown.total)
 
         if offer:
             tco_breakdown = self.scoring_service.compute_tco_breakdown(offer.components)
             final_tco_breakdown = tco_breakdown.as_dict()
+            final_tco = float(tco_breakdown.total)
 
             # Compute final utilities
             summary = getattr(state, "match_summary", None)
@@ -1042,10 +1070,13 @@ class BuyerAgent:
             )
             final_seller_utility = seller_bd.seller_utility
 
+        savings = max(float(list_tco_breakdown.total) - final_tco, 0.0)
+
+        # Compute final TCO breakdown and utilities if offer exists
         # ZOPA basis information
         budget_per_unit = (request.budget_max / request.quantity) if request.budget_max and request.quantity else None
         seller_floor = vendor.guardrails.price_floor
-        min_concession_price = state.min_concession_price
+        estimated_min_concession_price = state.estimated_min_concession_price
 
         return {
             "rounds_completed": float(state.round),
@@ -1056,10 +1087,12 @@ class BuyerAgent:
             "final_tco_breakdown": final_tco_breakdown,
             "final_buyer_utility": final_buyer_utility,
             "final_seller_utility": final_seller_utility,
+            "final_tco": final_tco,
+            "list_price_tco": float(list_tco_breakdown.total),
             "zopa_basis": {
                 "buyer_budget_per_unit": budget_per_unit,
                 "seller_floor": seller_floor,
-                "min_concession_price": min_concession_price,
+                "estimated_min_concession_price": estimated_min_concession_price,
             }
         }
 

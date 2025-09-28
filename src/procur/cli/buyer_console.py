@@ -20,6 +20,7 @@ from ..services import (
 )
 from ..services.scoring_service import ScoreWeights
 from ..agents import BuyerAgent, BuyerAgentConfig
+from .prompt_manager import PromptManager
 
 DEFAULT_SEED_PATH = Path("assets/seeds.json")
 
@@ -66,19 +67,14 @@ def build_live_pipeline(seeds_path: Path = DEFAULT_SEED_PATH) -> SaaSProcurement
 
     return SaaSProcurementPipeline(seeds_path=seeds_path, buyer_agent_factory=factory)
 
-
-def prompt_user(prompt: str) -> str:
-    try:
-        return input(prompt)
-    except KeyboardInterrupt:  # pragma: no cover - interactive safeguard
-        print("\nExiting...")
-        raise SystemExit(0)
-
-
 def summarize_results(result: Dict[str, object]) -> None:
     print("\n=== Intake Summary ===")
     print(json.dumps(result["request"], indent=2))
 
+    notice = result.get("shortlist_notice")
+    if notice:
+        print("\nShortlist note:")
+        print(f"- {notice.get('message')}")
     if result["shortlist"]:
         print("\n=== Vendor Shortlist ===")
         for entry in result["shortlist"]:
@@ -120,21 +116,22 @@ def summarize_results(result: Dict[str, object]) -> None:
 def interactive_main() -> None:
     try:
         pipeline = build_live_pipeline()
+        manager = PromptManager()
         print("Welcome to Procur CLI! Describe your procurement request below.\n")
-        raw_text = prompt_user("Describe your need: ")
-        policy_summary = prompt_user("Policy summary (enter to skip): ") or ""
+        raw_text = manager.prompt("Describe your need: ")
+        policy_summary = manager.prompt("Policy summary (enter to skip): ") or ""
 
         clarification_answers: Dict[str, str] = {}
-        print("Processing your request...")
+        manager.status("Processing your request...")
         result = pipeline.run(raw_text, policy_summary, None)
         questions = result.get("clarification_questions", [])
 
         while questions:
             print("\nWe need a bit more detail:")
             for question in questions:
-                value = prompt_user(f"- {question['question']} ")
+                value = manager.prompt(f"- {question['question']} ")
                 clarification_answers[question["field"]] = value
-            print("Processing additional details...")
+            manager.status("Processing additional details...")
             result = pipeline.run(raw_text, policy_summary, clarification_answers)
             questions = result.get("clarification_questions", [])
 
