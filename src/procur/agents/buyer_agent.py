@@ -768,6 +768,13 @@ class BuyerAgent:
         decision = self.negotiation_engine.decide_next_move(plan, state, seller_offer)
         should_close, reason = self.negotiation_engine.should_close_deal(state, seller_offer.components, request)
 
+        blocking_buyer = any(v.blocking for v in policy_result.violations)
+        blocking_seller = any(v.blocking for v in seller_policy.violations)
+        if blocking_buyer or blocking_seller:
+            decision = NegotiationDecision.DROP
+            should_close = True
+            reason = "policy_blocked"
+
         seller_evaluation = self._build_candidate_evaluation(
             request,
             state.vendor,

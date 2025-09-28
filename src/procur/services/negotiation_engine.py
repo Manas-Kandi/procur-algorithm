@@ -137,23 +137,29 @@ class NegotiationEngine:
         tco = self.calculate_tco(offer)
         
         if is_buyer:
-            # Buyer utility: lower cost = higher utility
-            budget_max = request.budget_max or float('inf')
-            cost_utility = max(0, 1 - (tco / (budget_max * 1.2)))
-            
+            # Buyer utility: prioritise cost alignment, dampen other levers when spend is off-budget.
+            budget_max = request.budget_max or 0.0
+            if budget_max <= 0 or tco <= 0:
+                cost_component = 0.0
+            else:
+                cost_component = min(budget_max / tco, 1.0)
+
             # Term preference (shorter terms preferred)
-            term_utility = max(0, 1 - (offer.term_months - 12) / 24)
-            
+            term_utility = max(0.0, 1 - abs(offer.term_months - 12) / 24)
+
             # Payment terms utility
             payment_utility = {
                 PaymentTerms.NET_15: 0.9,
                 PaymentTerms.NET_30: 1.0,
-                PaymentTerms.NET_45: 0.8,
-                PaymentTerms.MILESTONES: 0.95,
-                PaymentTerms.DEPOSIT: 0.85
-            }.get(offer.payment_terms, 0.8)
-            
-            return 0.6 * cost_utility + 0.25 * term_utility + 0.15 * payment_utility
+                PaymentTerms.NET_45: 0.7,
+                PaymentTerms.MILESTONES: 0.9,
+                PaymentTerms.DEPOSIT: 0.6,
+            }.get(offer.payment_terms, 0.7)
+
+            weighted_term = term_utility * cost_component
+            weighted_payment = payment_utility * cost_component
+
+            return 0.85 * cost_component + 0.1 * weighted_term + 0.05 * weighted_payment
 
         if vendor is None:
             return 0.5

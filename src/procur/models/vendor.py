@@ -27,3 +27,4 @@ class VendorProfile(BaseModel):
     reliability_stats: Dict[str, object] = Field(default_factory=dict)
     risk_level: RiskLevel = RiskLevel.MEDIUM
     contact_endpoints: Dict[str, str] = Field(default_factory=dict)
+    billing_cadence: Optional[str] = None

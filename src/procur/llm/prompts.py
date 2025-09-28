@@ -15,6 +15,7 @@ def intake_prompt(raw_text: str, policy_summary: str) -> List[dict]:
         "quantity": 100,
         "budget_max": 120000,
         "currency": "USD",
+        "billing_cadence": "per_seat_per_year",
         "must_haves": ["api"],
         "compliance_requirements": ["soc2", "iso27001"]
     }

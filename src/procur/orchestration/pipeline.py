@@ -23,9 +23,11 @@ from ..services import (
     RetrievalService,
     ScoringService,
 )
+from ..services.negotiation_engine import ExchangePolicy
 from ..services.vendor_matching import VendorMatcher
 from ..services.compliance_service import ComplianceAssessment
 from ..services.scoring_service import ScoreWeights
+from ..utils.pricing import annualize_value, normalize_budget_total, price_fit_ratio
 
 
 @dataclass
@@ -68,6 +70,9 @@ class BuyerIntakeOrchestrator:
 
     def __init__(self, buyer_agent: BuyerAgent) -> None:
         self.buyer_agent = buyer_agent
+        self._budget_hint = (
+            "Typical CRM pricing ranges from roughly $200 to $1,200 per seat annually."
+        )
 
     def run(
         self,
@@ -90,6 +95,16 @@ class BuyerIntakeOrchestrator:
 
     def generate_questions(self, request: Request) -> List[ClarificationQuestion]:
         questions: List[ClarificationQuestion] = []
+        if not request.budget_max or request.budget_max <= 0:
+            questions.append(
+                ClarificationQuestion(
+                    field="budget_per_unit",
+                    question=(
+                        "What's your approximate budget per seat per year (or total)? "
+                        f"{self._budget_hint}"
+                    ),
+                )
+            )
         if not request.must_haves:
             questions.append(
                 ClarificationQuestion(
@@ -102,6 +117,14 @@ class BuyerIntakeOrchestrator:
                 ClarificationQuestion(
                     field="compliance_requirements",
                     question="List any compliance frameworks you must enforce (e.g., SOC2, ISO27001)?",
+                )
+            )
+        if not request.billing_cadence:
+            questions.append(
+                ClarificationQuestion(
+                    field="billing_cadence",
+                    question="Is your budget per seat per month or per year? (default: per year)",
+                    required=False,
                 )
             )
         if "features" not in request.specs:
@@ -126,21 +149,180 @@ class BuyerIntakeOrchestrator:
                 specs = dict(payload.get("specs", {}))
                 specs["features"] = tokens
                 payload["specs"] = specs
+            elif field == "billing_cadence":
+                cadence = value.strip().lower()
+                if cadence in {"monthly", "per month", "month", "per-seat per month", "per seat per month"}:
+                    payload["billing_cadence"] = "per_seat_per_month"
+                elif cadence in {"yearly", "annual", "per year", "year"}:
+                    payload["billing_cadence"] = "per_seat_per_year"
+                elif cadence:
+                    payload["billing_cadence"] = cadence
+                specs = dict(payload.get("specs", {}))
+                specs["billing_cadence"] = payload.get("billing_cadence")
+                payload["specs"] = specs
+            elif field == "budget_per_unit":
+                total, per_unit, cadence = self._parse_budget_answer(value, request.quantity)
+                specs = dict(payload.get("specs", {}))
+                for key in (
+                    "_budget_normalized",
+                    "_raw_budget_max",
+                    "_normalized_cadence",
+                    "_raw_billing_cadence",
+                    "_raw_budget_min",
+                ):
+                    specs.pop(key, None)
+                if cadence:
+                    payload["billing_cadence"] = cadence
+                    specs["billing_cadence"] = cadence
+                if per_unit is not None and request.quantity:
+                    specs["target_unit_budget"] = per_unit
+                payload["specs"] = specs
+                if total is not None:
+                    payload["budget_max"] = total
+                if total is not None and total > 0:
+                    payload.setdefault("budget_min", None)
         return Request.model_validate(payload)
 
-    def summarize(self, request: Request) -> Dict[str, object]:
-        budget_per_unit = (
-            request.budget_max / request.quantity if request.budget_max and request.quantity else None
+    def _parse_budget_answer(
+        self, value: str, quantity: Optional[int]
+    ) -> Tuple[Optional[float], Optional[float], Optional[str]]:
+        text = (value or "").strip()
+        if not text:
+            return None, None, None
+
+        cleaned = text.replace(",", "")
+        lower = text.lower()
+        search_base = cleaned.lower()
+        matches = list(
+            re.finditer(r"(\$)?(\d+(?:\.\d+)?)(?:\s*(k|m))?", cleaned, re.IGNORECASE)
         )
+        if not matches:
+            return None, None, None
+
+        selected_value: Optional[float] = None
+        selected_suffix: Optional[str] = None
+        for match in reversed(matches):
+            number_str = match.group(2)
+            suffix = (match.group(3) or "").lower()
+            try:
+                candidate = float(number_str)
+            except ValueError:
+                continue
+
+            context = search_base[max(0, match.start() - 12) : match.end() + 12]
+            if "month" in context and "per month" not in context and "per-seat" not in context and "per user" not in context:
+                # Likely a duration reference (e.g., "12 months")
+                continue
+            if quantity and suffix == "" and abs(candidate - quantity) < 1e-6:
+                # Probably restating seat count, not budget
+                continue
+
+            selected_value = candidate
+            selected_suffix = suffix
+            break
+
+        if selected_value is None:
+            number_str, suffix = matches[-1].group(2), (matches[-1].group(3) or "").lower()
+            try:
+                selected_value = float(number_str)
+                selected_suffix = suffix
+            except ValueError:
+                return None, None, None
+
+        multiplier = 1.0
+        if selected_suffix == "k":
+            multiplier = 1_000.0
+        elif selected_suffix == "m":
+            multiplier = 1_000_000.0
+
+        amount = selected_value * multiplier
+        if amount <= 0:
+            return None, None, None
+
+        cadence: Optional[str] = None
+        if "per month" in search_base or "monthly" in search_base or "/mo" in search_base:
+            cadence = "per_seat_per_month"
+        elif "per year" in search_base or "annual" in search_base or "yearly" in search_base or "/yr" in search_base:
+            cadence = "per_seat_per_year"
+
+        seat_phrases = [
+            "per seat",
+            "per user",
+            "per-person",
+            "per person",
+            "per employee",
+            "per licence",
+            "per license",
+        ]
+        is_per_seat = any(phrase in lower for phrase in seat_phrases)
+        if not is_per_seat:
+            is_per_seat = any(phrase in search_base for phrase in seat_phrases)
+
+        if is_per_seat:
+            if cadence is None:
+                cadence = "per_seat_per_year"
+            total = amount * (quantity or 1)
+            per_unit = amount
+        else:
+            total = amount
+            per_unit = (total / quantity) if quantity else None
+
+        return total, per_unit, cadence
+
+    def summarize(self, request: Request) -> Dict[str, object]:
+        normalized_total = request.budget_max
+        raw_total = request.specs.get("_raw_budget_max", normalized_total)
+        quantity = request.quantity or 0
+
+        budget_per_unit_input = raw_total / quantity if raw_total and quantity else None
+        budget_per_unit_normalized = (
+            normalized_total / quantity if normalized_total and quantity else None
+        )
+        input_cadence = request.specs.get("_raw_billing_cadence") or request.billing_cadence
+        annual_per_unit = annualize_value(budget_per_unit_input, input_cadence)
         return {
             "description": request.description,
             "quantity": request.quantity,
-            "budget_total": request.budget_max,
-            "budget_per_unit": budget_per_unit,
+            "budget_total": normalized_total,
+            "budget_total_input": raw_total,
+            "budget_per_unit": budget_per_unit_input,
+            "budget_per_unit_normalized": budget_per_unit_normalized,
+            "budget_per_unit_annual": annual_per_unit,
+            "budget_per_unit_provided": request.specs.get("target_unit_budget"),
+            "billing_cadence": input_cadence,
             "must_haves": request.must_haves,
             "compliance": request.compliance_requirements,
             "specs": request.specs,
         }
+
+    def normalize_budget(self, request: Request) -> Request:
+        specs = dict(request.specs)
+        if specs.get("_budget_normalized"):
+            return request
+
+        cadence = request.billing_cadence or specs.get("billing_cadence")
+        if not cadence:
+            return request
+
+        normalized_max = normalize_budget_total(request.budget_max, cadence)
+        normalized_min = normalize_budget_total(request.budget_min, cadence)
+
+        specs["_budget_normalized"] = True
+        specs["_raw_billing_cadence"] = cadence
+        if request.budget_max is not None:
+            specs.setdefault("_raw_budget_max", request.budget_max)
+        if request.budget_min is not None:
+            specs.setdefault("_raw_budget_min", request.budget_min)
+        specs["_normalized_cadence"] = "per_seat_per_year"
+        specs.setdefault("billing_cadence", cadence)
+
+        return request.model_copy(
+            update={
+                "budget_max": normalized_max,
+                "budget_min": normalized_min,
+                "specs": specs,
+            }
+        )
 
 
 class VendorPicker:
@@ -152,7 +334,12 @@ class VendorPicker:
 
     def pick(self, request: Request, records: Iterable[SeedVendorRecord], top_n: int = 5) -> List[VendorSelection]:
         scored: List[VendorSelection] = []
-        budget_per_unit = request.budget_max / request.quantity if request.budget_max and request.quantity > 0 else None
+        raw_budget_per_unit = (
+            request.budget_max / request.quantity if request.budget_max and request.quantity > 0 else None
+        )
+        normalized_cadence = request.specs.get("_normalized_cadence")
+        cadence_for_budget = normalized_cadence or request.billing_cadence or request.specs.get("billing_cadence")
+        budget_per_unit_annual = annualize_value(raw_budget_per_unit, cadence_for_budget)
 
         for record in records:
             # Use enhanced matching with category gating
@@ -169,12 +356,12 @@ class VendorPicker:
             vendor_profile = record.to_vendor_profile()
             assessment = self.compliance_service.assess_vendor(request, vendor_profile)
 
-            # Price scoring
-            if budget_per_unit:
-                price_target = budget_per_unit
-                list_price = record.list_price
-                price_score = max(0.0, min(price_target / list_price, 1.2))
-                price_score = min(price_score, 1.0)
+            # Price scoring with gating
+            list_price_annual = record.list_price
+            if budget_per_unit_annual:
+                price_score = price_fit_ratio(budget_per_unit_annual, list_price_annual)
+                if price_score < 0.3:
+                    continue
             else:
                 price_score = 0.6
 
@@ -189,11 +376,19 @@ class VendorPicker:
             if assessment.blocking:
                 score *= 0.1
 
+            compliance_total = len(request.compliance_requirements) or 1
+            feature_total = match_result.total_features or len(request.must_haves) or 1
             reasons = [
-                f"Compliance match {int(match_result.compliance_score * len(request.compliance_requirements))}/{len(request.compliance_requirements) or 1}",
-                f"Feature match {match_result.feature_hits}/{match_result.total_features}",
-                f"List price ${record.list_price:.2f} vs budget {budget_per_unit or 'n/a'}",
+                f"Compliance match {int(match_result.compliance_score * compliance_total)}/{compliance_total}",
+                f"Feature match {match_result.feature_hits}/{feature_total}",
             ]
+
+            if budget_per_unit_annual:
+                reasons.append(
+                    f"Price fit {price_score:.2f} — annual list ${list_price_annual:.2f} vs budget ${budget_per_unit_annual:.2f}"
+                )
+            else:
+                reasons.append(f"Annual list price ${list_price_annual:.2f}")
 
             if match_result.missing_features:
                 reasons.append(f"Missing: {', '.join(match_result.missing_features[:2])}")
@@ -238,6 +433,16 @@ class NegotiationManager:
             # Attach per-seed metadata for downstream plan adjustments
             setattr(vendor_profile, "_exchange_policy", selection.record.exchange_policy)
             setattr(vendor_profile, "_seed_metadata", selection.record.raw)
+
+            exchange_policy = getattr(vendor_profile, "_exchange_policy", None)
+            if not self.buyer_agent.negotiation_engine.feasible_with_trades(
+                request, vendor_profile, exchange_policy or ExchangePolicy()
+            ):
+                note = "No viable price band under current budget — negotiation skipped"
+                if note not in selection.reasons:
+                    selection.reasons.append(note)
+                continue
+
             vendor_profiles.append(vendor_profile)
             record_map[vendor_profile.vendor_id] = selection
             profile_map[vendor_profile.vendor_id] = vendor_profile
@@ -324,6 +529,7 @@ class SaaSProcurementPipeline:
 
         intake = BuyerIntakeOrchestrator(buyer_agent)
         request, questions = intake.run(raw_text, policy_summary, clarification_answers)
+        request = intake.normalize_budget(request)
 
         selections, negotiation_results, audit_payload, offers = self._execute(
             buyer_agent, services, request, top_n=top_n
@@ -381,7 +587,7 @@ class SaaSProcurementPipeline:
     def _default_buyer_agent_factory(self) -> Tuple[BuyerAgent, PipelineServices]:
         policy_engine = PolicyEngine()
         compliance_service = ComplianceService(mandatory_certifications=["soc2"])
-        guardrail_service = GuardrailService()
+        guardrail_service = GuardrailService(run_mode="simulation")
         scoring_service = ScoringService(weights=ScoreWeights())
         negotiation_engine = NegotiationEngine(policy_engine, scoring_service)
         explainability_service = ExplainabilityService()
@@ -430,6 +636,7 @@ class SaaSProcurementPipeline:
                         "quantity": quantity,
                         "budget_max": budget_total,
                         "currency": "USD",
+                        "billing_cadence": "per_seat_per_year",
                         "must_haves": [],
                         "compliance_requirements": [],
                     }

@@ -96,14 +96,16 @@ class ScoringService:
         components: OfferComponents,
         request: Request,
     ) -> OfferScore:
-        spec_match = 70.0 + min(len(vendor.capability_tags) * 2.5, 30.0)
-        if request.must_haves:
-            coverage = sum(
-                1
-                for tag in request.must_haves
-                if tag in vendor.certifications or tag in vendor.capability_tags
-            )
-            spec_match = min(100.0, spec_match + (coverage / max(len(request.must_haves), 1)) * 15)
+        required_features = set()
+        required_features.update(tag.lower().replace(" ", "_") for tag in request.must_haves)
+        for feature in request.specs.get("features", []):
+            required_features.add(str(feature).lower().replace(" ", "_"))
+
+        vendor_features = {tag.lower().replace(" ", "_") for tag in vendor.capability_tags}
+        coverage_hits = len(required_features & vendor_features)
+        required_total = len(required_features) or 1
+        coverage_ratio = coverage_hits / required_total
+        spec_match = round(min(max(coverage_ratio * 100.0, 0.0), 100.0), 4)
 
         normalized_certs = {cert.lower() for cert in vendor.certifications}
         risk_score = 20.0 if "soc2" in normalized_certs else 60.0

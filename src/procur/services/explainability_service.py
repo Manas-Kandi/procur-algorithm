@@ -10,8 +10,13 @@ class ExplainabilityService:
 
     def build_why_this_pick(self, offer: Offer, sensitivity: Dict[str, float]) -> Dict[str, List[str]]:
         components = offer.score
+        coverage = components.spec_match
+        coverage_bullet = f"Feature coverage {coverage:.0%} of requested capabilities"
+        if coverage < 1.0:
+            coverage_bullet += f"; gap {int(round((1 - coverage) * 100))}% remains"
+
         bullets = [
-            f"Spec alignment contributes {components.spec_match:.0%} of target coverage",
+            coverage_bullet,
             f"Total cost impact normalized at {components.tco:.0%} with weight {sensitivity['cost']:.2f}",
             f"Risk exposure normalized at {components.risk:.0%}; remaining headroom {max(0.0, 1 - components.risk):.0%}",
         ]

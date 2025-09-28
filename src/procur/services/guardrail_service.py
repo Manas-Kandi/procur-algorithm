@@ -16,11 +16,14 @@ class GuardrailAlert:
 class GuardrailService:
     """Detects anomalies, verifies counterparties, and enforces safety stops."""
 
-    def __init__(self, price_outlier_threshold: float = 0.3) -> None:
+    def __init__(self, price_outlier_threshold: float = 0.3, *, run_mode: str = "production") -> None:
         self.price_outlier_threshold = price_outlier_threshold
+        self.run_mode = run_mode
 
     def verify_counterparty(self, vendor: VendorProfile) -> List[GuardrailAlert]:
         alerts: List[GuardrailAlert] = []
+        if self.run_mode == "simulation":
+            return alerts
         if "bank_account" not in vendor.contact_endpoints:
             alerts.append(
                 GuardrailAlert(

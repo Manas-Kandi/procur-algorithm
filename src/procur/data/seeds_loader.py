@@ -8,6 +8,7 @@ from typing import Dict, Iterable, List, Optional
 from ..models import PaymentTerms, VendorGuardrails, VendorProfile
 from ..services.negotiation_engine import ExchangePolicy
 from ..services.compliance_catalog import normalize_identifier
+from ..utils.pricing import annualize_value
 
 
 @dataclass
@@ -27,6 +28,7 @@ class SeedVendorRecord:
     behavior_profile: str
     price_tiers: Dict[str, float]
     exchange_policy: ExchangePolicy
+    billing_cadence: str
     raw: Dict[str, object]
 
     def to_vendor_profile(self) -> VendorProfile:
@@ -56,6 +58,7 @@ class SeedVendorRecord:
             guardrails=guardrails,
             reliability_stats=reliability_stats,
             contact_endpoints={"sales": "seed"},
+            billing_cadence=self.billing_cadence,
         )
         setattr(profile, "_exchange_policy", self.exchange_policy)
         setattr(profile, "_seed_metadata", self.raw)
@@ -115,6 +118,11 @@ def _build_seed_record(raw: Dict[str, object]) -> SeedVendorRecord:
     list_price = float(pricing.get("list_price"))
     floor_price = float(pricing.get("floor"))
     tiers = {str(k): float(v) for k, v in pricing.get("tiers", {}).items()}
+    billing_cadence = str(raw.get("billing_cadence", "per_seat_per_year"))
+
+    list_price = annualize_value(list_price, billing_cadence) or list_price
+    floor_price = annualize_value(floor_price, billing_cadence) or floor_price
+    tiers = {key: annualize_value(value, billing_cadence) or float(value) for key, value in tiers.items()}
 
     payment_terms = _parse_payment_terms(raw.get("payment_terms", []))
     compliance = [normalize_identifier(item).upper() for item in raw.get("compliance", [])]
@@ -138,6 +146,7 @@ def _build_seed_record(raw: Dict[str, object]) -> SeedVendorRecord:
         behavior_profile=behavior_profile,
         price_tiers=tiers,
         exchange_policy=exchange_policy,
+        billing_cadence=billing_cadence,
         raw=raw,
     )
 

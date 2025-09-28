@@ -41,7 +41,7 @@ class NegotiationTester:
         # Initialize core services (same as buyer_demo.py)
         self.policy_engine = PolicyEngine()
         self.compliance_service = ComplianceService(mandatory_certifications=["soc2"])
-        self.guardrail_service = GuardrailService()
+        self.guardrail_service = GuardrailService(run_mode="simulation")
         self.scoring_service = ScoringService()
         self.negotiation_engine = NegotiationEngine(self.policy_engine, self.scoring_service)
         self.explainability_service = ExplainabilityService()

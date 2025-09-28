@@ -8,9 +8,23 @@
       "floor": 980.0,
       "tiers": {"50": 1180.0, "100": 1120.0, "200": 1050.0}
     },
+    "billing_cadence": "per_seat_per_year",
     "payment_terms": ["NET30", "NET45", "NET15"],
     "compliance": ["SOC2", "ISO27001", "GDPR"],
-    "features": ["api", "mobile", "analytics", "sso", "crm", "leads", "contacts", "pipeline", "lead_management", "contact_management", "pipeline_tracking"],
+    "features": [
+      "api",
+      "mobile",
+      "analytics",
+      "sso",
+      "crm",
+      "leads",
+      "contacts",
+      "pipeline",
+      "lead_management",
+      "contact_management",
+      "pipeline_tracking",
+      "automation"
+    ],
     "regions": ["us-east", "eu-west"],
     "support": {"tier": "24/7", "sla": 99.9},
     "behavior_profile": "term_elastic",
@@ -18,6 +32,68 @@
       "term_trade": {"12": 0.03, "24": 0.05, "36": 0.07},
       "payment_trade": {"NET15": 0.008, "NET45": -0.004},
       "value_add_offsets": {"training_credits": 1500.0, "premium_support": 2000.0}
+    }
+  },
+  {
+    "id": "orbit-crm",
+    "name": "OrbitCRM",
+    "category": "saas/crm",
+    "pricing": {
+      "list_price": 240.0,
+      "floor": 180.0,
+      "tiers": {"50": 220.0, "100": 205.0, "200": 190.0}
+    },
+    "billing_cadence": "per_seat_per_year",
+    "payment_terms": ["NET30", "NET15"],
+    "compliance": ["SOC2", "GDPR"],
+    "features": [
+      "crm",
+      "lead_management",
+      "contact_management",
+      "pipeline_tracking",
+      "email_integration",
+      "automation",
+      "api",
+      "analytics"
+    ],
+    "regions": ["us-east", "us-west"],
+    "support": {"tier": "extended", "sla": 99.5},
+    "behavior_profile": "balanced",
+    "exchange": {
+      "term_trade": {"12": 0.02, "24": 0.04},
+      "payment_trade": {"NET15": 0.01},
+      "value_add_offsets": {"training_credits": 750.0}
+    }
+  },
+  {
+    "id": "celerity-crm",
+    "name": "CelerityCRM",
+    "category": "saas/crm",
+    "pricing": {
+      "list_price": 360.0,
+      "floor": 280.0,
+      "tiers": {"50": 340.0, "100": 320.0, "200": 300.0}
+    },
+    "billing_cadence": "per_seat_per_year",
+    "payment_terms": ["NET30", "NET45"],
+    "compliance": ["SOC2", "ISO27001"],
+    "features": [
+      "crm",
+      "lead_management",
+      "contact_management",
+      "pipeline_tracking",
+      "email_integration",
+      "workflow",
+      "automation",
+      "mobile"
+    ],
+    "regions": ["us-east", "eu-central"],
+    "support": {"tier": "business_hours", "sla": 99.6},
+    "behavior_profile": "payment_flexible",
+    "exchange": {
+      "term_trade": {"12": 0.03, "24": 0.05},
+      "payment_trade": {"NET45": -0.002},
+      "value_add_offsets": {"admin_training": 1200.0}
     }
   },
   {
@@ -29,6 +105,7 @@
       "floor": 18.0,
       "tiers": {"50": 23.0, "100": 21.0, "500": 19.0}
     },
+    "billing_cadence": "per_seat_per_month",
     "payment_terms": ["NET30", "NET15"],
     "compliance": ["SOC2", "ISO27001", "PCI-DSS", "CCPA"],
     "features": ["api", "payroll", "benefits", "mobile"],
@@ -50,6 +127,7 @@
       "floor": 1200.0,
       "tiers": {"25": 1400.0, "100": 1325.0, "250": 1250.0}
     },
+    "billing_cadence": "per_seat_per_year",
     "payment_terms": ["NET30", "NET45"],
     "compliance": ["SOC2", "ISO27001", "FedRAMP", "HIPAA"],
     "features": ["siem", "soar", "managed_services"],
@@ -71,6 +149,7 @@
       "floor": 720.0,
       "tiers": {"100": 860.0, "250": 820.0, "500": 780.0}
     },
+    "billing_cadence": "per_seat_per_year",
     "payment_terms": ["NET30", "MILESTONES"],
     "compliance": ["SOC2", "GDPR"],
     "features": ["api", "dashboards", "ml", "data-warehouse"],
@@ -92,6 +171,7 @@
       "floor": 1400.0,
       "tiers": {"100": 1700.0, "250": 1600.0, "500": 1500.0}
     },
+    "billing_cadence": "per_seat_per_year",
     "payment_terms": ["NET30", "NET45", "MILESTONES"],
     "compliance": ["SOC2", "ISO27001", "GDPR", "HIPAA"],
     "features": ["api", "modules-finance", "modules-hr", "workflow"],
