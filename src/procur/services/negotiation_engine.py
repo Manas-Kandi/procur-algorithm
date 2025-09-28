@@ -112,6 +112,8 @@ class VendorNegotiationState:
     stalemate_rounds: int = 0
     plan: Optional[NegotiationPlan] = None
     compliance_summary: List[str] = field(default_factory=list)
+    outcome_state: Optional[str] = None
+    outcome_reason: Optional[str] = None
 
 
 class NegotiationEngine:
@@ -125,6 +127,9 @@ class NegotiationEngine:
         """Delegate to scoring service for consistent TCO calculations."""
         return self.scoring_service.compute_tco(offer)
 
+    def calculate_tco_breakdown(self, offer: OfferComponents) -> ScoringService.TCOBreakdown:
+        return self.scoring_service.compute_tco_breakdown(offer)
+
     def calculate_utility(
         self,
         offer: OfferComponents,
@@ -135,31 +140,26 @@ class NegotiationEngine:
     ) -> float:
         """Calculate utility score for an offer"""
         tco = self.calculate_tco(offer)
-        
+
         if is_buyer:
-            # Buyer utility: prioritise cost alignment, dampen other levers when spend is off-budget.
             budget_max = request.budget_max or 0.0
-            if budget_max <= 0 or tco <= 0:
-                cost_component = 0.0
-            else:
-                cost_component = min(budget_max / tco, 1.0)
+            cost_fit = 0.0
+            if budget_max > 0 and tco > 0:
+                cost_fit = min(budget_max / tco, 1.0)
 
-            # Term preference (shorter terms preferred)
-            term_utility = max(0.0, 1 - abs(offer.term_months - 12) / 24)
+            feature_fit = self._feature_fit(request, vendor)
+            compliance_fit = self._compliance_fit(request, vendor)
+            term_fit = max(0.0, 1 - abs(offer.term_months - 12) / 24)
+            payment_fit = self._buyer_payment_preference(offer.payment_terms)
 
-            # Payment terms utility
-            payment_utility = {
-                PaymentTerms.NET_15: 0.9,
-                PaymentTerms.NET_30: 1.0,
-                PaymentTerms.NET_45: 0.7,
-                PaymentTerms.MILESTONES: 0.9,
-                PaymentTerms.DEPOSIT: 0.6,
-            }.get(offer.payment_terms, 0.7)
-
-            weighted_term = term_utility * cost_component
-            weighted_payment = payment_utility * cost_component
-
-            return 0.85 * cost_component + 0.1 * weighted_term + 0.05 * weighted_payment
+            utility = (
+                0.4 * cost_fit
+                + 0.2 * feature_fit
+                + 0.2 * compliance_fit
+                + 0.1 * term_fit
+                + 0.1 * payment_fit
+            )
+            return round(min(max(utility, 0.0), 1.0), 4)
 
         if vendor is None:
             return 0.5
@@ -174,9 +174,61 @@ class NegotiationEngine:
 
         return 0.6 * margin_utility + 0.25 * term_preference + 0.15 * payment_preference
 
+    def _feature_fit(self, request: Request, vendor: Optional[VendorProfile]) -> float:
+        required_features: set[str] = set()
+        required_features.update(tag.lower().replace(" ", "_") for tag in request.must_haves)
+        for feature in request.specs.get("features", []):
+            required_features.add(str(feature).lower().replace(" ", "_"))
+
+        if not required_features:
+            return 1.0
+        if vendor is None:
+            return 0.6
+
+        vendor_features = {tag.lower().replace(" ", "_") for tag in vendor.capability_tags}
+        coverage = len(required_features & vendor_features) / len(required_features)
+        return max(0.0, min(coverage, 1.0))
+
+    def _compliance_fit(self, request: Request, vendor: Optional[VendorProfile]) -> float:
+        requirements = {req.lower() for req in request.compliance_requirements}
+        if not requirements:
+            return 1.0
+        if vendor is None:
+            return 0.6
+        vendor_certs = {cert.lower() for cert in vendor.certifications}
+        matches = len(requirements & vendor_certs)
+        return max(0.0, min(matches / len(requirements), 1.0))
+
+    def _buyer_payment_preference(self, payment_terms: PaymentTerms) -> float:
+        mapping = {
+            PaymentTerms.NET_15: 0.9,
+            PaymentTerms.NET_30: 1.0,
+            PaymentTerms.NET_45: 0.7,
+            PaymentTerms.MILESTONES: 0.85,
+            PaymentTerms.DEPOSIT: 0.6,
+        }
+        return mapping.get(payment_terms, 0.75)
+
+    def _strategy_for_lever(self, lever: str) -> NegotiationStrategy:
+        mapping = {
+            "multi_year_discount": NegotiationStrategy.TERM_TRADE,
+            "term": NegotiationStrategy.TERM_TRADE,
+            "payment_terms": NegotiationStrategy.PAYMENT_TRADE,
+            "payment": NegotiationStrategy.PAYMENT_TRADE,
+            "value_add": NegotiationStrategy.VALUE_ADD,
+            "price_adjustment": NegotiationStrategy.PRICE_PRESSURE,
+        }
+        return mapping.get(lever, NegotiationStrategy.PRICE_PRESSURE)
+
     def determine_buyer_strategy(self, state: VendorNegotiationState, current_offer: OfferComponents) -> NegotiationStrategy:
         """Determine optimal buyer strategy based on negotiation state"""
         round_num = state.round
+        plan = state.plan
+
+        if plan and state.stalemate_rounds >= 2:
+            next_lever = self.next_concession(plan, state)
+            state.stalemate_rounds = 0
+            return self._strategy_for_lever(next_lever)
         
         if round_num == 1:
             return NegotiationStrategy.PRICE_ANCHOR
@@ -332,9 +384,12 @@ class NegotiationEngine:
         return False
 
     def next_concession(self, plan: NegotiationPlan, state: VendorNegotiationState) -> str:
-        idx = min(state.concession_index + 1, len(plan.concession_ladder) - 1)
-        state.concession_index = idx
-        return plan.concession_ladder[idx]
+        if not plan.concession_ladder:
+            return "price_adjustment"
+        idx = min(state.concession_index, len(plan.concession_ladder) - 1)
+        lever = plan.concession_ladder[idx]
+        state.concession_index = min(idx + 1, len(plan.concession_ladder) - 1)
+        return lever
 
     def decide_next_move(
         self,
@@ -408,7 +463,7 @@ class NegotiationEngine:
                 return True, "converged_percentage"
 
         # Accept if within budget and reasonable utility
-        utility = self.calculate_utility(current_offer, request, is_buyer=True)
+        utility = self.calculate_utility(current_offer, request, vendor=state.vendor, is_buyer=True)
         if utility >= 0.7:  # Accept if 70%+ utility
             return True, "acceptable_utility"
         if utility >= 0.6 and state.round >= 6:  # Lower bar after many rounds
@@ -473,7 +528,7 @@ class NegotiationEngine:
                 payment_terms=bundle.payment_terms
             )
             bundle.tco = self.calculate_tco(mock_offer)
-            bundle.utility = self.calculate_utility(mock_offer, request, is_buyer=True)
+            bundle.utility = self.calculate_utility(mock_offer, request, vendor=vendor, is_buyer=True)
             
         return bundles[:3]  # Limit to 3 options
 
@@ -497,6 +552,8 @@ class NegotiationEngine:
         
         # Check if near floor price
         floor_price = state.vendor.guardrails.price_floor
+        if floor_price is not None and abs(buyer_offer.unit_price - floor_price) <= 1e-2:
+            return SellerStrategy.CLOSE_DEAL
         if buyer_offer.unit_price <= floor_price * 1.1:
             return SellerStrategy.REJECT_BELOW_FLOOR
             
@@ -544,15 +601,15 @@ class NegotiationEngine:
                 target_price = current_price * (1 + premium)
                 
         elif strategy == SellerStrategy.CLOSE_DEAL:
-            # Final concession to close
-            target_price = max(floor_price, current_price - (policy.min_step_abs * 2))
+            # Final concession to close at floor
+            target_price = floor_price if floor_price is not None else current_price
             
         else:  # GRADUAL_CONCESSION
             # Standard incremental reduction
             target_price = max(floor_price, current_price - policy.min_step_abs)
         
         return OfferComponents(
-            unit_price=max(target_price, floor_price),
+            unit_price=max(target_price, floor_price) if floor_price is not None else target_price,
             currency=buyer_offer.currency,
             quantity=buyer_offer.quantity,
             term_months=buyer_offer.term_months,
@@ -745,7 +802,7 @@ class NegotiationEngine:
                                        state: VendorNegotiationState) -> float:
         """Calibrated acceptance probability using logistic function"""
         tco = self.calculate_tco(offer)
-        utility = self.calculate_utility(offer, request, is_buyer=True)
+        utility = self.calculate_utility(offer, request, vendor=state.vendor, is_buyer=True)
         
         # Price fit: how close to budget constraints
         budget_ratio = tco / request.budget_max

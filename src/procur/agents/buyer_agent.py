@@ -183,14 +183,15 @@ class BuyerAgent:
                 decision: NegotiationDecision = round_result["decision"]
                 should_close: bool = round_result["should_close"]
                 close_reason = round_result["close_reason"]
-
-                if should_close or decision == NegotiationDecision.ACCEPT:
-                    final_offer = round_result["seller_offer"]
-                    outcome = "accepted"
-                    break
                 if decision == NegotiationDecision.DROP:
                     final_offer = state.best_offer or round_result["buyer_offer"]
-                    outcome = "dropped"
+                    outcome = state.outcome_state or "dropped"
+                    close_reason = state.outcome_reason or close_reason or "buyer_drop"
+                    break
+                if should_close or decision == NegotiationDecision.ACCEPT:
+                    final_offer = round_result["seller_offer"]
+                    outcome = state.outcome_state or "accepted"
+                    close_reason = state.outcome_reason or close_reason
                     break
 
             if final_offer is None:
@@ -199,17 +200,20 @@ class BuyerAgent:
                 elif round_result:
                     final_offer = round_result["buyer_offer"]
 
+            if state.outcome_state:
+                outcome = state.outcome_state
+
             if final_offer:
                 offers[vendor.vendor_id] = final_offer
 
             if self.audit_service:
                 summary = self._build_summary(request, vendor, final_offer, state)
-                summary["outcome"] = outcome
-                summary["reason"] = close_reason
+                summary["outcome"] = state.outcome_state or outcome
+                summary["reason"] = state.outcome_reason or close_reason
                 self.audit_service.finalize_session(
                     request_id=request.request_id,
                     vendor_id=vendor.vendor_id,
-                    outcome=outcome,
+                    outcome=state.outcome_state or outcome,
                     summary=summary,
                 )
             if self.memory_service:
@@ -217,7 +221,7 @@ class BuyerAgent:
                 self.memory_service.finalize_session(
                     request.request_id,
                     vendor.vendor_id,
-                    outcome=outcome,
+                    outcome=state.outcome_state or outcome,
                     savings=summary.get("savings"),
                 )
                 if self.retrieval_service:
@@ -277,7 +281,7 @@ class BuyerAgent:
                 return PaymentTerms.NET_30
         return PaymentTerms.NET_30
 
-    def _assess_bundle(self, bundle, request: Request) -> None:
+    def _assess_bundle(self, bundle, request: Request, vendor: Optional[VendorProfile] = None) -> None:
         bundle.tco = self.negotiation_engine.calculate_tco_for_bundle(bundle, request)
         mock_offer = OfferComponents(
             unit_price=bundle.price,
@@ -286,7 +290,12 @@ class BuyerAgent:
             term_months=bundle.term_months,
             payment_terms=bundle.payment_terms,
         )
-        bundle.utility = self.negotiation_engine.calculate_utility(mock_offer, request, is_buyer=True)
+        bundle.utility = self.negotiation_engine.calculate_utility(
+            mock_offer,
+            request,
+            vendor=vendor,
+            is_buyer=True,
+        )
 
     def _select_bundle(self, bundles, request: Request):
         for bundle in bundles:
@@ -363,8 +372,14 @@ class BuyerAgent:
         is_buyer_proposal: bool = True,
     ) -> CandidateEvaluation:
         cloned_offer = components.model_copy(deep=True)
-        tco = self.negotiation_engine.calculate_tco(cloned_offer)
-        buyer_util = self.negotiation_engine.calculate_utility(cloned_offer, request, is_buyer=True)
+        tco_breakdown = self.negotiation_engine.calculate_tco_breakdown(cloned_offer)
+        tco = tco_breakdown.total
+        buyer_util = self.negotiation_engine.calculate_utility(
+            cloned_offer,
+            request,
+            vendor=vendor,
+            is_buyer=True,
+        )
         seller_util = self.negotiation_engine.calculate_utility(
             cloned_offer,
             request,
@@ -382,6 +397,18 @@ class BuyerAgent:
 
         valid = policy_result.valid and not any(alert.blocking for alert in guardrail_alerts)
 
+        rationale_list = list(rationale or [])
+        payment_delta = -tco_breakdown.payment_adjustment
+        payment_note = ""
+        if tco_breakdown.payment_adjustment != 0:
+            payment_note = " (discount rate 12%)"
+        rationale_list.append(
+            "TCO breakdown: "
+            f"base ${tco_breakdown.base_cost:,.2f} + fees ${tco_breakdown.one_time_fees:,.2f} "
+            f"- credits ${tco_breakdown.value_credits:,.2f} "
+            f"+ payment adj {payment_delta:+,.2f}{payment_note} = ${tco:,.2f}"
+        )
+
         return CandidateEvaluation(
             offer=cloned_offer,
             primary_lever=lever,
@@ -391,7 +418,7 @@ class BuyerAgent:
             valid=valid,
             policy_violations=[violation.message for violation in policy_result.violations],
             guardrail_alerts=[alert.message for alert in guardrail_alerts],
-            rationale=list(rationale or []),
+            rationale=rationale_list,
         )
 
     def _bucket_quantity(self, quantity: int) -> str:
@@ -512,6 +539,8 @@ class BuyerAgent:
         return [violation.message for violation in violations]
 
     def _guardrail_notes(self, alerts: List[GuardrailAlert]) -> List[str]:
+        if getattr(self.guardrail_service, "run_mode", "production") == "simulation":
+            return []
         return [alert.message for alert in alerts]
 
     def _run_round(
@@ -526,23 +555,31 @@ class BuyerAgent:
     ) -> Dict[str, object]:
         state.round = round_number
         plan = state.plan or self.plan_negotiation(request)
+        state.plan = plan
         policy = plan.exchange_policy
 
         prev_tco: Optional[float] = None
         prev_buyer_utility: Optional[float] = None
         if previous_offer:
             prev_tco = self.negotiation_engine.calculate_tco(previous_offer)
-            prev_buyer_utility = self.negotiation_engine.calculate_utility(previous_offer, request, is_buyer=True)
+            prev_buyer_utility = self.negotiation_engine.calculate_utility(
+                previous_offer,
+                request,
+                vendor=state.vendor,
+                is_buyer=True,
+            )
 
         if not state.history:
             bundles = self.negotiation_engine.seed_bundles(request, state.vendor, policy)
             for bundle in bundles:
-                self._assess_bundle(bundle, request)
+                self._assess_bundle(bundle, request, state.vendor)
             chosen_bundle = self._select_bundle(bundles, request)
             strategy = NegotiationStrategy.PRICE_ANCHOR
         else:
             strategy = self.negotiation_engine.determine_buyer_strategy(state, previous_offer)
             bundles = self.negotiation_engine.generate_multiple_bundles(strategy, request, previous_offer, state)
+            for bundle in bundles:
+                self._assess_bundle(bundle, request, state.vendor)
             chosen_bundle = self._select_bundle(bundles, request)
 
         plan.current_strategy = strategy
@@ -627,7 +664,12 @@ class BuyerAgent:
 
         self.negotiation_engine.record_offer(state, buyer_offer)
         buyer_tco = self.negotiation_engine.calculate_tco(buyer_components)
-        buyer_utility = self.negotiation_engine.calculate_utility(buyer_components, request, is_buyer=True)
+        buyer_utility = self.negotiation_engine.calculate_utility(
+            buyer_components,
+            request,
+            vendor=state.vendor,
+            is_buyer=True,
+        )
         seller_projection = self.negotiation_engine.calculate_utility(
             buyer_components,
             request,
@@ -725,6 +767,11 @@ class BuyerAgent:
 
         self.negotiation_engine.record_offer(state, seller_offer)
 
+        if seller_strategy == SellerStrategy.REJECT_BELOW_FLOOR and lever == "price":
+            state.stalemate_rounds += 1
+        else:
+            state.stalemate_rounds = 0
+
         if state.opponent_model:
             self.negotiation_engine.update_opponent_model(
                 state.opponent_model,
@@ -743,6 +790,7 @@ class BuyerAgent:
         buyer_view = self.negotiation_engine.calculate_utility(
             seller_offer.components,
             request,
+            vendor=state.vendor,
             is_buyer=True,
         )
 
@@ -767,6 +815,18 @@ class BuyerAgent:
 
         decision = self.negotiation_engine.decide_next_move(plan, state, seller_offer)
         should_close, reason = self.negotiation_engine.should_close_deal(state, seller_offer.components, request)
+
+        if decision == NegotiationDecision.DROP:
+            should_close = True
+            reason = "buyer_drop"
+            state.outcome_state = "dropped"
+            state.outcome_reason = reason
+        elif should_close:
+            if previous_offer and abs(seller_offer.components.unit_price - previous_offer.unit_price) < 1e-2:
+                state.outcome_state = "accepted_no_concession"
+            else:
+                state.outcome_state = "accepted"
+            state.outcome_reason = reason
 
         blocking_buyer = any(v.blocking for v in policy_result.violations)
         blocking_seller = any(v.blocking for v in seller_policy.violations)
@@ -839,6 +899,8 @@ class BuyerAgent:
             "rounds_completed": float(state.round),
             "savings": savings,
             "compliance": state.compliance_summary,
+            "outcome_state": state.outcome_state,
+            "outcome_reason": state.outcome_reason,
         }
 
     def bundle_and_explain(self, offers: Dict[str, Offer]) -> Dict[str, Dict[str, List[str]]]:

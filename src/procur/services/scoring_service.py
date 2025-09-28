@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Dict
+from typing import Dict, NamedTuple
 
 from ..models import OfferComponents, OfferScore, Request, VendorProfile
 
@@ -21,14 +21,21 @@ class ScoringService:
         self.weights = weights or ScoreWeights()
         self.discount_rate = discount_rate
 
-    def compute_tco(self, components: OfferComponents) -> float:
-        # Defensive programming against None values
+    class TCOBreakdown(NamedTuple):
+        total: float
+        base_cost: float
+        one_time_fees: float
+        value_credits: float
+        payment_adjustment: float
+
+    def compute_tco_breakdown(self, components: OfferComponents) -> "ScoringService.TCOBreakdown":
         unit_price = components.unit_price or 0.0
         quantity = components.quantity or 1
         term_months = components.term_months or 12
 
-        base = unit_price * quantity * (term_months / 12)
-        fees = sum(components.one_time_fees.values())
+        base_cost = unit_price * quantity * (term_months / 12)
+        fees = sum(value for value in components.one_time_fees.values() if value >= 0)
+        credits = -sum(value for value in components.one_time_fees.values() if value < 0)
 
         payment_term_days = {
             "Net15": 15,
@@ -38,10 +45,25 @@ class ScoringService:
             "Deposit": 0,
         }.get(components.payment_terms.value, 30)
 
-        r_daily = (1 + self.discount_rate) ** (1 / 365) - 1
-        pv_adjustment = base * (1 - 1 / ((1 + r_daily) ** payment_term_days))
+        payment_adjustment = 0.0
+        if payment_term_days < 30:
+            r_daily = (1 + self.discount_rate) ** (1 / 365) - 1
+            payment_adjustment = base_cost * (1 - 1 / ((1 + r_daily) ** (30 - payment_term_days)))
+        elif payment_term_days > 30:
+            r_daily = (1 + self.discount_rate) ** (1 / 365) - 1
+            payment_adjustment = -base_cost * (1 / ((1 + r_daily) ** (payment_term_days - 30)) - 1)
 
-        return round(base - pv_adjustment + fees, 2)
+        total = base_cost + fees - credits - payment_adjustment
+        return self.TCOBreakdown(
+            total=round(total, 2),
+            base_cost=round(base_cost, 2),
+            one_time_fees=round(fees, 2),
+            value_credits=round(credits, 2),
+            payment_adjustment=round(payment_adjustment, 2),
+        )
+
+    def compute_tco(self, components: OfferComponents) -> float:
+        return self.compute_tco_breakdown(components).total
 
     def normalize(self, value: float, *, reference: float) -> float:
         if reference <= 0:
@@ -57,7 +79,8 @@ class ScoringService:
         delivery_delay_days: float,
         reference_points: Dict[str, float],
     ) -> OfferScore:
-        tco = self.compute_tco(components)
+        tco_breakdown = self.compute_tco_breakdown(components)
+        tco = tco_breakdown.total
         normalized = {
             "spec": spec_match / 100.0,
             "tco": self.normalize(tco, reference=reference_points.get("tco", max(tco, 1.0))),

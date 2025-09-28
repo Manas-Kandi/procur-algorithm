@@ -11,15 +11,20 @@ class ExplainabilityService:
     def build_why_this_pick(self, offer: Offer, sensitivity: Dict[str, float]) -> Dict[str, List[str]]:
         components = offer.score
         coverage = components.spec_match
-        coverage_bullet = f"Feature coverage {coverage:.0%} of requested capabilities"
+        coverage_bullet = f"Feature coverage {coverage:.0%} of required capabilities"
         if coverage < 1.0:
-            coverage_bullet += f"; gap {int(round((1 - coverage) * 100))}% remains"
+            coverage_bullet += f" (gap {int(round((1 - coverage) * 100))}% remaining)"
 
-        bullets = [
-            coverage_bullet,
-            f"Total cost impact normalized at {components.tco:.0%} with weight {sensitivity['cost']:.2f}",
-            f"Risk exposure normalized at {components.risk:.0%}; remaining headroom {max(0.0, 1 - components.risk):.0%}",
-        ]
+        cost_ratio = components.tco
+        if cost_ratio <= 1.0:
+            cost_bullet = f"Cost {(1 - cost_ratio):.0%} under budget"
+        else:
+            cost_bullet = f"Cost exceeds budget by {(cost_ratio - 1):.0%}"
+
+        risk_headroom = max(0.0, 1 - components.risk)
+        risk_bullet = f"Compliance/risk headroom {risk_headroom:.0%}"
+
+        bullets = [coverage_bullet, cost_bullet, risk_bullet]
         return {
             "offer_id": offer.offer_id,
             "vendor_id": offer.vendor_id,
