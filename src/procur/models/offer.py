@@ -41,6 +41,8 @@ class OfferScore(BaseModel):
     risk: float
     time: float
     utility: float
+    matched_features: List[str] = Field(default_factory=list)
+    missing_features: List[str] = Field(default_factory=list)
 
 
 class Offer(BaseModel):

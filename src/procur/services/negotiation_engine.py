@@ -16,6 +16,7 @@ from .evaluation import (
     compute_buyer_utility,
     compute_seller_utility,
     UtilityBreakdown,
+    compute_feature_score,
     detect_zopa,
 )
 
@@ -201,19 +202,20 @@ class NegotiationEngine:
         return 0.6 * margin_utility + 0.25 * term_preference + 0.15 * payment_preference
 
     def _feature_fit(self, request: Request, vendor: Optional[VendorProfile]) -> float:
-        required_features: set[str] = set()
-        required_features.update(tag.lower().replace(" ", "_") for tag in request.must_haves)
-        for feature in request.specs.get("features", []):
-            required_features.add(str(feature).lower().replace(" ", "_"))
+        required_features = list(
+            dict.fromkeys([*request.must_haves, *request.specs.get("features", [])])
+        )
 
         if not required_features:
             return 1.0
         if vendor is None:
             return 0.6
 
-        vendor_features = {tag.lower().replace(" ", "_") for tag in vendor.capability_tags}
-        coverage = len(required_features & vendor_features) / len(required_features)
-        return max(0.0, min(coverage, 1.0))
+        score = compute_feature_score(
+            must_haves=required_features,
+            vendor_features=vendor.capability_tags,
+        )
+        return max(0.0, min(score.score, 1.0))
 
     def _compliance_fit(self, request: Request, vendor: Optional[VendorProfile]) -> float:
         requirements = {req.lower() for req in request.compliance_requirements}
@@ -509,7 +511,12 @@ class NegotiationEngine:
 
         # 4. Policy compliance
         try:
-            policy_result = self.policy_engine.validate_offer(current_offer, request)
+            policy_result = self.policy_engine.validate_offer(
+                request,
+                current_offer,
+                vendor=state.vendor,
+                is_buyer_proposal=False,
+            )
             if not policy_result.valid:
                 return False, "policy_violation"
         except:
@@ -566,6 +573,8 @@ class NegotiationEngine:
     def generate_multiple_bundles(self, strategy: NegotiationStrategy, request: Request, 
                                 current_offer: OfferComponents, state: VendorNegotiationState) -> List[OfferBundle]:
         """Generate multiple offer bundles for enhanced UX"""
+        vendor = state.vendor
+
         primary = self.generate_target_bundle(strategy, request, current_offer, state)
         primary = self.enforce_offer_diversity(primary, state)
         
@@ -592,7 +601,12 @@ class NegotiationEngine:
                 payment_terms=bundle.payment_terms
             )
             bundle.tco = self.calculate_tco(mock_offer)
-            bundle.utility = self.calculate_utility(mock_offer, request, vendor=vendor, is_buyer=True)
+            bundle.utility = self.calculate_utility(
+                mock_offer,
+                request,
+                vendor=vendor,
+                is_buyer=True,
+            )
             
         return bundles[:3]  # Limit to 3 options
 
@@ -1022,8 +1036,8 @@ class NegotiationLifecycle(Enum):
     REPLAN_REQUIRED = "replan_required"
 
 
-BUYER_ACCEPT_THRESHOLD = 0.94
-SELLER_ACCEPT_THRESHOLD = 0.20
+BUYER_ACCEPT_THRESHOLD = 0.75
+SELLER_ACCEPT_THRESHOLD = 0.10
 MAX_STALLED_ROUNDS = 3
 
 

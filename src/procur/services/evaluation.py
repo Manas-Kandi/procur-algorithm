@@ -74,7 +74,8 @@ FEATURE_SYNONYMS: Mapping[str, Sequence[str]] = {
 
 
 def _normalise_feature(token: str) -> str:
-    lowered = token.lower().strip()
+    lowered = token.lower().strip().replace("_", " ").replace("-", " ")
+    lowered = " ".join(lowered.split())
     for canonical, variants in FEATURE_SYNONYMS.items():
         if lowered in variants:
             return canonical
@@ -271,14 +272,14 @@ def compute_seller_utility(
     proposed_price: float,
     list_price: float,
     floor_price: float,
-    min_accept_threshold: float = 0.2,
+    min_accept_threshold: float = 0.1,
     margin_weight: float = 0.9,
 ) -> SellerUtility:
     price_span = max(list_price - floor_price, 0.01)
     margin = max(0.0, min((proposed_price - floor_price) / price_span, 1.0))
     seller_utility = max(0.0, min(margin_weight * margin + (1 - margin_weight) * 0.5, 1.0))
     if seller_utility < min_accept_threshold:
-        seller_utility = max(0.0, min(margin, 1.0))
+        seller_utility = min_accept_threshold
     return SellerUtility(seller_margin=float(margin), seller_utility=float(seller_utility))
 
 

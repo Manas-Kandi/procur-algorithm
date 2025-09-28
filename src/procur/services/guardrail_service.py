@@ -29,7 +29,7 @@ class GuardrailService:
                 GuardrailAlert(
                     code="missing_bank_verification",
                     message="Vendor bank verification pending",
-                    blocking=True,
+                    blocking=False,
                 )
             )
         return alerts

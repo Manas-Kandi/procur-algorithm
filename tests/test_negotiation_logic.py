@@ -108,6 +108,26 @@ def test_buyer_utility_scaling_with_cost_and_compliance():
     assert utility == pytest.approx(round(expected, 4))
 
 
+def test_scoring_service_surfaces_missing_features():
+    scoring = ScoringService()
+    request = make_request(budget_per_seat=900.0)
+    request.must_haves = ["crm", "sso"]
+    request.specs["features"] = ["crm", "sso"]
+    vendor = make_vendor(list_price=240.0, floor_price=180.0)
+    components = OfferComponents(
+        unit_price=240.0,
+        currency="USD",
+        quantity=200,
+        term_months=12,
+        payment_terms=PaymentTerms.NET_30,
+    )
+
+    score = scoring.score_offer(vendor, components, request)
+
+    assert score.spec_match == pytest.approx(0.5)
+    assert "sso" in score.missing_features
+
+
 def test_seller_strategy_closes_at_floor():
     engine = make_engine()
     vendor = make_vendor(list_price=240.0, floor_price=180.0)

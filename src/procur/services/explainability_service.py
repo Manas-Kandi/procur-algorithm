@@ -13,7 +13,11 @@ class ExplainabilityService:
         coverage = components.spec_match
         coverage_bullet = f"Feature coverage {coverage:.0%} of required capabilities"
         if coverage < 1.0:
-            coverage_bullet += f" (gap {int(round((1 - coverage) * 100))}% remaining)"
+            missing = [feat.replace("_", " ") for feat in components.missing_features]
+            if missing:
+                coverage_bullet += f" — missing {', '.join(missing)}"
+            else:
+                coverage_bullet += f" (gap {int(round((1 - coverage) * 100))}% remaining)"
 
         cost_ratio = components.tco
         if cost_ratio <= 1.0:

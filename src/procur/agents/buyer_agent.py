@@ -764,6 +764,13 @@ class BuyerAgent:
 
         self.negotiation_engine.record_offer(state, buyer_offer)
 
+        preview_buyer_utility = self.negotiation_engine.calculate_utility(
+            buyer_components,
+            request,
+            vendor=state.vendor,
+            is_buyer=True,
+        )
+
         buyer_rationale: List[str]
         if negotiation_message:
             buyer_rationale = list(negotiation_message.justification_bullets)
@@ -774,7 +781,7 @@ class BuyerAgent:
                 "LLM fallback engaged",
             ]
             machine_rationale = MachineRationale(
-                score_components={"utility": buyer_utility},
+                score_components={"utility": preview_buyer_utility},
                 constraints_respected=[],
                 concession_taken=self._strategy_lever(strategy),
             )

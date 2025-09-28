@@ -2,10 +2,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from decimal import Decimal
-from typing import Dict
+from typing import Dict, List, Optional
 
 from ..models import OfferComponents, OfferScore, Request, VendorProfile
-from .evaluation import TCOInputs, TCOBreakdown, compute_tco
+from .evaluation import TCOInputs, TCOBreakdown, compute_tco, compute_feature_score
 
 
 @dataclass
@@ -54,6 +54,8 @@ class ScoringService:
         risk_score: float,
         delivery_delay_days: float,
         reference_points: Dict[str, float],
+        matched_features: Optional[List[str]] = None,
+        missing_features: Optional[List[str]] = None,
     ) -> OfferScore:
         tco = float(self.compute_tco_breakdown(components).total)
         normalized = {
@@ -77,6 +79,8 @@ class ScoringService:
             risk=round(normalized["risk"], 4),
             time=round(normalized["time"], 4),
             utility=round(utility, 4),
+            matched_features=list(matched_features or []),
+            missing_features=list(missing_features or []),
         )
 
     def sensitivity_analysis(self, score: OfferScore) -> Dict[str, float]:
@@ -94,16 +98,13 @@ class ScoringService:
         components: OfferComponents,
         request: Request,
     ) -> OfferScore:
-        required_features = set()
-        required_features.update(tag.lower().replace(" ", "_") for tag in request.must_haves)
-        for feature in request.specs.get("features", []):
-            required_features.add(str(feature).lower().replace(" ", "_"))
+        required_features = list(dict.fromkeys([*request.must_haves, *request.specs.get("features", [])]))
 
-        vendor_features = {tag.lower().replace(" ", "_") for tag in vendor.capability_tags}
-        coverage_hits = len(required_features & vendor_features)
-        required_total = len(required_features) or 1
-        coverage_ratio = coverage_hits / required_total
-        spec_match = round(min(max(coverage_ratio * 100.0, 0.0), 100.0), 4)
+        feature_result = compute_feature_score(
+            must_haves=required_features,
+            vendor_features=vendor.capability_tags,
+        )
+        spec_match = round(min(max(feature_result.score * 100.0, 0.0), 100.0), 4)
 
         normalized_certs = {cert.lower() for cert in vendor.certifications}
         risk_score = 20.0 if "soc2" in normalized_certs else 60.0
@@ -122,4 +123,6 @@ class ScoringService:
             risk_score=risk_score,
             delivery_delay_days=delivery_delay,
             reference_points=reference,
+            matched_features=feature_result.matched,
+            missing_features=feature_result.missing,
         )
