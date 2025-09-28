@@ -31,7 +31,11 @@ class ScrapingConfig:
 
     # Request settings
     timeout: int = 30
-    user_agent: str = "Procur-AI-Bot/1.0 (Procurement Intelligence)"
+    user_agent: str = (
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/124.0.0.0 Safari/537.36"
+    )
 
     # Caching
     cache_duration_hours: int = 24
@@ -92,6 +96,7 @@ class BaseScraper(ABC):
             'Accept-Language': 'en-US,en;q=0.5',
             'Accept-Encoding': 'gzip, deflate',
             'Connection': 'keep-alive',
+            'Referer': 'https://www.g2.com/',
         })
 
         # Rate limiting
