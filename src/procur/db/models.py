@@ -183,7 +183,7 @@ class VendorProfileRecord(Base, TimestampMixin, SoftDeleteMixin):
     # Ratings and metadata
     rating: Mapped[float | None] = mapped_column(Float, nullable=True)
     review_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    metadata: Mapped[Dict[str, Any] | None] = mapped_column(JSON, nullable=True)
+    vendor_metadata: Mapped[Dict[str, Any] | None] = mapped_column(JSON, nullable=True)
     
     # Data quality
     confidence_score: Mapped[float | None] = mapped_column(Float, nullable=True)

@@ -11,8 +11,28 @@ from ..db.repositories import (
     NegotiationRepository,
     VendorRepository,
     ContractRepository,
+    RequestRepository,
 )
 from ..events import EventPublisher, EventType
+from ..agents import BuyerAgent, SellerAgent
+from ..services import (
+    NegotiationEngine,
+    PolicyEngine,
+    ScoringService,
+    ComplianceService,
+    GuardrailService,
+    AuditTrailService,
+    MemoryService,
+    ExplainabilityService,
+    RetrievalService,
+)
+from ..llm import LLMClient
+from ..integrations import (
+    G2Scraper,
+    PricingScraper,
+    ComplianceScraper,
+)
+from ..observability import get_logger, track_metric
 
 logger = logging.getLogger(__name__)
 
@@ -59,19 +79,116 @@ def process_negotiation_round(
     """
     try:
         logger.info(f"Processing negotiation round: {negotiation_id} - Round {round_number}")
+        track_metric("negotiation_round_started", 1, {"negotiation_id": negotiation_id})
         
         with get_session() as session:
             neg_repo = NegotiationRepository(session)
+            request_repo = RequestRepository(session)
+            vendor_repo = VendorRepository(session)
             
             # Get negotiation session
             negotiation = neg_repo.get_by_session_id(negotiation_id)
             if not negotiation:
                 raise ValueError(f"Negotiation not found: {negotiation_id}")
             
-            # TODO: Implement actual negotiation logic
-            # This would call BuyerAgent and SellerAgent to generate offers
+            # Get request and vendor
+            request = request_repo.get(negotiation.request_id)
+            vendor = vendor_repo.get(negotiation.vendor_id)
             
-            # For now, just increment round
+            if not request or not vendor:
+                raise ValueError("Request or vendor not found")
+            
+            # Initialize services
+            llm_client = LLMClient()
+            policy_engine = PolicyEngine()
+            scoring_service = ScoringService()
+            compliance_service = ComplianceService()
+            guardrail_service = GuardrailService()
+            audit_service = AuditTrailService()
+            memory_service = MemoryService()
+            explainability_service = ExplainabilityService()
+            retrieval_service = RetrievalService()
+            negotiation_engine = NegotiationEngine(policy_engine, scoring_service)
+            
+            # Initialize buyer agent
+            buyer_agent = BuyerAgent(
+                llm_client=llm_client,
+                policy_engine=policy_engine,
+                scoring_service=scoring_service,
+                compliance_service=compliance_service,
+                guardrail_service=guardrail_service,
+                negotiation_engine=negotiation_engine,
+                audit_service=audit_service,
+                memory_service=memory_service,
+                explainability_service=explainability_service,
+                retrieval_service=retrieval_service,
+            )
+            
+            # Initialize seller agent
+            seller_agent = SellerAgent(
+                llm_client=llm_client,
+                negotiation_engine=negotiation_engine,
+            )
+            
+            # Convert DB models to domain models
+            from ..models import Request, VendorProfile
+            domain_request = Request(
+                request_id=request.request_id,
+                description=request.description,
+                category=request.category or "",
+                budget_min=request.budget_min,
+                budget_max=request.budget_max,
+                quantity=request.quantity or 1,
+                must_haves=request.must_haves or [],
+                nice_to_haves=request.nice_to_haves or [],
+                compliance_requirements=request.compliance_requirements or [],
+            )
+            
+            domain_vendor = VendorProfile(
+                vendor_id=vendor.vendor_id,
+                name=vendor.name,
+                category=vendor.category or "",
+                list_price=vendor.list_price or 0.0,
+                features=vendor.features or [],
+                certifications=vendor.certifications or [],
+                compliance_frameworks=vendor.compliance_frameworks or [],
+            )
+            
+            # Execute negotiation round
+            # Get history from negotiation session
+            history = negotiation.history or []
+            
+            # Buyer generates offer/counter-offer
+            buyer_decision = buyer_agent.negotiate(
+                request=domain_request,
+                vendor=domain_vendor,
+                round_num=round_number,
+            )
+            
+            # Seller responds
+            if buyer_decision.offer:
+                seller_decision = seller_agent.respond_to_offer(
+                    offer=buyer_decision.offer,
+                    vendor=domain_vendor,
+                    round_num=round_number,
+                )
+                
+                # Update history
+                history.append({
+                    "round": round_number,
+                    "buyer_offer": buyer_decision.offer.model_dump(),
+                    "seller_response": seller_decision.model_dump(),
+                })
+            
+            # Update negotiation session
+            neg_repo.update(
+                negotiation.id,
+                current_round=round_number + 1,
+                history=history,
+                opponent_model=buyer_agent.vendor_states.get(vendor.vendor_id, {}).model_dump() if hasattr(buyer_agent, 'vendor_states') else None,
+            )
+            
+            # Increment round
             neg_repo.increment_round(negotiation.id)
             
             # Publish round completed event
@@ -81,16 +198,19 @@ def process_negotiation_round(
                 data={
                     "negotiation_id": negotiation_id,
                     "round_number": round_number,
+                    "buyer_decision": buyer_decision.decision,
                 },
                 correlation_id=correlation_id,
             )
             
+            track_metric("negotiation_round_completed", 1, {"negotiation_id": negotiation_id})
             logger.info(f"Completed negotiation round: {negotiation_id} - Round {round_number}")
             
             return {
                 "negotiation_id": negotiation_id,
                 "round_number": round_number,
                 "status": "completed",
+                "buyer_decision": buyer_decision.decision,
             }
             
     except Exception as e:
@@ -122,6 +242,7 @@ def enrich_vendor_data(
     """
     try:
         logger.info(f"Enriching vendor data: {vendor_id}")
+        track_metric("vendor_enrichment_started", 1, {"vendor_id": vendor_id})
         
         with get_session() as session:
             vendor_repo = VendorRepository(session)
@@ -131,12 +252,47 @@ def enrich_vendor_data(
             if not vendor:
                 raise ValueError(f"Vendor not found: {vendor_id}")
             
-            # TODO: Implement actual enrichment logic
-            # This would call G2Scraper, PricingScraper, ComplianceScraper
+            # Initialize scrapers
+            g2_scraper = G2Scraper()
+            pricing_scraper = PricingScraper()
+            compliance_scraper = ComplianceScraper()
             
-            # Update last enriched timestamp
-            from datetime import datetime
-            vendor_repo.update(vendor.id, last_enriched_at=datetime.utcnow())
+            enrichment_data = {}
+            
+            # Scrape G2 data (ratings, reviews, features)
+            try:
+                g2_data = g2_scraper.scrape_vendor(vendor.name, category)
+                if g2_data:
+                    enrichment_data["rating"] = g2_data.get("rating")
+                    enrichment_data["review_count"] = g2_data.get("review_count")
+                    enrichment_data["features"] = g2_data.get("features", vendor.features)
+            except Exception as e:
+                logger.warning(f"G2 scraping failed for {vendor_id}: {e}")
+            
+            # Scrape pricing data
+            try:
+                pricing_data = pricing_scraper.scrape_pricing(vendor.name, category)
+                if pricing_data:
+                    enrichment_data["list_price"] = pricing_data.get("list_price")
+                    enrichment_data["price_tiers"] = pricing_data.get("price_tiers")
+            except Exception as e:
+                logger.warning(f"Pricing scraping failed for {vendor_id}: {e}")
+            
+            # Scrape compliance data
+            try:
+                compliance_data = compliance_scraper.scrape_compliance(vendor.name)
+                if compliance_data:
+                    enrichment_data["certifications"] = compliance_data.get("certifications", vendor.certifications)
+                    enrichment_data["compliance_frameworks"] = compliance_data.get("frameworks", vendor.compliance_frameworks)
+            except Exception as e:
+                logger.warning(f"Compliance scraping failed for {vendor_id}: {e}")
+            
+            # Update vendor with enriched data
+            from datetime import datetime, timezone
+            enrichment_data["last_enriched_at"] = datetime.now(timezone.utc)
+            enrichment_data["confidence_score"] = 0.8  # Calculate based on data completeness
+            
+            vendor_repo.update(vendor.id, **enrichment_data)
             
             # Publish enrichment completed event
             publisher = EventPublisher()
@@ -145,14 +301,17 @@ def enrich_vendor_data(
                 data={
                     "vendor_id": vendor_id,
                     "category": category,
+                    "enriched_fields": list(enrichment_data.keys()),
                 },
             )
             
+            track_metric("vendor_enrichment_completed", 1, {"vendor_id": vendor_id})
             logger.info(f"Completed vendor enrichment: {vendor_id}")
             
             return {
                 "vendor_id": vendor_id,
                 "status": "completed",
+                "enriched_fields": list(enrichment_data.keys()),
             }
             
     except Exception as e:
@@ -199,20 +358,71 @@ def generate_contract(
     """
     try:
         logger.info(f"Generating contract: {contract_id}")
+        track_metric("contract_generation_started", 1, {"contract_id": contract_id})
         
         with get_session() as session:
             contract_repo = ContractRepository(session)
+            request_repo = RequestRepository(session)
+            vendor_repo = VendorRepository(session)
             
             # Get contract
             contract = contract_repo.get_by_contract_id(contract_id)
             if not contract:
                 raise ValueError(f"Contract not found: {contract_id}")
             
-            # TODO: Implement actual contract generation
-            # This would call ContractGenerator service
+            # Get related entities
+            request = request_repo.get(contract.request_id)
+            vendor = vendor_repo.get(contract.vendor_id)
             
-            # Update contract status
-            contract_repo.update(contract.id, status="generated")
+            if not request or not vendor:
+                raise ValueError("Request or vendor not found")
+            
+            # Generate contract document using LLM
+            llm_client = LLMClient()
+            
+            contract_prompt = f"""
+            Generate a professional procurement contract document with the following details:
+            
+            VENDOR: {vendor.name}
+            BUYER: {request.user_id}
+            
+            CONTRACT TERMS:
+            - Total Value: ${contract.total_value:,.2f} {contract.currency}
+            - Start Date: {contract.start_date.strftime('%Y-%m-%d')}
+            - End Date: {contract.end_date.strftime('%Y-%m-%d')}
+            - Auto-Renew: {"Yes" if contract.auto_renew else "No"}
+            - Payment Schedule: {contract.payment_schedule}
+            
+            REQUIREMENTS:
+            - Must-haves: {request.must_haves}
+            - Compliance: {request.compliance_requirements}
+            
+            Generate a complete contract document with standard clauses for:
+            1. Scope of Services
+            2. Payment Terms
+            3. Service Level Agreement (SLA)
+            4. Termination Conditions
+            5. Data Privacy and Security
+            6. Intellectual Property
+            7. Limitation of Liability
+            8. Dispute Resolution
+            """
+            
+            contract_document = llm_client.generate_completion(
+                prompt=contract_prompt,
+                max_tokens=4000,
+            )
+            
+            # Store contract document (in production, upload to S3/storage)
+            document_url = f"contracts/{contract_id}.pdf"  # Placeholder
+            
+            # Update contract with generated document
+            contract_repo.update(
+                contract.id,
+                status="generated",
+                terms_and_conditions=contract_document,
+                document_url=document_url,
+            )
             
             # Publish generation completed event
             publisher = EventPublisher()
@@ -222,15 +432,18 @@ def generate_contract(
                     "contract_id": contract_id,
                     "request_id": request_id,
                     "vendor_id": vendor_id,
+                    "document_url": document_url,
                 },
                 correlation_id=correlation_id,
             )
             
+            track_metric("contract_generation_completed", 1, {"contract_id": contract_id})
             logger.info(f"Completed contract generation: {contract_id}")
             
             return {
                 "contract_id": contract_id,
                 "status": "generated",
+                "document_url": document_url,
             }
             
     except Exception as e:
@@ -268,19 +481,41 @@ def send_notification(
     """
     try:
         logger.info(f"Sending {notification_type} notification to {recipient}")
+        track_metric("notification_sent", 1, {"type": notification_type})
         
-        # TODO: Implement actual notification sending
-        # This would call SlackIntegration, EmailService, etc.
+        from ..integrations import SlackIntegration, EmailService
         
         if notification_type == "email":
             # Send email
-            pass
+            email_service = EmailService()
+            email_service.send_email(
+                to=recipient,
+                subject=subject,
+                body=message,
+                **kwargs
+            )
         elif notification_type == "slack":
             # Send Slack message
-            pass
+            slack = SlackIntegration()
+            slack.send_message(
+                channel=recipient,
+                text=message,
+                **kwargs
+            )
         elif notification_type == "webhook":
             # Call webhook
-            pass
+            import requests
+            requests.post(
+                recipient,
+                json={
+                    "subject": subject,
+                    "message": message,
+                    **kwargs
+                },
+                timeout=10,
+            )
+        else:
+            raise ValueError(f"Unsupported notification type: {notification_type}")
         
         logger.info(f"Sent {notification_type} notification to {recipient}")
         

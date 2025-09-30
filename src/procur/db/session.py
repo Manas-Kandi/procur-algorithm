@@ -135,10 +135,21 @@ def get_session() -> Generator[Session, None, None]:
         @app.get("/items")
         def get_items(session: Session = Depends(get_session)):
             return session.query(Item).all()
+    
+    Usage as context manager:
+        with get_session() as session:
+            session.query(Item).all()
     """
     db = get_db_session()
-    with db.get_session() as session:
+    session = db.session_factory()
+    try:
         yield session
+        session.commit()
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        session.close()
 
 
 def init_db(create_tables: bool = True) -> DatabaseSession:
