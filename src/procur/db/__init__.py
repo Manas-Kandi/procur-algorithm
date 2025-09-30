@@ -12,6 +12,14 @@ from .models import (
     AuditLogRecord,
     PolicyConfigRecord,
 )
+from .models_auth import (
+    UserSession,
+    APIKey,
+    PasswordHistory,
+    LoginAttempt,
+    Organization,
+    OAuthConnection,
+)
 
 __all__ = [
     "Base",
@@ -26,4 +34,10 @@ __all__ = [
     "NegotiationSessionRecord",
     "AuditLogRecord",
     "PolicyConfigRecord",
+    "UserSession",
+    "APIKey",
+    "PasswordHistory",
+    "LoginAttempt",
+    "Organization",
+    "OAuthConnection",
 ]

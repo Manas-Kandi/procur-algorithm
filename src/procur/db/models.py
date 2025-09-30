@@ -20,6 +20,14 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .base import Base, SoftDeleteMixin, TimestampMixin
+from .models_auth import (
+    APIKey,
+    LoginAttempt,
+    OAuthConnection,
+    Organization,
+    PasswordHistory,
+    UserSession,
+)
 
 
 class UserAccount(Base, TimestampMixin, SoftDeleteMixin):
@@ -42,8 +50,25 @@ class UserAccount(Base, TimestampMixin, SoftDeleteMixin):
     organization_id: Mapped[str | None] = mapped_column(String(100), nullable=True, index=True)
     team: Mapped[str | None] = mapped_column(String(100), nullable=True)
     
+    # Password policy
+    password_changed_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
+    password_expires_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    must_change_password: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    
+    # Account security
+    failed_login_attempts: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    locked_until: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    email_verified: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    email_verification_token: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    
+    # MFA
+    mfa_enabled: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    mfa_secret: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    mfa_backup_codes: Mapped[List[str] | None] = mapped_column(JSON, nullable=True)
+    
     # Metadata
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    last_password_change_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     preferences: Mapped[Dict[str, Any] | None] = mapped_column(JSON, nullable=True)
     
     # Relationships
@@ -52,6 +77,21 @@ class UserAccount(Base, TimestampMixin, SoftDeleteMixin):
     )
     audit_logs: Mapped[List["AuditLogRecord"]] = relationship(
         "AuditLogRecord", back_populates="user", cascade="all, delete-orphan"
+    )
+    sessions: Mapped[List["UserSession"]] = relationship(
+        "UserSession", back_populates="user", cascade="all, delete-orphan"
+    )
+    api_keys: Mapped[List["APIKey"]] = relationship(
+        "APIKey", back_populates="user", cascade="all, delete-orphan"
+    )
+    password_history: Mapped[List["PasswordHistory"]] = relationship(
+        "PasswordHistory", back_populates="user", cascade="all, delete-orphan"
+    )
+    oauth_connections: Mapped[List["OAuthConnection"]] = relationship(
+        "OAuthConnection", back_populates="user", cascade="all, delete-orphan"
+    )
+    organization: Mapped["Organization | None"] = relationship(
+        "Organization", back_populates="users", foreign_keys=[organization_id]
     )
     
     def __repr__(self) -> str:
