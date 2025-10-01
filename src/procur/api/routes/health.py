@@ -39,6 +39,31 @@ def health_check(session: Session = Depends(get_session)):
 
 
 @router.get(
+    "/ready",
+    response_model=HealthResponse,
+    summary="Readiness check",
+    description="Check if API is ready to accept requests",
+)
+def readiness_check(session: Session = Depends(get_session)):
+    """Readiness check endpoint for Kubernetes/load balancers."""
+    config = get_api_config()
+    
+    # Check database connectivity
+    try:
+        session.execute(text("SELECT 1"))
+        db_status = "connected"
+    except Exception as e:
+        db_status = f"error: {str(e)}"
+    
+    return {
+        "status": "ready" if db_status == "connected" else "not_ready",
+        "timestamp": datetime.utcnow(),
+        "version": config.version,
+        "database": db_status,
+    }
+
+
+@router.get(
     "/",
     summary="Root endpoint",
     description="API root with basic information",

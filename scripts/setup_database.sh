@@ -40,20 +40,30 @@ fi
 
 echo -e "${GREEN}PostgreSQL is running${NC}"
 
+# Detect PostgreSQL superuser (macOS uses system username, Linux uses 'postgres')
+if psql -h $DB_HOST -p $DB_PORT -U postgres -d postgres -c '\q' 2>/dev/null; then
+    PG_SUPERUSER="postgres"
+    PG_DEFAULT_DB="postgres"
+else
+    PG_SUPERUSER=$(whoami)
+    PG_DEFAULT_DB="postgres"
+    echo "Using system user '$PG_SUPERUSER' as PostgreSQL superuser (macOS default)"
+fi
+
 # Create database user if it doesn't exist
 echo "Creating database user..."
-psql -h $DB_HOST -p $DB_PORT -U postgres -tc "SELECT 1 FROM pg_user WHERE usename = '$DB_USER'" | grep -q 1 || \
-    psql -h $DB_HOST -p $DB_PORT -U postgres -c "CREATE USER $DB_USER WITH PASSWORD '$DB_PASSWORD';"
+psql -h $DB_HOST -p $DB_PORT -U $PG_SUPERUSER -d $PG_DEFAULT_DB -tc "SELECT 1 FROM pg_user WHERE usename = '$DB_USER'" | grep -q 1 || \
+    psql -h $DB_HOST -p $DB_PORT -U $PG_SUPERUSER -d $PG_DEFAULT_DB -c "CREATE USER $DB_USER WITH PASSWORD '$DB_PASSWORD';"
 
 # Create database if it doesn't exist
 echo "Creating database..."
-psql -h $DB_HOST -p $DB_PORT -U postgres -tc "SELECT 1 FROM pg_database WHERE datname = '$DB_NAME'" | grep -q 1 || \
-    psql -h $DB_HOST -p $DB_PORT -U postgres -c "CREATE DATABASE $DB_NAME OWNER $DB_USER;"
+psql -h $DB_HOST -p $DB_PORT -U $PG_SUPERUSER -d $PG_DEFAULT_DB -tc "SELECT 1 FROM pg_database WHERE datname = '$DB_NAME'" | grep -q 1 || \
+    psql -h $DB_HOST -p $DB_PORT -U $PG_SUPERUSER -d $PG_DEFAULT_DB -c "CREATE DATABASE $DB_NAME OWNER $DB_USER;"
 
 # Grant privileges
 echo "Granting privileges..."
-psql -h $DB_HOST -p $DB_PORT -U postgres -d $DB_NAME -c "GRANT ALL PRIVILEGES ON DATABASE $DB_NAME TO $DB_USER;"
-psql -h $DB_HOST -p $DB_PORT -U postgres -d $DB_NAME -c "GRANT ALL ON SCHEMA public TO $DB_USER;"
+psql -h $DB_HOST -p $DB_PORT -U $PG_SUPERUSER -d $DB_NAME -c "GRANT ALL PRIVILEGES ON DATABASE $DB_NAME TO $DB_USER;"
+psql -h $DB_HOST -p $DB_PORT -U $PG_SUPERUSER -d $DB_NAME -c "GRANT ALL ON SCHEMA public TO $DB_USER;"
 
 echo -e "${GREEN}Database setup complete!${NC}"
 echo ""
