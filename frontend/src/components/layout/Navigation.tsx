@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import clsx from 'clsx'
 import type { LucideIcon } from 'lucide-react'
@@ -11,10 +12,14 @@ import {
   SlidersHorizontal,
   Brain,
   MapPinned,
+  ChevronsLeft,
+  ChevronsRight,
+  LogOut,
 } from 'lucide-react'
 import { useAuthStore } from '../../store/auth'
 import type { UserRole } from '../../types'
 import { RoleBadge } from '../../ui/components/RoleBadge'
+import { Tooltip } from '../shared/Tooltip'
 
 interface NavigationProps {
   variant?: 'desktop' | 'mobile'
@@ -115,6 +120,14 @@ export function Navigation ({ variant = 'desktop', onNavigate }: NavigationProps
   const location = useLocation()
   const { user, logout } = useAuthStore()
 
+  const [collapsed, setCollapsed] = useState<boolean>(() => {
+    try { return localStorage.getItem('nav_collapsed') === '1' } catch { return false }
+  })
+  useEffect(() => {
+    try { localStorage.setItem('nav_collapsed', collapsed ? '1' : '0') } catch {}
+  }, [collapsed])
+  const toggleCollapsed = () => setCollapsed(prev => !prev)
+
   if (!user) return null
 
   const sections: Array<{ key: 'buyer' | 'seller'; label: string; accent: string; items: NavItem[] }> = []
@@ -126,21 +139,42 @@ export function Navigation ({ variant = 'desktop', onNavigate }: NavigationProps
   }
 
   const containerClass = clsx(
-    'flex w-60 flex-col bg-surface-raised',
-    variant === 'desktop' && 'hidden border-r border-border-subtle lg:flex',
+    'flex flex-col bg-surface-raised transition-[width] duration-200 ease-in-out',
+    collapsed ? 'w-16' : 'w-60',
+    variant === 'desktop' && 'hidden h-screen overflow-hidden border-r border-border-subtle lg:flex',
     variant === 'mobile' && 'h-full shadow-medium'
   )
 
   return (
     <nav className={containerClass} aria-label="Primary navigation">
-      <div className="flex-1 overflow-y-auto py-6">
+      <div className="flex items-center justify-between border-b border-border-subtle px-3 py-3">
+        <Link to="/" className="inline-flex items-center gap-2">
+          <div className="flex h-8 w-8 items-center justify-center rounded-sm bg-brand-primary text-text-inverse text-sm font-bold">
+            P
+          </div>
+          {!collapsed && <span className="text-sm font-semibold text-text-primary">Procur</span>}
+        </Link>
+        <Tooltip content={collapsed ? 'Expand' : 'Collapse'}>
+          <button
+            type="button"
+            onClick={toggleCollapsed}
+            aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            className="inline-flex h-8 w-8 items-center justify-center rounded-sm border border-border-medium bg-surface-raised text-text-secondary transition-all duration-150 hover:bg-background-secondary hover:text-text-primary"
+          >
+            {collapsed ? <ChevronsRight className="h-4 w-4" /> : <ChevronsLeft className="h-4 w-4" />}
+          </button>
+        </Tooltip>
+      </div>
+      <div className="flex-1 py-4">
         {sections.map((section) => (
           <div key={section.key} className="mb-8">
-            <div className="flex items-center gap-2 px-6 text-xs font-semibold uppercase tracking-wide text-text-tertiary">
-              <span className={clsx('h-1 w-1 rounded-full', section.accent)} aria-hidden="true" />
-              {section.label}
-            </div>
-            <div className="mt-2 space-y-0.5 px-3">
+            {!collapsed && (
+              <div className="flex items-center gap-2 px-6 text-xs font-semibold uppercase tracking-wide text-text-tertiary">
+                <span className={clsx('h-1 w-1 rounded-full', section.accent)} aria-hidden="true" />
+                {section.label}
+              </div>
+            )}
+            <div className={clsx('mt-2 space-y-0.5', collapsed ? 'px-2' : 'px-3')}>
               {section.items
                 .filter(item => item.roles.includes(user.role))
                 .map((item) => {
@@ -150,13 +184,13 @@ export function Navigation ({ variant = 'desktop', onNavigate }: NavigationProps
                     : location.pathname.startsWith(item.href)
                   const ItemIcon = item.icon
 
-                  return (
+                  const link = (
                     <Link
-                      key={item.href}
                       to={item.href}
                       onClick={onNavigate}
                       className={clsx(
                         'group flex items-center gap-3 rounded-sm px-3 py-2.5 text-sm font-medium transition-all duration-150',
+                        collapsed && 'justify-center gap-0 px-2',
                         isActive
                           ? 'bg-brand-primary/10 text-brand-primary'
                           : 'text-text-secondary hover:bg-background-secondary hover:text-text-primary'
@@ -170,15 +204,18 @@ export function Navigation ({ variant = 'desktop', onNavigate }: NavigationProps
                       )}>
                         <ItemIcon className="h-4 w-4" aria-hidden="true" />
                       </span>
-                      <span className="flex flex-col">
-                        {item.name}
-                        {item.description && (
-                          <span className="text-xs font-normal text-text-tertiary group-hover:text-text-secondary">
-                            {item.description}
-                          </span>
-                        )}
-                      </span>
+                      {!collapsed && (
+                        <span className="flex flex-col">
+                          {item.name}
+                        </span>
+                      )}
                     </Link>
+                  )
+
+                  return collapsed ? (
+                    <Tooltip key={item.href} content={item.name}>{link}</Tooltip>
+                  ) : (
+                    <span key={item.href}>{link}</span>
                   )
                 })}
             </div>
@@ -187,23 +224,40 @@ export function Navigation ({ variant = 'desktop', onNavigate }: NavigationProps
       </div>
 
       <div className="mt-auto border-t border-border-subtle px-4 py-4">
-        <div className="flex items-center gap-3">
+        <div className={clsx('flex items-center gap-3', collapsed && 'justify-center') }>
           <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-sm bg-background-secondary text-sm font-semibold text-brand-primary">
             {(user.full_name ?? user.username).charAt(0).toUpperCase()}
           </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-text-primary truncate">{user.full_name ?? user.username}</p>
-            <p className="text-xs text-text-tertiary truncate">{user.email}</p>
-          </div>
-          <RoleBadge role={user.role} />
+          {!collapsed && (
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-text-primary truncate">{user.full_name ?? user.username}</p>
+              <p className="text-xs text-text-tertiary truncate">{user.email}</p>
+            </div>
+          )}
+          {!collapsed && <RoleBadge role={user.role} />}
         </div>
-        <button
-          type="button"
-          onClick={logout}
-          className="mt-3 inline-flex w-full items-center justify-center rounded-sm border border-border-medium bg-surface-raised px-3 py-2 text-xs font-medium text-text-secondary transition-all duration-150 hover:border-border-strong hover:bg-background-secondary hover:text-text-primary"
-        >
-          Sign out
-        </button>
+        {!collapsed ? (
+          <button
+            type="button"
+            onClick={logout}
+            className="mt-3 inline-flex w-full items-center justify-center rounded-sm border border-border-medium bg-surface-raised px-3 py-2 text-xs font-medium text-text-secondary transition-all duration-150 hover:border-border-strong hover:bg-background-secondary hover:text-text-primary"
+          >
+            Sign out
+          </button>
+        ) : (
+          <div className="mt-3 flex justify-center">
+            <Tooltip content="Sign out">
+              <button
+                type="button"
+                onClick={logout}
+                aria-label="Sign out"
+                className="inline-flex h-8 w-8 items-center justify-center rounded-sm border border-border-medium bg-surface-raised text-text-secondary transition-all duration-150 hover:border-border-strong hover:bg-background-secondary hover:text-text-primary"
+              >
+                <LogOut className="h-4 w-4" />
+              </button>
+            </Tooltip>
+          </div>
+        )}
       </div>
     </nav>
   )
