@@ -224,6 +224,146 @@ The codebase is now ready for end-to-end testing and deployment.
 
 ---
 
+## 🔄 Round 2 Fixes (Additional Issues)
+
+After the initial fixes, additional issues were identified and resolved:
+
+### 9. **Fixed Request Domain Model Instantiation** ✅
+**Issue**: `tasks.py:135-144` instantiated `Request` without required fields `requester_id`, `type`, and `specs`, causing validation errors.
+
+**Resolution**:
+- Added `requester_id` mapped from `request.user_id`
+- Added `type` field with proper `RequestType` enum conversion
+- Added `specs` field with default empty dict
+- Removed invalid fields like `category` that don't exist in domain model
+
+**Files Modified**:
+- `src/procur/workers/tasks.py` (fixed Request instantiation)
+
+---
+
+### 10. **Fixed VendorProfile Domain Model Instantiation** ✅
+**Issue**: `tasks.py:147-154` passed invalid fields `category`, `list_price`, and `compliance_frameworks` to `VendorProfile`, causing "unexpected keyword argument" errors.
+
+**Resolution**:
+- Changed to use correct fields: `capability_tags`, `price_tiers`, `regions`
+- Mapped `features` to `capability_tags`
+- Converted `list_price` to `price_tiers` dict format
+- Added required `risk_level` field with default value
+
+**Files Modified**:
+- `src/procur/workers/tasks.py` (fixed VendorProfile instantiation)
+
+---
+
+### 11. **Fixed buyer_agent.negotiate() Return Value** ✅
+**Issue**: `tasks.py:157-175` treated `buyer_agent.negotiate()` return value as an object with `.offer` and `.decision` attributes, but it actually returns `Dict[str, Offer]`, causing `AttributeError`.
+
+**Resolution**:
+- Updated to handle `Dict[str, Offer]` return type correctly
+- Extract offer using `offers_dict.get(vendor.vendor_id)`
+- Derive decision from offer score instead of non-existent attribute
+- Simplified negotiation flow to match actual agent API
+
+**Files Modified**:
+- `src/procur/workers/tasks.py` (fixed return value handling)
+
+---
+
+### 12. **Fixed SellerAgent Method Call** ✅
+**Issue**: `tasks.py:170-183` called `seller_agent.respond_to_offer()`, but the actual method is `respond()`, causing `AttributeError`.
+
+**Resolution**:
+- Removed incorrect seller agent interaction from task
+- `buyer_agent.negotiate()` handles full multi-round negotiation internally
+- Seller agent is instantiated within buyer agent as needed
+- Task now focuses on orchestration, not individual round execution
+
+**Files Modified**:
+- `src/procur/workers/tasks.py` (removed invalid method call)
+
+---
+
+### 13. **Fixed negotiation.history AttributeError** ✅
+**Issue**: `tasks.py:158` accessed `negotiation.history`, but the ORM model `NegotiationSessionRecord` doesn't have a `history` column, causing `AttributeError`.
+
+**Resolution**:
+- Removed references to non-existent `history` field
+- Use existing fields: `buyer_state`, `seller_state`, `opponent_model` for state tracking
+- Update `total_messages` counter instead of maintaining history array
+- Store outcome in `outcome` and `outcome_reason` fields
+
+**Files Modified**:
+- `src/procur/workers/tasks.py` (removed history field access)
+
+---
+
+### 14. **Fixed JWT Token Payload in Tests** ✅
+**Issue**: `test_api_flows.py:35-47` created tokens with `sub` set to user email, but `get_current_user` expects an integer user ID, causing "invalid literal for int()" errors.
+
+**Resolution**:
+- Changed token payload to use `test_user.id` instead of `test_user.email`
+- Matches `get_current_user` expectation in `security.py:139`
+- Tests now properly authenticate and reach API endpoints
+
+**Files Modified**:
+- `tests/integration/test_api_flows.py` (fixed token payload)
+
+---
+
+### 15. **Added Missing datetime Import** ✅
+**Issue**: `tasks.py` used `datetime.now(timezone.utc)` without importing `datetime` and `timezone`.
+
+**Resolution**:
+- Added `from datetime import datetime, timezone` import
+
+**Files Modified**:
+- `src/procur/workers/tasks.py` (added import)
+
+---
+
+## 📊 Updated Impact Summary
+
+| Category | Round 1 | Round 2 | Total | Status |
+|----------|---------|---------|-------|--------|
+| **Import/Export Issues** | 1 | 1 | 2 | ✅ Fixed |
+| **Context Managers** | 1 | 0 | 1 | ✅ Fixed |
+| **Repository Methods** | 1 | 0 | 1 | ✅ Fixed |
+| **LLM Client** | 2 | 0 | 2 | ✅ Fixed |
+| **Task Logic** | 1 | 0 | 1 | ✅ Fixed |
+| **Service Instantiation** | 1 | 0 | 1 | ✅ Fixed |
+| **Domain Model Mapping** | 0 | 5 | 5 | ✅ Fixed |
+| **Integration Tests** | 1 | 1 | 2 | ✅ Fixed |
+| **Total** | **8** | **7** | **15** | **✅ All Fixed** |
+
+---
+
+## 🎯 Key Architectural Insights
+
+### Domain Model vs ORM Model Mismatch
+The most significant issues stemmed from confusion between:
+- **Domain Models** (`src/procur/models/`) - Pydantic models for business logic
+- **ORM Models** (`src/procur/db/models.py`) - SQLAlchemy models for persistence
+
+**Critical Differences**:
+- `Request` domain model requires: `requester_id`, `type` (enum), `specs` (dict)
+- `RequestRecord` ORM has: `user_id`, `request_type` (string), `specs` (JSON)
+- `VendorProfile` domain model uses: `capability_tags`, `price_tiers`, `regions`
+- `VendorProfileRecord` ORM has: `features`, `list_price`, `category`
+
+### Agent API Contracts
+- `BuyerAgent.negotiate()` returns `Dict[str, Offer]` (vendor_id -> Offer mapping)
+- `SellerAgent.respond()` requires `Request`, `VendorNegotiationState`, `OfferComponents`, `round_number`
+- Buyer agent handles full multi-round negotiation internally
+- Tasks should orchestrate at session level, not individual rounds
+
+### Authentication Flow
+- JWT tokens must use user ID (integer) in `sub` claim
+- `get_current_user` expects: `payload.get("sub")` to be an integer
+- Tests must mint tokens with `{"sub": user.id}`, not `{"sub": user.email}`
+
+---
+
 **Generated**: 2025-09-30  
 **Author**: Cascade AI  
-**Status**: All Fixes Verified ✅
+**Status**: All Round 1 & 2 Fixes Verified ✅

@@ -1,6 +1,7 @@
 """Celery tasks for async processing."""
 
 import logging
+from datetime import datetime, timezone
 from typing import Any, Dict
 
 from celery import Task
@@ -124,69 +125,73 @@ def process_negotiation_round(
                 retrieval_service=retrieval_service,
             )
             
-            # Initialize seller agent
-            seller_agent = SellerAgent(
-                llm_client=llm_client,
-                negotiation_engine=negotiation_engine,
-            )
+            # Note: SellerAgent is instantiated within BuyerAgent.negotiate()
+            # No need to create it here
             
             # Convert DB models to domain models
-            from ..models import Request, VendorProfile
+            from ..models import Request, VendorProfile, RequestType
+            from ..models.enums import RiskLevel
+            
+            # Map request type string to enum
+            request_type = RequestType.SAAS if request.request_type == "saas" else RequestType.GOODS
+            
             domain_request = Request(
                 request_id=request.request_id,
+                requester_id=str(request.user_id),
+                type=request_type,
                 description=request.description,
-                category=request.category or "",
+                specs=request.specs or {},
+                quantity=request.quantity or 1,
                 budget_min=request.budget_min,
                 budget_max=request.budget_max,
-                quantity=request.quantity or 1,
                 must_haves=request.must_haves or [],
-                nice_to_haves=request.nice_to_haves or [],
                 compliance_requirements=request.compliance_requirements or [],
+                billing_cadence=request.billing_cadence,
             )
             
             domain_vendor = VendorProfile(
                 vendor_id=vendor.vendor_id,
                 name=vendor.name,
-                category=vendor.category or "",
-                list_price=vendor.list_price or 0.0,
-                features=vendor.features or [],
+                capability_tags=vendor.features or [],
                 certifications=vendor.certifications or [],
-                compliance_frameworks=vendor.compliance_frameworks or [],
+                regions=[],
+                price_tiers={"base": vendor.list_price or 0.0} if vendor.list_price else {},
+                risk_level=RiskLevel.MEDIUM,
+                billing_cadence=None,  # ORM model doesn't have this field
             )
             
             # Execute negotiation round
-            # Get history from negotiation session
-            history = negotiation.history or []
-            
-            # Buyer generates offer/counter-offer
-            buyer_decision = buyer_agent.negotiate(
+            # buyer_agent.negotiate() returns Dict[str, Offer]
+            offers_dict = buyer_agent.negotiate(
                 request=domain_request,
-                vendor=domain_vendor,
-                round_num=round_number,
+                vendors=[domain_vendor],
             )
             
-            # Seller responds
-            if buyer_decision.offer:
-                seller_decision = seller_agent.respond_to_offer(
-                    offer=buyer_decision.offer,
-                    vendor=domain_vendor,
-                    round_num=round_number,
-                )
-                
-                # Update history
-                history.append({
-                    "round": round_number,
-                    "buyer_offer": buyer_decision.offer.model_dump(),
-                    "seller_response": seller_decision.model_dump(),
-                })
+            # Extract the offer for this vendor
+            final_offer = offers_dict.get(vendor.vendor_id)
             
-            # Update negotiation session
-            neg_repo.update(
-                negotiation.id,
-                current_round=round_number + 1,
-                history=history,
-                opponent_model=buyer_agent.vendor_states.get(vendor.vendor_id, {}).model_dump() if hasattr(buyer_agent, 'vendor_states') else None,
-            )
+            # Determine decision based on offer outcome
+            # Offer.score is an OfferScore object with utility field
+            if final_offer and final_offer.score.utility >= 0.7:
+                decision = "accepted"
+            elif final_offer:
+                decision = "continue"
+            else:
+                decision = "no_offer"
+            
+            # Update negotiation session with current state
+            update_data = {
+                "current_round": round_number + 1,
+                "total_messages": negotiation.total_messages + 1,
+            }
+            
+            # Store final offer if negotiation completed
+            if final_offer and decision == "accepted":
+                update_data["status"] = "completed"
+                update_data["outcome"] = "accepted"
+                update_data["completed_at"] = datetime.now(timezone.utc)
+            
+            neg_repo.update(negotiation.id, **update_data)
             
             # Publish round completed event
             publisher = EventPublisher()
@@ -195,7 +200,8 @@ def process_negotiation_round(
                 data={
                     "negotiation_id": negotiation_id,
                     "round_number": round_number,
-                    "buyer_decision": buyer_decision.decision,
+                    "decision": decision,
+                    "has_offer": final_offer is not None,
                 },
                 correlation_id=correlation_id,
             )
@@ -207,7 +213,8 @@ def process_negotiation_round(
                 "negotiation_id": negotiation_id,
                 "round_number": round_number,
                 "status": "completed",
-                "buyer_decision": buyer_decision.decision,
+                "decision": decision,
+                "has_offer": final_offer is not None,
             }
             
     except Exception as e:

@@ -50,7 +50,8 @@ def test_user(test_db):
 @pytest.fixture
 def auth_headers(test_user):
     """Create authentication headers for test user."""
-    token = create_access_token(data={"sub": test_user.email})
+    # Use user_id as sub claim (get_current_user expects integer user_id)
+    token = create_access_token(data={"sub": test_user.id})
     return {"Authorization": f"Bearer {token}"}
 
 
