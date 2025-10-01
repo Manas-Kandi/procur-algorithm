@@ -109,6 +109,11 @@ class ApiClient {
     return response.data
   }
 
+  async startNegotiations(requestId: string): Promise<NegotiationSession[]> {
+    const response = await this.client.post(`/sourcing/start/${requestId}`)
+    return response.data
+  }
+
   async submitOffer(sessionId: string, offer: Partial<Offer>): Promise<NegotiationSession> {
     const response = await this.client.post(`/negotiations/${sessionId}/offer`, offer)
     return response.data

@@ -45,15 +45,20 @@ export function NewRequest (): JSX.Element {
   const [showSourcingProgress, setShowSourcingProgress] = useState(false)
 
   const createRequest = useMutation({
-    mutationFn: () => {
+    mutationFn: async () => {
       const { budget_mode, ...payload } = draft
-      return api.createRequest({
+      // Create the request
+      const request = await api.createRequest({
         ...payload,
         specs: { ...payload.specs, budget_mode },
       })
+      // Automatically start negotiations with vendors
+      await api.startNegotiations(request.request_id)
+      return request
     },
     onMutate: () => setShowSourcingProgress(true),
     onSuccess: (response) => {
+      // Navigate to negotiation theater
       navigate(`/requests/${response.request_id}/negotiate`)
     },
   })

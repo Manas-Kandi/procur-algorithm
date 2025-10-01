@@ -65,14 +65,8 @@ def get_upcoming_renewals(
     """Get upcoming renewals."""
     contract_repo = ContractRepository(db_session)
     
-    # Calculate the date range
-    end_date = datetime.utcnow() + timedelta(days=days_ahead)
-    
-    # Get contracts expiring within the timeframe
-    contracts = contract_repo.get_expiring_contracts(
-        user_id=current_user.id,
-        end_date=end_date
-    )
+    # Get contracts expiring soon
+    contracts = contract_repo.get_expiring_soon(days=days_ahead)
     
     return contracts
 
