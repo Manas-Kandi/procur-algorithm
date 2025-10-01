@@ -1,5 +1,6 @@
 """Integration tests for API endpoints with database."""
 
+import os
 import pytest
 from datetime import datetime, timezone
 from fastapi.testclient import TestClient
@@ -12,6 +13,7 @@ from src.procur.db.repositories import (
     VendorRepository,
     NegotiationRepository,
 )
+from src.procur.api.security import create_access_token
 
 
 @pytest.fixture(scope="module")
@@ -41,7 +43,15 @@ def test_user(test_db):
             full_name="Test User",
             role="buyer",
         )
+        session.commit()
         return user
+
+
+@pytest.fixture
+def auth_headers(test_user):
+    """Create authentication headers for test user."""
+    token = create_access_token(data={"sub": test_user.email})
+    return {"Authorization": f"Bearer {token}"}
 
 
 @pytest.fixture
@@ -63,10 +73,10 @@ def test_vendor(test_db):
 class TestRequestAPI:
     """Test request API endpoints."""
     
-    def test_create_request(self, client, test_user):
+    def test_create_request(self, client, test_user, auth_headers):
         """Test creating a procurement request."""
         response = client.post(
-            "/api/v1/requests",
+            "/requests",
             json={
                 "description": "Need CRM software",
                 "request_type": "saas",
@@ -74,10 +84,13 @@ class TestRequestAPI:
                 "budget_min": 5000,
                 "budget_max": 10000,
                 "quantity": 50,
+                "billing_cadence": "monthly",
                 "must_haves": ["email integration", "mobile app"],
                 "nice_to_haves": ["ai features"],
+                "compliance_requirements": [],
+                "specs": {},
             },
-            headers={"X-User-ID": str(test_user.id)},
+            headers=auth_headers,
         )
         
         assert response.status_code == 201
@@ -86,7 +99,7 @@ class TestRequestAPI:
         assert data["category"] == "crm"
         assert "request_id" in data
     
-    def test_get_request(self, client, test_user):
+    def test_get_request(self, client, test_user, auth_headers):
         """Test retrieving a request."""
         # Create request first
         with get_session() as session:
@@ -99,19 +112,20 @@ class TestRequestAPI:
                 category="crm",
                 status="pending",
             )
+            session.commit()
         
-        response = client.get(f"/api/v1/requests/{request.request_id}")
+        response = client.get(f"/requests/{request.request_id}", headers=auth_headers)
         
         assert response.status_code == 200
         data = response.json()
         assert data["request_id"] == "req-001"
         assert data["description"] == "Test request"
     
-    def test_list_requests(self, client, test_user):
+    def test_list_requests(self, client, test_user, auth_headers):
         """Test listing requests."""
         response = client.get(
-            "/api/v1/requests",
-            headers={"X-User-ID": str(test_user.id)},
+            "/requests",
+            headers=auth_headers,
         )
         
         assert response.status_code == 200
@@ -122,17 +136,19 @@ class TestRequestAPI:
 class TestVendorAPI:
     """Test vendor API endpoints."""
     
-    def test_create_vendor(self, client):
+    def test_create_vendor(self, client, auth_headers):
         """Test creating a vendor profile."""
         response = client.post(
-            "/api/v1/vendors",
+            "/vendors",
             json={
                 "name": "Salesforce",
                 "category": "crm",
                 "list_price": 150.0,
                 "features": ["email", "mobile", "analytics"],
                 "certifications": ["SOC2", "ISO27001"],
+                "compliance_frameworks": [],
             },
+            headers=auth_headers,
         )
         
         assert response.status_code == 201
@@ -140,18 +156,18 @@ class TestVendorAPI:
         assert data["name"] == "Salesforce"
         assert "vendor_id" in data
     
-    def test_get_vendor(self, client, test_vendor):
+    def test_get_vendor(self, client, test_vendor, auth_headers):
         """Test retrieving a vendor."""
-        response = client.get(f"/api/v1/vendors/{test_vendor.vendor_id}")
+        response = client.get(f"/vendors/{test_vendor.vendor_id}", headers=auth_headers)
         
         assert response.status_code == 200
         data = response.json()
         assert data["vendor_id"] == test_vendor.vendor_id
         assert data["name"] == test_vendor.name
     
-    def test_search_vendors(self, client):
+    def test_search_vendors(self, client, auth_headers):
         """Test searching vendors by category."""
-        response = client.get("/api/v1/vendors/search?category=saas")
+        response = client.get("/vendors/search?category=saas", headers=auth_headers)
         
         assert response.status_code == 200
         data = response.json()
@@ -161,7 +177,7 @@ class TestVendorAPI:
 class TestNegotiationAPI:
     """Test negotiation API endpoints."""
     
-    def test_start_negotiation(self, client, test_user, test_vendor):
+    def test_start_negotiation(self, client, test_user, test_vendor, auth_headers):
         """Test starting a negotiation session."""
         # Create request first
         with get_session() as session:
@@ -174,14 +190,16 @@ class TestNegotiationAPI:
                 category="crm",
                 status="pending",
             )
+            session.commit()
         
         response = client.post(
-            "/api/v1/negotiations",
+            "/negotiations",
             json={
                 "request_id": request.request_id,
                 "vendor_id": test_vendor.vendor_id,
                 "max_rounds": 5,
             },
+            headers=auth_headers,
         )
         
         assert response.status_code == 201
@@ -189,7 +207,7 @@ class TestNegotiationAPI:
         assert data["status"] == "active"
         assert "session_id" in data
     
-    def test_get_negotiation(self, client, test_user, test_vendor):
+    def test_get_negotiation(self, client, test_user, test_vendor, auth_headers):
         """Test retrieving negotiation session."""
         # Create negotiation first
         with get_session() as session:
@@ -212,8 +230,9 @@ class TestNegotiationAPI:
                 current_round=1,
                 max_rounds=5,
             )
+            session.commit()
         
-        response = client.get(f"/api/v1/negotiations/{negotiation.session_id}")
+        response = client.get(f"/negotiations/{negotiation.session_id}", headers=auth_headers)
         
         assert response.status_code == 200
         data = response.json()

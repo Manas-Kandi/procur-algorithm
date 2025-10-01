@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+import os
 import time
-from typing import List
+from typing import List, Optional
 
 from openai import OpenAI
 import httpx
@@ -12,12 +13,22 @@ class LLMClient:
 
     def __init__(
         self,
-        api_key: str,
+        api_key: Optional[str] = None,
         base_url: str = "https://integrate.api.nvidia.com/v1",
         model: str = "openai/gpt-oss-120b",
         timeout: float = 60.0,
         max_retries: int = 3,
     ) -> None:
+        # Get API key from parameter or environment
+        if api_key is None:
+            api_key = os.getenv("NVIDIA_API_KEY") or os.getenv("OPENAI_API_KEY")
+        
+        if not api_key:
+            raise ValueError(
+                "API key is required. Provide it via the api_key parameter or set "
+                "NVIDIA_API_KEY or OPENAI_API_KEY environment variable."
+            )
+        
         # Configure httpx client with proper timeouts
         http_client = httpx.Client(
             timeout=httpx.Timeout(
@@ -75,3 +86,9 @@ class LLMClient:
 
         # If we get here, all retries failed
         raise RuntimeError(f"LLM request failed after {self.max_retries + 1} attempts. Last error: {last_exception}")
+    
+    def generate_completion(self, prompt: str, **kwargs) -> str:
+        """Generate completion from prompt (convenience method)."""
+        messages = [{"role": "user", "content": prompt}]
+        response = self.complete(messages, **kwargs)
+        return response["content"]

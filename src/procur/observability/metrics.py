@@ -315,3 +315,33 @@ def track_time(metric_name: str, labels: Optional[Dict[str, str]] = None):
         
         return wrapper
     return decorator
+
+
+def track_metric(metric_name: str, value: float, labels: Optional[Dict[str, str]] = None) -> None:
+    """Track a generic metric."""
+    collector = get_metrics_collector()
+    labels = labels or {}
+    
+    # Route to appropriate metric based on name
+    if "negotiation" in metric_name:
+        if "started" in metric_name:
+            collector.negotiation_started.labels(
+                vendor=labels.get("vendor", "unknown"),
+                category=labels.get("category", "unknown"),
+            ).inc(value)
+        elif "completed" in metric_name:
+            collector.negotiation_completed.labels(
+                vendor=labels.get("vendor", "unknown"),
+                category=labels.get("category", "unknown"),
+                outcome=labels.get("outcome", "unknown"),
+            ).inc(value)
+    elif "event" in metric_name:
+        collector.events_published.labels(
+            event_type=labels.get("event_type", "unknown"),
+        ).inc(value)
+    elif "integration" in metric_name:
+        collector.integration_calls.labels(
+            integration=labels.get("integration", "unknown"),
+            method=labels.get("method", "unknown"),
+            status=labels.get("status", "success"),
+        ).inc(value)

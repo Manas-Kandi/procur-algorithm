@@ -42,7 +42,7 @@ class BaseRepository(Generic[ModelType]):
         self.session.refresh(instance)
         return instance
     
-    def get_by_id(self, id: int) -> Optional[ModelType]:
+    def get(self, id: int) -> Optional[ModelType]:
         """
         Get record by primary key ID.
         
@@ -53,6 +53,18 @@ class BaseRepository(Generic[ModelType]):
             Model instance or None
         """
         return self.session.get(self.model, id)
+    
+    def get_by_id(self, id: int) -> Optional[ModelType]:
+        """
+        Get record by primary key ID (alias for get()).
+        
+        Args:
+            id: Primary key
+        
+        Returns:
+            Model instance or None
+        """
+        return self.get(id)
     
     def get_all(self, limit: Optional[int] = None, offset: int = 0) -> List[ModelType]:
         """

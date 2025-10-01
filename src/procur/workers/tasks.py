@@ -188,9 +188,6 @@ def process_negotiation_round(
                 opponent_model=buyer_agent.vendor_states.get(vendor.vendor_id, {}).model_dump() if hasattr(buyer_agent, 'vendor_states') else None,
             )
             
-            # Increment round
-            neg_repo.increment_round(negotiation.id)
-            
             # Publish round completed event
             publisher = EventPublisher()
             publisher.publish(
@@ -483,15 +480,28 @@ def send_notification(
         logger.info(f"Sending {notification_type} notification to {recipient}")
         track_metric("notification_sent", 1, {"type": notification_type})
         
-        from ..integrations import SlackIntegration, EmailService
+        from ..integrations import SlackIntegration, SendGridService
+        import os
         
         if notification_type == "email":
-            # Send email
-            email_service = EmailService()
+            # Send email using SendGrid
+            api_key = os.getenv("SENDGRID_API_KEY")
+            from_email = os.getenv("SENDGRID_FROM_EMAIL", "noreply@procur.ai")
+            
+            if not api_key:
+                logger.warning("SendGrid API key not configured, skipping email")
+                return {
+                    "notification_type": notification_type,
+                    "recipient": recipient,
+                    "status": "skipped",
+                    "reason": "no_api_key",
+                }
+            
+            email_service = SendGridService(api_key, from_email)
             email_service.send_email(
-                to=recipient,
+                to_email=recipient,
                 subject=subject,
-                body=message,
+                html_content=message,
                 **kwargs
             )
         elif notification_type == "slack":

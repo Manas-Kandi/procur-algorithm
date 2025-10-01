@@ -127,6 +127,7 @@ def get_db_session() -> DatabaseSession:
     return _db_session
 
 
+@contextmanager
 def get_session() -> Generator[Session, None, None]:
     """
     Dependency injection helper for getting database sessions.
