@@ -4,7 +4,7 @@ import { useMutation } from '@tanstack/react-query'
 import { api } from '../../services/api'
 import { Card } from '../../components/shared/Card'
 import { Button } from '../../components/shared/Button'
-import { FlowStepper, type FlowStep } from '../../components/shared/FlowStepper'
+// Simplified progress UI replaces FlowStepper
 import { BudgetSelector, type BudgetMode } from '../../components/buyer/request/BudgetSelector'
 import { ScopeDetails } from '../../components/buyer/request/ScopeDetails'
 import { RequirementChecklist } from '../../components/buyer/request/RequirementChecklist'
@@ -24,11 +24,11 @@ interface RequestDraft {
 }
 
 const STEP_ORDER: Array<{ id: StepKey; label: string; description: string }> = [
-  { id: 'budget', label: 'Budget context', description: 'Anchor expectations and policy routing' },
-  { id: 'scope', label: 'What & how many', description: 'Capture scope with natural language' },
-  { id: 'requirements', label: 'Requirements refinement', description: 'Prioritize capabilities and compliance' },
-  { id: 'policy', label: 'Policy preview', description: 'See who will approve and how fast' },
-  { id: 'launch', label: 'Launch AI sourcing', description: 'Kick off vendor outreach' },
+  { id: 'budget', label: 'Budget context', description: '' },
+  { id: 'scope', label: 'What & how many', description: '' },
+  { id: 'requirements', label: 'Requirements refinement', description: '' },
+  { id: 'policy', label: 'Policy preview', description: '' },
+  { id: 'launch', label: 'Launch AI sourcing', description: '' },
 ]
 
 type StepKey = 'budget' | 'scope' | 'requirements' | 'policy' | 'launch'
@@ -64,12 +64,6 @@ export function NewRequest (): JSX.Element {
   })
 
   const currentIndex = STEP_ORDER.findIndex((step) => step.id === currentStep)
-  const steps: FlowStep[] = STEP_ORDER.map((step, index) => ({
-    id: step.id,
-    label: step.label,
-    description: step.description,
-    status: index < currentIndex ? 'complete' : index === currentIndex ? 'current' : 'upcoming',
-  }))
 
   const canGoNext = (): boolean => {
     switch (currentStep) {
@@ -117,15 +111,16 @@ export function NewRequest (): JSX.Element {
         <p className="text-sm text-[var(--core-color-text-muted)]">Provide context once—our AI agents will scope vendors, negotiate, and keep you in control.</p>
       </header>
 
-      <FlowStepper
-        steps={steps}
-        onStepSelect={(id) => {
-          const targetIndex = STEP_ORDER.findIndex((step) => step.id === id)
-          if (targetIndex <= currentIndex) {
-            setCurrentStep(id as StepKey)
-          }
-        }}
-      />
+      {/* Minimal progress bar */}
+      <div className="space-y-2">
+        <div className="h-1.5 w-full rounded-full bg-[var(--core-color-surface-subtle)]" aria-hidden="true">
+          <div
+            className="h-1.5 rounded-full bg-[var(--core-color-brand-primary)] transition-all"
+            style={{ width: `${Math.round(((currentIndex + 1) / STEP_ORDER.length) * 100)}%` }}
+          />
+        </div>
+        <p className="text-xs text-[var(--core-color-text-tertiary)]">Step {currentIndex + 1} of {STEP_ORDER.length}</p>
+      </div>
 
       <Card padding="lg" className="space-y-8 border-[var(--core-color-border-default)] bg-[var(--core-color-surface-canvas)]">
         {currentStep === 'budget' && (
@@ -186,10 +181,11 @@ export function NewRequest (): JSX.Element {
         )}
 
         <div className="flex flex-col gap-3 border-t border-[var(--core-color-border-default)] pt-6 sm:flex-row sm:items-center sm:justify-between">
-          <div className="text-xs text-[var(--core-color-text-muted)]">
-            <span className="font-semibold text-[var(--core-color-text-primary)]">Step {currentIndex + 1} of {STEP_ORDER.length}</span>
+          <div className="flex-1" />
+          <div className="flex flex-1 justify-center">
+            <span className="text-xs text-[var(--core-color-text-tertiary)]">Step {currentIndex + 1} of {STEP_ORDER.length}</span>
           </div>
-          <div className="flex flex-col gap-3 sm:flex-row">
+          <div className="flex flex-1 flex-col gap-3 sm:flex-row sm:justify-end">
             <Button variant="outline" onClick={handleBack} disabled={currentIndex === 0}>
               Back
             </Button>
