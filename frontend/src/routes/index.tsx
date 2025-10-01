@@ -1,6 +1,6 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom'
+import { AppLayout } from '../components/layout/AppLayout'
 import { useAuthStore } from '../store/auth'
-import { Navigation } from '../components/layout/Navigation'
 import { Login } from '../pages/auth/Login'
 import { BuyerDashboard } from '../pages/buyer/Dashboard'
 import { NewRequest } from '../pages/buyer/NewRequest'
@@ -8,100 +8,49 @@ import { NegotiationTheater } from '../pages/buyer/NegotiationTheater'
 import { ApprovalWorkspace } from '../pages/buyer/ApprovalWorkspace'
 import { Portfolio } from '../pages/buyer/Portfolio'
 import { SellerDashboard } from '../pages/seller/SellerDashboard'
+import { SellerNegotiations } from '../pages/seller/SellerNegotiations'
+import { SellerGuardrails } from '../pages/seller/SellerGuardrails'
+import { SellerIntelligence } from '../pages/seller/SellerIntelligence'
+import { SellerTerritory } from '../pages/seller/SellerTerritory'
 
-function ProtectedRoute({ children }: { children: React.ReactNode }) {
+function ProtectedApp (): JSX.Element {
   const { isAuthenticated } = useAuthStore()
-  
+
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />
   }
-  
-  return <>{children}</>
-}
 
-function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex h-screen bg-gray-50">
-      <Navigation />
-      <main className="flex-1 overflow-y-auto">
-        {children}
-      </main>
-    </div>
+    <AppLayout>
+      <Outlet />
+    </AppLayout>
   )
 }
 
-export function AppRoutes() {
+export function AppRoutes (): JSX.Element {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Auth Routes */}
         <Route path="/login" element={<Login />} />
-        
-        {/* Buyer Routes */}
-        <Route
-          path="/"
-          element={
-            <ProtectedRoute>
-              <AuthenticatedLayout>
-                <BuyerDashboard />
-              </AuthenticatedLayout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/requests/new"
-          element={
-            <ProtectedRoute>
-              <AuthenticatedLayout>
-                <NewRequest />
-              </AuthenticatedLayout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/requests/:requestId/negotiate"
-          element={
-            <ProtectedRoute>
-              <AuthenticatedLayout>
-                <NegotiationTheater />
-              </AuthenticatedLayout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/approvals"
-          element={
-            <ProtectedRoute>
-              <AuthenticatedLayout>
-                <ApprovalWorkspace />
-              </AuthenticatedLayout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/portfolio"
-          element={
-            <ProtectedRoute>
-              <AuthenticatedLayout>
-                <Portfolio />
-              </AuthenticatedLayout>
-            </ProtectedRoute>
-          }
-        />
-        
-        {/* Seller Routes */}
-        <Route
-          path="/seller"
-          element={
-            <ProtectedRoute>
-              <AuthenticatedLayout>
-                <SellerDashboard />
-              </AuthenticatedLayout>
-            </ProtectedRoute>
-          }
-        />
-        
-        {/* Catch all */}
+
+        <Route element={<ProtectedApp />}>
+          <Route index element={<BuyerDashboard />} />
+          <Route path="requests">
+            <Route path="new" element={<NewRequest />} />
+            <Route path=":requestId/negotiate" element={<NegotiationTheater />} />
+          </Route>
+          <Route path="approvals" element={<ApprovalWorkspace />} />
+          <Route path="portfolio" element={<Portfolio />} />
+
+          <Route path="seller">
+            <Route index element={<SellerDashboard />} />
+            <Route path="negotiations" element={<SellerNegotiations />} />
+            <Route path="guardrails" element={<SellerGuardrails />} />
+            <Route path="intelligence" element={<SellerIntelligence />} />
+            <Route path="territory" element={<SellerTerritory />} />
+          </Route>
+        </Route>
+
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

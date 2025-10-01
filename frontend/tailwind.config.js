@@ -8,14 +8,29 @@ export default {
     extend: {
       colors: {
         brand: {
-          primary: '#1D4ED8',
-          secondary: '#7C3AED',
+          primary: 'var(--core-color-brand-primary)',
+          secondary: 'var(--core-color-brand-secondary)',
+          inverse: 'var(--core-color-brand-inverse)',
         },
-        buyer: {
-          accent: '#0F766E',
+        surface: {
+          background: 'var(--core-color-surface-background)',
+          canvas: 'var(--core-color-surface-canvas)',
+          subtle: 'var(--core-color-surface-subtle)',
         },
-        seller: {
-          accent: '#F97316',
+        text: {
+          primary: 'var(--core-color-text-primary)',
+          muted: 'var(--core-color-text-muted)',
+          disabled: 'var(--core-color-text-disabled)',
+        },
+        data: {
+          positive: 'var(--core-color-data-positive)',
+          warning: 'var(--core-color-data-warning)',
+          critical: 'var(--core-color-data-critical)',
+          info: 'var(--core-color-data-info)',
+        },
+        persona: {
+          buyer: 'var(--persona-color-buyer-accent)',
+          seller: 'var(--persona-color-seller-accent)',
         },
       },
       fontFamily: {
@@ -29,9 +44,9 @@ export default {
         pill: '999px',
       },
       boxShadow: {
-        '100': '0 2px 6px rgba(15, 23, 42, 0.08)',
-        '200': '0 8px 20px rgba(15, 23, 42, 0.12)',
-        '300': '0 16px 32px rgba(15, 23, 42, 0.16)',
+        100: 'var(--shadow-100)',
+        200: 'var(--shadow-200)',
+        300: 'var(--shadow-300)',
       },
     },
   },
