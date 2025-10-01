@@ -47,7 +47,7 @@ class UserAccount(Base, TimestampMixin, SoftDeleteMixin):
     is_superuser: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     
     # Organization and team
-    organization_id: Mapped[str | None] = mapped_column(String(100), nullable=True, index=True)
+    organization_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("organizations.id"), nullable=True, index=True)
     team: Mapped[str | None] = mapped_column(String(100), nullable=True)
     
     # Password policy
@@ -73,7 +73,7 @@ class UserAccount(Base, TimestampMixin, SoftDeleteMixin):
     
     # Relationships
     requests: Mapped[List["RequestRecord"]] = relationship(
-        "RequestRecord", back_populates="user", cascade="all, delete-orphan"
+        "RequestRecord", back_populates="user", cascade="all, delete-orphan", foreign_keys="RequestRecord.user_id"
     )
     audit_logs: Mapped[List["AuditLogRecord"]] = relationship(
         "AuditLogRecord", back_populates="user", cascade="all, delete-orphan"
@@ -91,7 +91,7 @@ class UserAccount(Base, TimestampMixin, SoftDeleteMixin):
         "OAuthConnection", back_populates="user", cascade="all, delete-orphan"
     )
     organization: Mapped["Organization | None"] = relationship(
-        "Organization", back_populates="users", foreign_keys=[organization_id]
+        "Organization", back_populates="users"
     )
     
     def __repr__(self) -> str:
@@ -252,7 +252,7 @@ class OfferRecord(Base, TimestampMixin, SoftDeleteMixin):
     request: Mapped["RequestRecord"] = relationship("RequestRecord", back_populates="offers")
     vendor: Mapped["VendorProfileRecord"] = relationship("VendorProfileRecord", back_populates="offers")
     negotiation_session: Mapped["NegotiationSessionRecord | None"] = relationship(
-        "NegotiationSessionRecord", back_populates="offers"
+        "NegotiationSessionRecord", back_populates="offers", foreign_keys=[negotiation_session_id]
     )
     
     def __repr__(self) -> str:
@@ -359,7 +359,7 @@ class NegotiationSessionRecord(Base, TimestampMixin, SoftDeleteMixin):
         "VendorProfileRecord", back_populates="negotiation_sessions"
     )
     offers: Mapped[List["OfferRecord"]] = relationship(
-        "OfferRecord", back_populates="negotiation_session", cascade="all, delete-orphan"
+        "OfferRecord", back_populates="negotiation_session", cascade="all, delete-orphan", foreign_keys="OfferRecord.negotiation_session_id"
     )
     audit_logs: Mapped[List["AuditLogRecord"]] = relationship(
         "AuditLogRecord", back_populates="negotiation_session", cascade="all, delete-orphan"

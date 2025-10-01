@@ -136,8 +136,7 @@ class Organization(Base, TimestampMixin):
     # Relationships
     users: Mapped[list["UserAccount"]] = relationship(
         "UserAccount",
-        back_populates="organization",
-        foreign_keys="UserAccount.organization_id",
+        back_populates="organization"
     )
     
     def __repr__(self) -> str:

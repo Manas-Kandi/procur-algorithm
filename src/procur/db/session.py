@@ -127,7 +127,6 @@ def get_db_session() -> DatabaseSession:
     return _db_session
 
 
-@contextmanager
 def get_session() -> Generator[Session, None, None]:
     """
     Dependency injection helper for getting database sessions.
@@ -136,9 +135,26 @@ def get_session() -> Generator[Session, None, None]:
         @app.get("/items")
         def get_items(session: Session = Depends(get_session)):
             return session.query(Item).all()
+    """
+    db = get_db_session()
+    session = db.session_factory()
+    try:
+        yield session
+        session.commit()
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        session.close()
+
+
+@contextmanager
+def session_context() -> Generator[Session, None, None]:
+    """
+    Context manager for getting database sessions.
     
-    Usage as context manager:
-        with get_session() as session:
+    Usage:
+        with session_context() as session:
             session.query(Item).all()
     """
     db = get_db_session()

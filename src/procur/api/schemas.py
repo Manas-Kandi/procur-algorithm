@@ -33,7 +33,8 @@ class UserRegister(BaseModel):
     username: str = Field(..., min_length=3, max_length=50, description="Username")
     password: str = Field(..., min_length=8, description="Password")
     full_name: Optional[str] = Field(None, description="Full name")
-    organization_id: Optional[str] = Field(None, description="Organization ID")
+    organization_id: Optional[int] = Field(None, description="Organization ID")
+    role: str = Field(default="buyer", description="User role")
 
 
 class UserResponse(BaseModel):
@@ -44,7 +45,7 @@ class UserResponse(BaseModel):
     full_name: Optional[str]
     role: str
     is_active: bool
-    organization_id: Optional[str]
+    organization_id: Optional[int]
     created_at: datetime
     
     model_config = {"from_attributes": True}
