@@ -53,8 +53,12 @@ export function BudgetSelector ({ mode, budgetMin, budgetMax, currency = 'USD', 
                 type="radio"
                 name="budget-mode"
                 checked={isSelected}
-                onChange={() => onChange({ mode: option.value, budgetMin, budgetMax })}
-                className="mt-1 h-4 w-4 rounded-full border-[var(--core-color-border-medium)] text-[var(--core-color-brand-primary)] focus:ring-[var(--core-color-brand-primary)]/40"
+                onChange={() => {
+                  const nextMode = option.value
+                  const reset = nextMode === 'see-pricing' || nextMode === 'need-approval'
+                  onChange({ mode: nextMode, budgetMin: reset ? undefined : budgetMin, budgetMax: reset ? undefined : budgetMax })
+                }}
+                className="mt-1 h-4 w-4 accent-[var(--core-color-brand-primary)]"
               />
               <div className="leading-tight">
                 <p className={clsx('text-sm', isSelected ? 'font-semibold text-[var(--core-color-text-primary)]' : 'text-[var(--core-color-text-primary)]')}>

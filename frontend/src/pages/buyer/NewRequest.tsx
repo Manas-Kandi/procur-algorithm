@@ -37,7 +37,7 @@ export function NewRequest (): JSX.Element {
   const navigate = useNavigate()
   const [currentStep, setCurrentStep] = useState<StepKey>('budget')
   const [draft, setDraft] = useState<RequestDraft>({
-    budget_mode: 'exact',
+    budget_mode: 'see-pricing',
     must_haves: [],
     compliance_requirements: [],
     specs: {},
