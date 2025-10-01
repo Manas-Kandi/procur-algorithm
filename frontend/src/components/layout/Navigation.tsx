@@ -154,16 +154,18 @@ export function Navigation ({ variant = 'desktop', onNavigate }: NavigationProps
           </div>
           {!collapsed && <span className="text-sm font-semibold text-text-primary">Procur</span>}
         </Link>
-        <Tooltip content={collapsed ? 'Expand' : 'Collapse'}>
-          <button
-            type="button"
-            onClick={toggleCollapsed}
-            aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-            className="inline-flex h-8 w-8 items-center justify-center rounded-sm border border-border-medium bg-surface-raised text-text-secondary transition-all duration-150 hover:bg-background-secondary hover:text-text-primary"
-          >
-            {collapsed ? <ChevronsRight className="h-4 w-4" /> : <ChevronsLeft className="h-4 w-4" />}
-          </button>
-        </Tooltip>
+        {!collapsed && (
+          <Tooltip content="Collapse">
+            <button
+              type="button"
+              onClick={toggleCollapsed}
+              aria-label="Collapse sidebar"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-sm border border-border-medium bg-surface-raised text-text-secondary transition-all duration-150 hover:bg-background-secondary hover:text-text-primary"
+            >
+              <ChevronsLeft className="h-4 w-4" />
+            </button>
+          </Tooltip>
+        )}
       </div>
       <div className="flex-1 py-4">
         {sections.map((section) => (
@@ -223,20 +225,18 @@ export function Navigation ({ variant = 'desktop', onNavigate }: NavigationProps
         ))}
       </div>
 
-      <div className="mt-auto border-t border-border-subtle px-4 py-4">
-        <div className={clsx('flex items-center gap-3', collapsed && 'justify-center') }>
-          <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-sm bg-background-secondary text-sm font-semibold text-brand-primary">
-            {(user.full_name ?? user.username).charAt(0).toUpperCase()}
-          </div>
-          {!collapsed && (
+      {!collapsed && (
+        <div className="mt-auto border-t border-border-subtle px-4 py-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-sm bg-background-secondary text-sm font-semibold text-brand-primary">
+              {(user.full_name ?? user.username).charAt(0).toUpperCase()}
+            </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-text-primary truncate">{user.full_name ?? user.username}</p>
               <p className="text-xs text-text-tertiary truncate">{user.email}</p>
             </div>
-          )}
-          {!collapsed && <RoleBadge role={user.role} />}
-        </div>
-        {!collapsed ? (
+            <RoleBadge role={user.role} />
+          </div>
           <button
             type="button"
             onClick={logout}
@@ -244,21 +244,8 @@ export function Navigation ({ variant = 'desktop', onNavigate }: NavigationProps
           >
             Sign out
           </button>
-        ) : (
-          <div className="mt-3 flex justify-center">
-            <Tooltip content="Sign out">
-              <button
-                type="button"
-                onClick={logout}
-                aria-label="Sign out"
-                className="inline-flex h-8 w-8 items-center justify-center rounded-sm border border-border-medium bg-surface-raised text-text-secondary transition-all duration-150 hover:border-border-strong hover:bg-background-secondary hover:text-text-primary"
-              >
-                <LogOut className="h-4 w-4" />
-              </button>
-            </Tooltip>
-          </div>
-        )}
-      </div>
+        </div>
+      )}
     </nav>
   )
 }
