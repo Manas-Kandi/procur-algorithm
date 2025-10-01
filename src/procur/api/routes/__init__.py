@@ -6,6 +6,7 @@ from .vendors import router as vendors_router
 from .negotiations import router as negotiations_router
 from .contracts import router as contracts_router
 from .health import router as health_router
+from .dashboard import router as dashboard_router
 
 __all__ = [
     "auth_router",
@@ -14,4 +15,5 @@ __all__ = [
     "negotiations_router",
     "contracts_router",
     "health_router",
+    "dashboard_router",
 ]

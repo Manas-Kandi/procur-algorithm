@@ -7,15 +7,15 @@ interface StatusBadgeProps {
 }
 
 const statusConfig: Record<RequestStatus, { label: string; color: string }> = {
-  draft: { label: 'Draft', color: 'bg-gray-100 text-gray-700' },
-  intake: { label: 'Intake', color: 'bg-blue-100 text-blue-700' },
-  sourcing: { label: 'Sourcing', color: 'bg-cyan-100 text-cyan-700' },
-  negotiating: { label: 'Negotiating', color: 'bg-purple-100 text-purple-700' },
-  approving: { label: 'Approving', color: 'bg-amber-100 text-amber-700' },
-  contracted: { label: 'Contracted', color: 'bg-green-100 text-green-700' },
-  provisioning: { label: 'Provisioning', color: 'bg-indigo-100 text-indigo-700' },
-  completed: { label: 'Completed', color: 'bg-green-100 text-green-700' },
-  cancelled: { label: 'Cancelled', color: 'bg-red-100 text-red-700' },
+  draft: { label: 'Draft', color: 'bg-background-tertiary text-text-secondary' },
+  intake: { label: 'Intake', color: 'bg-info-bg text-info' },
+  sourcing: { label: 'Sourcing', color: 'bg-info-bg text-info' },
+  negotiating: { label: 'Negotiating', color: 'bg-ai-bg text-ai-primary' },
+  approving: { label: 'Approving', color: 'bg-warning-bg text-warning' },
+  contracted: { label: 'Contracted', color: 'bg-success-bg text-success' },
+  provisioning: { label: 'Provisioning', color: 'bg-brand-primary/10 text-brand-primary' },
+  completed: { label: 'Completed', color: 'bg-success-bg text-success' },
+  cancelled: { label: 'Cancelled', color: 'bg-danger-bg text-danger' },
 }
 
 export function StatusBadge({ status, size = 'md' }: StatusBadgeProps) {
@@ -24,12 +24,12 @@ export function StatusBadge({ status, size = 'md' }: StatusBadgeProps) {
   return (
     <span
       className={clsx(
-        'inline-flex items-center rounded-full font-medium',
+        'inline-flex items-center rounded-sm font-semibold uppercase tracking-wide',
         config.color,
         {
-          'px-2 py-0.5 text-xs': size === 'sm',
-          'px-2.5 py-1 text-sm': size === 'md',
-          'px-3 py-1.5 text-base': size === 'lg',
+          'px-2 py-1 text-xs': size === 'sm',
+          'px-2.5 py-1 text-xs': size === 'md',
+          'px-3 py-1.5 text-xs': size === 'lg',
         }
       )}
     >

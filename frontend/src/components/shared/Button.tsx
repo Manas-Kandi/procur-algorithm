@@ -22,19 +22,24 @@ export function Button({
   return (
     <button
       className={clsx(
-        'inline-flex items-center justify-center rounded-lg font-medium transition-colors',
+        'inline-flex items-center justify-center font-semibold transition-all duration-150',
         'focus:outline-none focus:ring-2 focus:ring-offset-2',
+        'rounded-sm', // 2px border radius from design system
         {
-          'bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500': variant === 'primary',
-          'bg-gray-600 text-white hover:bg-gray-700 focus:ring-gray-500': variant === 'secondary',
-          'border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 focus:ring-blue-500': variant === 'outline',
-          'text-gray-700 hover:bg-gray-100 focus:ring-gray-500': variant === 'ghost',
-          'bg-red-600 text-white hover:bg-red-700 focus:ring-red-500': variant === 'danger',
-          'px-3 py-1.5 text-sm': size === 'sm',
-          'px-4 py-2 text-base': size === 'md',
-          'px-6 py-3 text-lg': size === 'lg',
+          // Primary Button
+          'bg-brand-primary text-text-inverse hover:bg-brand-hover active:bg-brand-active focus:ring-brand-primary': variant === 'primary',
+          // Secondary/Outline Button
+          'bg-surface-raised text-text-primary border border-border-medium hover:border-border-strong hover:bg-background-secondary focus:ring-brand-primary': variant === 'secondary' || variant === 'outline',
+          // Ghost Button
+          'bg-transparent text-text-secondary hover:bg-background-secondary hover:text-text-primary focus:ring-brand-primary': variant === 'ghost',
+          // Danger Button
+          'bg-danger text-text-inverse hover:bg-danger/90 focus:ring-danger': variant === 'danger',
+          // Sizes from design system
+          'px-3 py-1.5 text-xs': size === 'sm',    // Small: 6px 12px
+          'px-5 py-2.5 text-sm': size === 'md',    // Medium: 10px 20px
+          'px-6 py-3 text-base': size === 'lg',    // Large: 12px 24px
           'w-full': fullWidth,
-          'opacity-50 cursor-not-allowed': disabled || loading,
+          'opacity-50 cursor-not-allowed pointer-events-none': disabled || loading,
         },
         className
       )}

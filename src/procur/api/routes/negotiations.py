@@ -19,6 +19,41 @@ router = APIRouter(prefix="/negotiations", tags=["Negotiations"])
 
 
 @router.get(
+    "/request/{request_id}",
+    response_model=List[NegotiationResponse],
+    summary="Get negotiations for request",
+    description="Get all negotiation sessions for a request",
+)
+def get_negotiations_for_request(
+    request_id: str,
+    current_user: UserAccount = Depends(get_current_user),
+    db_session: Session = Depends(get_session),
+):
+    """Get all negotiations for a request."""
+    neg_repo = NegotiationRepository(db_session)
+    request_repo = RequestRepository(db_session)
+    
+    # Check if request exists and user has access (by request_id string)
+    request = request_repo.get_by_request_id(request_id)
+    if not request:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Request not found",
+        )
+    
+    if request.user_id != current_user.id and not current_user.is_superuser:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to access this request",
+        )
+    
+    # Get all negotiations for the request using the integer ID
+    negotiations = neg_repo.get_by_request(request.id)
+    
+    return negotiations
+
+
+@router.get(
     "/{session_id}",
     response_model=NegotiationResponse,
     summary="Get negotiation",

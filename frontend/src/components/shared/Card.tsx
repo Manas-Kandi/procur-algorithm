@@ -1,29 +1,27 @@
-import { ReactNode } from 'react'
+import { ReactNode, HTMLAttributes } from 'react'
 import clsx from 'clsx'
 
-interface CardProps {
+interface CardProps extends HTMLAttributes<HTMLDivElement> {
   children: ReactNode
-  className?: string
   padding?: 'none' | 'sm' | 'md' | 'lg'
   hover?: boolean
-  onClick?: () => void
 }
 
-export function Card({ children, className, padding = 'md', hover = false, onClick }: CardProps) {
+export function Card({ children, padding = 'md', hover = false, className, ...props }: CardProps) {
   return (
     <div
       className={clsx(
-        'bg-white rounded-lg border border-gray-200 shadow-sm',
+        'bg-surface-raised border border-border-subtle rounded-sm', 
         {
           'p-0': padding === 'none',
-          'p-3': padding === 'sm',
-          'p-4': padding === 'md',
-          'p-6': padding === 'lg',
-          'hover:shadow-md transition-shadow cursor-pointer': hover,
+          'p-4': padding === 'sm',      
+          'p-6': padding === 'md',      
+          'p-8': padding === 'lg',      
+          'hover:border-border-medium transition-all duration-150 cursor-pointer': hover,
         },
         className
       )}
-      onClick={onClick}
+      {...props}
     >
       {children}
     </div>

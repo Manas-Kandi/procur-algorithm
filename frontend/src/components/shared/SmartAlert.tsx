@@ -16,23 +16,27 @@ interface SmartAlertProps {
 const SEVERITY_CONFIG = {
   info: {
     icon: Info,
-    badgeClass: 'bg-[rgba(14,165,233,0.12)] text-[var(--core-color-data-info)]',
-    iconClass: 'text-[var(--core-color-data-info)]',
+    badgeClass: 'bg-info/10 text-info',
+    borderClass: 'border-info/20',
+    bgClass: 'bg-info-bg',
   },
   success: {
     icon: CheckCircle2,
-    badgeClass: 'bg-[rgba(22,163,74,0.12)] text-[var(--core-color-data-positive)]',
-    iconClass: 'text-[var(--core-color-data-positive)]',
+    badgeClass: 'bg-success/10 text-success',
+    borderClass: 'border-success/20',
+    bgClass: 'bg-success-bg',
   },
   warning: {
     icon: AlertTriangle,
-    badgeClass: 'bg-[rgba(245,158,11,0.12)] text-[var(--core-color-data-warning)]',
-    iconClass: 'text-[var(--core-color-data-warning)]',
+    badgeClass: 'bg-warning/10 text-warning',
+    borderClass: 'border-warning/20',
+    bgClass: 'bg-warning-bg',
   },
   critical: {
     icon: OctagonAlert,
-    badgeClass: 'bg-[rgba(220,38,38,0.12)] text-[var(--core-color-data-critical)]',
-    iconClass: 'text-[var(--core-color-data-critical)]',
+    badgeClass: 'bg-danger/10 text-danger',
+    borderClass: 'border-danger/20',
+    bgClass: 'bg-danger-bg',
   },
 } as const
 
@@ -50,17 +54,17 @@ export function SmartAlert ({
   const Icon = config.icon
 
   return (
-    <div className="flex items-start gap-4 rounded-xl border border-[var(--core-color-border-default)] bg-[var(--core-color-surface-canvas)] px-5 py-4 shadow-100">
-      <div className={`flex h-10 w-10 items-center justify-center rounded-full ${config.badgeClass}`}>
-        <Icon className={`h-5 w-5 ${config.iconClass}`} aria-hidden="true" />
+    <div className={`flex items-start gap-4 rounded-sm border ${config.borderClass} ${config.bgClass} px-4 py-4`}>
+      <div className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-sm ${config.badgeClass}`}>
+        <Icon className="h-5 w-5" aria-hidden="true" />
       </div>
-      <div className="flex-1">
+      <div className="flex-1 min-w-0">
         <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <p className="text-sm font-semibold text-[var(--core-color-text-primary)]">{title}</p>
-            <p className="mt-1 text-sm text-[var(--core-color-text-muted)]">
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-text-primary">{title}</p>
+            <p className="mt-1 text-sm text-text-secondary leading-relaxed">
               {message}{' '}
-              {emphasis && <span className="font-semibold text-[var(--core-color-text-primary)]">{emphasis}</span>}
+              {emphasis && <span className="font-semibold text-text-primary">{emphasis}</span>}
             </p>
           </div>
           {actionLabel && (
@@ -69,7 +73,7 @@ export function SmartAlert ({
             </Button>
           )}
         </div>
-        {footer && <div className="mt-3 text-xs text-[var(--core-color-text-muted)]">{footer}</div>}
+        {footer && <div className="mt-3 text-xs text-text-tertiary">{footer}</div>}
       </div>
     </div>
   )

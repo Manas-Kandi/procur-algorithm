@@ -101,12 +101,12 @@ const sellerNavItems: NavItem[] = [
 const SECTION_CONFIG = {
   buyer: {
     label: 'Buyer Workspace',
-    accent: 'bg-[var(--persona-color-buyer-accent)]',
+    accent: 'bg-info',
     items: buyerNavItems,
   },
   seller: {
     label: 'Seller Workspace',
-    accent: 'bg-[var(--persona-color-seller-accent)]',
+    accent: 'bg-warning',
     items: sellerNavItems,
   },
 }
@@ -126,9 +126,9 @@ export function Navigation ({ variant = 'desktop', onNavigate }: NavigationProps
   }
 
   const containerClass = clsx(
-    'flex w-72 flex-col bg-[var(--core-color-surface-canvas)]',
-    variant === 'desktop' && 'hidden border-r border-[var(--core-color-border-default)] shadow-100 lg:flex',
-    variant === 'mobile' && 'h-full shadow-200'
+    'flex w-60 flex-col bg-surface-raised',
+    variant === 'desktop' && 'hidden border-r border-border-subtle lg:flex',
+    variant === 'mobile' && 'h-full shadow-medium'
   )
 
   return (
@@ -136,11 +136,11 @@ export function Navigation ({ variant = 'desktop', onNavigate }: NavigationProps
       <div className="flex-1 overflow-y-auto py-6">
         {sections.map((section) => (
           <div key={section.key} className="mb-8">
-            <div className="flex items-center gap-2 px-6 text-xs font-semibold uppercase tracking-wider text-[var(--core-color-text-muted)]">
-              <span className={clsx('h-1.5 w-1.5 rounded-full', section.accent)} aria-hidden="true" />
+            <div className="flex items-center gap-2 px-6 text-xs font-semibold uppercase tracking-wide text-text-tertiary">
+              <span className={clsx('h-1 w-1 rounded-full', section.accent)} aria-hidden="true" />
               {section.label}
             </div>
-            <div className="mt-3 space-y-1 px-3">
+            <div className="mt-2 space-y-0.5 px-3">
               {section.items
                 .filter(item => item.roles.includes(user.role))
                 .map((item) => {
@@ -156,24 +156,24 @@ export function Navigation ({ variant = 'desktop', onNavigate }: NavigationProps
                       to={item.href}
                       onClick={onNavigate}
                       className={clsx(
-                        'group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                        'group flex items-center gap-3 rounded-sm px-3 py-2.5 text-sm font-medium transition-all duration-150',
                         isActive
-                          ? 'bg-[var(--core-color-brand-primary)]/10 text-[var(--core-color-brand-primary)]'
-                          : 'text-[var(--core-color-text-muted)] hover:bg-[var(--core-color-surface-subtle)] hover:text-[var(--core-color-text-primary)]'
+                          ? 'bg-brand-primary/10 text-brand-primary'
+                          : 'text-text-secondary hover:bg-background-secondary hover:text-text-primary'
                       )}
                     >
                       <span className={clsx(
-                        'flex h-8 w-8 items-center justify-center rounded-md border text-[var(--core-color-text-muted)] transition-colors',
+                        'flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-sm transition-colors',
                         isActive
-                          ? 'border-[var(--core-color-brand-primary)] bg-[var(--core-color-brand-primary)]/10 text-[var(--core-color-brand-primary)]'
-                          : 'border-transparent bg-[var(--core-color-surface-subtle)] group-hover:border-[var(--core-color-border-default)]'
+                          ? 'bg-brand-primary/10 text-brand-primary'
+                          : 'bg-background-secondary text-text-tertiary group-hover:text-text-secondary'
                       )}>
                         <ItemIcon className="h-4 w-4" aria-hidden="true" />
                       </span>
                       <span className="flex flex-col">
                         {item.name}
                         {item.description && (
-                          <span className="text-xs font-normal text-[var(--core-color-text-muted)] group-hover:text-[var(--core-color-text-primary)]/80">
+                          <span className="text-xs font-normal text-text-tertiary group-hover:text-text-secondary">
                             {item.description}
                           </span>
                         )}
@@ -186,21 +186,21 @@ export function Navigation ({ variant = 'desktop', onNavigate }: NavigationProps
         ))}
       </div>
 
-      <div className="mt-auto border-t border-[var(--core-color-border-default)] px-5 py-4">
+      <div className="mt-auto border-t border-border-subtle px-4 py-4">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--core-color-surface-subtle)] text-sm font-semibold text-[var(--core-color-brand-primary)]">
+          <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-sm bg-background-secondary text-sm font-semibold text-brand-primary">
             {(user.full_name ?? user.username).charAt(0).toUpperCase()}
           </div>
-          <div className="flex-1">
-            <p className="text-sm font-semibold text-[var(--core-color-text-primary)]">{user.full_name ?? user.username}</p>
-            <p className="text-xs text-[var(--core-color-text-muted)]">{user.email}</p>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-text-primary truncate">{user.full_name ?? user.username}</p>
+            <p className="text-xs text-text-tertiary truncate">{user.email}</p>
           </div>
           <RoleBadge role={user.role} />
         </div>
         <button
           type="button"
           onClick={logout}
-          className="mt-3 inline-flex w-full items-center justify-center rounded-lg border border-[var(--core-color-border-default)] bg-[var(--core-color-surface-subtle)] px-3 py-2 text-xs font-medium text-[var(--core-color-text-muted)] hover:border-[var(--core-color-border-focus)] hover:text-[var(--core-color-text-primary)]"
+          className="mt-3 inline-flex w-full items-center justify-center rounded-sm border border-border-medium bg-surface-raised px-3 py-2 text-xs font-medium text-text-secondary transition-all duration-150 hover:border-border-strong hover:bg-background-secondary hover:text-text-primary"
         >
           Sign out
         </button>

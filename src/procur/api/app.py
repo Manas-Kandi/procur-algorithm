@@ -15,6 +15,7 @@ from .config import get_api_config
 from .routes import (
     auth_router,
     contracts_router,
+    dashboard_router,
     health_router,
     negotiations_router,
     requests_router,
@@ -89,6 +90,7 @@ def create_app() -> FastAPI:
     app.include_router(vendors_router)
     app.include_router(negotiations_router)
     app.include_router(contracts_router)
+    app.include_router(dashboard_router)
     
     # Custom exception handlers
     @app.exception_handler(RequestValidationError)

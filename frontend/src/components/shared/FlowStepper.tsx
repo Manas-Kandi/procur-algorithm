@@ -19,9 +19,9 @@ export function FlowStepper ({ steps, onStepSelect }: FlowStepperProps): JSX.Ele
         {steps.map((step, index) => {
           const isLast = index === steps.length - 1
           const statusClass = {
-            complete: 'border-none bg-[var(--core-color-brand-primary)] text-white',
-            current: 'border-2 border-[var(--core-color-brand-primary)] text-[var(--core-color-brand-primary)] bg-white',
-            upcoming: 'border-2 border-[var(--core-color-border-default)] text-[var(--core-color-text-muted)] bg-white',
+            complete: 'border-none bg-brand-primary text-text-inverse',
+            current: 'border-2 border-brand-primary text-brand-primary bg-surface-raised',
+            upcoming: 'border-2 border-border-subtle text-text-tertiary bg-surface-raised',
           }[step.status]
 
           return (
@@ -29,11 +29,11 @@ export function FlowStepper ({ steps, onStepSelect }: FlowStepperProps): JSX.Ele
               <button
                 type="button"
                 onClick={() => onStepSelect?.(step.id)}
-                className="flex items-center text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--core-color-border-focus)] focus-visible:ring-offset-2"
+                className="flex items-center text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary focus-visible:ring-offset-2 transition-all"
               >
                 <span
                   className={clsx(
-                    'flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-semibold transition-colors',
+                    'flex h-9 w-9 shrink-0 items-center justify-center rounded-sm text-sm font-semibold transition-all duration-150',
                     statusClass
                   )}
                 >
@@ -50,16 +50,16 @@ export function FlowStepper ({ steps, onStepSelect }: FlowStepperProps): JSX.Ele
                   )}
                 </span>
                 <span className="ml-3">
-                  <span className="block text-sm font-semibold text-[var(--core-color-text-primary)]">{step.label}</span>
+                  <span className="block text-sm font-semibold text-text-primary">{step.label}</span>
                   {step.description && (
-                    <span className="mt-1 block text-xs text-[var(--core-color-text-muted)]">{step.description}</span>
+                    <span className="mt-1 block text-xs text-text-secondary">{step.description}</span>
                   )}
                 </span>
               </button>
 
               {!isLast && (
                 <span
-                  className="absolute left-12 top-5 hidden h-0.5 w-[calc(100%_-_3rem)] bg-[var(--core-color-border-default)] sm:block"
+                  className="absolute left-12 top-4 hidden h-0.5 w-[calc(100%_-_3rem)] bg-border-subtle sm:block"
                   aria-hidden="true"
                 />
               )}
