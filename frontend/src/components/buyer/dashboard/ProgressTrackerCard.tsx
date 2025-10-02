@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { Clock, TrendingUp } from 'lucide-react'
+import { Clock, TrendingUp, MoreHorizontal, MessageSquare } from 'lucide-react'
 import clsx from 'clsx'
 
 type StageKey = 'draft' | 'intake' | 'sourcing' | 'negotiating' | 'approving' | 'contracted' | 'provisioning' | 'completed' | 'cancelled'
@@ -42,24 +42,44 @@ export function ProgressTrackerCard({
   const circumference = 2 * Math.PI * 18 // radius = 18
   const strokeDashoffset = circumference - (config.progress / 100) * circumference
 
+  const TIMELINE: StageKey[] = ['sourcing', 'negotiating', 'approving', 'contracted']
+  const currentIndex = TIMELINE.indexOf(stage as StageKey)
+
   return (
     <button
       onClick={onClick}
       className={clsx(
-        'group relative w-full rounded-lg border bg-white p-4 text-left transition-all hover:shadow-md',
-        isActive ? 'border-[var(--color-ai-primary)] ring-2 ring-[var(--color-ai-primary)]/20' : 'border-gray-200'
+        'group relative w-full rounded-[12px] border bg-white p-[18px] text-left transition-all duration-200 hover:shadow-md',
+        isActive ? 'border-[var(--accent-mint)] ring-2 ring-[var(--accent-mint)]/30' : 'border-gray-200',
+        isActive && 'animate-[cardPulse_2s_ease-in-out_infinite]'
       )}
     >
       {isActive && (
         <div className="absolute -top-1 -right-1">
           <span className="relative flex h-3 w-3">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[var(--color-ai-primary)] opacity-75" />
-            <span className="relative inline-flex h-3 w-3 rounded-full bg-[var(--color-ai-primary)]" />
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[var(--accent-mint)] opacity-75" />
+            <span className="relative inline-flex h-3 w-3 rounded-full bg-[var(--accent-mint)]" />
           </span>
         </div>
       )}
 
       <div className="flex items-start gap-4">
+        {/* Vertical Micro-Timeline */}
+        <div className="relative mt-1 flex w-6 flex-col items-center">
+          <div className="absolute top-1 bottom-1 w-px bg-[var(--muted-line)]" aria-hidden="true" />
+          {TIMELINE.map((step, idx) => {
+            const reached = currentIndex >= idx
+            const mint = step === 'negotiating'
+            return (
+              <div key={step} className={clsx('relative z-10 my-1 flex h-3 w-3 items-center justify-center rounded-full',
+                reached ? (mint ? 'bg-[var(--accent-mint)]' : 'bg-gray-300') : 'bg-white border border-gray-200'
+              )}>
+                {isActive && step === stage && <span className="absolute inline-flex h-4 w-4 animate-ping rounded-full bg-[var(--accent-mint)] opacity-60" />}
+              </div>
+            )
+          })}
+        </div>
+
         {/* Progress Ring */}
         <div className="relative flex-shrink-0">
           <svg className="h-12 w-12 -rotate-90 transform">
@@ -91,14 +111,14 @@ export function ProgressTrackerCard({
         </div>
 
         {/* Content */}
-        <div className="flex-1 min-w-0">
+        <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-2">
             <div className="flex-1 min-w-0">
-              <h3 className="text-sm font-semibold text-[var(--core-color-text-primary)] truncate group-hover:text-[var(--color-ai-primary)]">
+              <h3 className="truncate text-sm font-semibold text-[var(--core-color-text-primary)] group-hover:text-[var(--color-ai-primary)]">
                 {title}
               </h3>
               {vendor && (
-                <p className="text-xs text-[var(--core-color-text-muted)] mt-0.5">{vendor}</p>
+                <p className="mt-0.5 text-xs text-[var(--core-color-text-muted)]">{vendor}</p>
               )}
             </div>
             {budget && (
@@ -108,22 +128,44 @@ export function ProgressTrackerCard({
             )}
           </div>
 
-          {/* Stage Badge */}
-          <div className="mt-2 flex items-center gap-2">
-            <span className={clsx('inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium', config.bgColor, config.color)}>
-              <span className="h-1.5 w-1.5 rounded-full bg-current" />
-              {config.label}
+          {/* One-line action summary */}
+          <p className="mt-1 text-xs text-[var(--core-color-text-secondary)]">
+            {nextAction ?? config.label}
+          </p>
+
+          {/* Chips: ETA / Price / Risk */}
+          <div className="mt-2 flex flex-wrap gap-2">
+            <span className="inline-flex items-center gap-1 rounded-[8px] bg-[var(--accent-blue)]/30 px-2 py-0.5 text-[12px] text-[var(--core-color-text-primary)]">
+              <Clock className="h-3 w-3" /> ETA: {stage === 'approving' ? '2-3 days' : stage === 'sourcing' ? '1-2 days' : '—'}
+            </span>
+            {budget && (
+              <span className="inline-flex items-center gap-1 rounded-[8px] bg-[var(--accent-yellow)]/40 px-2 py-0.5 text-[12px] text-[var(--core-color-text-primary)]">
+                💰 {budget}
+              </span>
+            )}
+            <span className="inline-flex items-center gap-1 rounded-[8px] bg-[var(--accent-peach)]/40 px-2 py-0.5 text-[12px] text-[var(--core-color-text-primary)]">
+              🛡️ {stage === 'negotiating' ? 'Medium risk' : 'Low risk'}
             </span>
           </div>
-
-          {/* Next Action */}
-          {nextAction && (
-            <div className="mt-2 flex items-start gap-1.5 text-xs text-[var(--core-color-text-muted)]">
-              <Clock className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />
-              <span>{nextAction}</span>
-            </div>
-          )}
         </div>
+      </div>
+
+      {/* Footer CTAs */}
+      <div className="mt-3 flex items-center justify-between">
+        <button
+          type="button"
+          className="inline-flex items-center gap-1 rounded-sm border border-[var(--accent-mint)] bg-white px-2.5 py-1.5 text-xs font-medium text-[var(--core-color-text-primary)] transition hover:bg-[var(--accent-mint)]/30"
+          onClick={onClick}
+        >
+          <MessageSquare className="h-3.5 w-3.5" /> View negotiation
+        </button>
+        <button
+          type="button"
+          className="inline-flex h-7 w-7 items-center justify-center rounded-sm border border-gray-200 bg-white text-[var(--core-color-text-secondary)] hover:bg-gray-50"
+          aria-label="More options"
+        >
+          <MoreHorizontal className="h-4 w-4" />
+        </button>
       </div>
     </button>
   )

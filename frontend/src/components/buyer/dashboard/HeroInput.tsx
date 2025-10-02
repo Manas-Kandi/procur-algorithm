@@ -34,13 +34,13 @@ export function HeroInput({ onSubmit }: HeroInputProps) {
             type="text"
             value={value}
             onChange={(e) => setValue(e.target.value)}
-            placeholder="What do you need? (e.g., 'CRM for 200 sales reps with Salesforce integration')"
+            placeholder="Need 200 design seats · budget $1,000/seat/year · SOC 2 required"
             className="flex-1 bg-transparent py-2 text-base text-[var(--core-color-text-primary)] placeholder:text-[var(--core-color-text-muted)] focus:outline-none"
           />
           <button
             type="submit"
             disabled={!value.trim()}
-            className="flex h-10 items-center gap-2 rounded-md bg-[var(--color-ai-primary)] px-4 text-sm font-semibold text-white transition-all hover:bg-[var(--color-ai-primary)]/90 disabled:opacity-40 disabled:cursor-not-allowed"
+            className="flex h-10 items-center gap-2 rounded-md border border-[var(--accent-mint)] bg-white px-4 text-sm font-semibold text-[var(--core-color-text-primary)] transition-all hover:bg-[var(--accent-mint)]/30 disabled:opacity-40 disabled:cursor-not-allowed"
           >
             Start
             <ArrowRight className="h-4 w-4" />
