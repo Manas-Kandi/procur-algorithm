@@ -45,22 +45,17 @@ export function ProgressTrackerCard({
     <button
       onClick={onClick}
       className={clsx(
-        'group relative w-full rounded-[12px] border bg-white p-[18px] text-left transition-all duration-200 hover:shadow-md',
-        isActive ? 'border-[var(--accent-mint)] ring-2 ring-[var(--accent-mint)]/30' : 'border-gray-200'
+        'group relative w-full rounded-[16px] border p-[18px] text-left transition-transform duration-200 bg-[var(--surface)]',
+        isActive ? 'border-[var(--agent-accent)] ring-2 ring-[var(--agent-accent)]/20' : 'border-[var(--muted-2)]',
+        'hover:-translate-y-0.5 hover:shadow-[var(--shadow-soft)]'
       )}
     >
-      {isActive && (
-        <div className="absolute -top-1 -right-1">
-          <span className="relative flex h-3 w-3">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[var(--accent-mint)] opacity-75" />
-            <span className="relative inline-flex h-3 w-3 rounded-full bg-[var(--accent-mint)]" />
-          </span>
-        </div>
-      )}
-
       <div className="flex items-start gap-3">
         {/* Vendor avatar */}
-        <div className="mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full border border-gray-200 bg-white text-xs font-semibold text-[var(--core-color-text-primary)]">
+        <div
+          className="mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full border border-gray-200 bg-white text-xs font-semibold text-[var(--core-color-text-primary)]"
+          style={isActive ? { boxShadow: '0 0 0 8px var(--agent-accent-soft)', transform: 'scale(1.02)', transition: 'transform 200ms' } : undefined}
+        >
           {(vendor || title).charAt(0).toUpperCase()}
         </div>
 
@@ -80,6 +75,15 @@ export function ProgressTrackerCard({
             <span className="inline-flex items-center rounded-[8px] border border-gray-200 bg-white px-2 py-0.5 text-[11px] font-medium text-[var(--core-color-text-secondary)]">
               {nextAction ?? config.label}
             </span>
+          </div>
+
+          {/* Inline micro-progress dots (3 steps) */}
+          <div className="mt-1 flex items-center gap-1.5" aria-hidden="true">
+            {(['sourcing','negotiating','approving'] as StageKey[]).map((s) => {
+              const order = ['sourcing','negotiating','approving']
+              const reached = order.indexOf(stage as any) >= order.indexOf(s as any)
+              return <span key={s} className={clsx('h-1.5 w-1.5 rounded-full', reached ? 'bg-[var(--agent-accent)]' : 'bg-[var(--muted-2)]')} />
+            })}
           </div>
 
           {/* Negotiation preview (subtle bubble) */}

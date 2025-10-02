@@ -1,14 +1,26 @@
-import { PropsWithChildren, useEffect, useRef, useState } from 'react'
-import { Menu, Search, X } from 'lucide-react'
+import { PropsWithChildren, useEffect, useMemo, useRef, useState } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
+import { ChevronsRight, Menu, Search, X } from 'lucide-react'
 import { Navigation } from './Navigation'
+import { ProcurSidebar } from '../../components/ui/ProcurSidebar'
 import { useAuthStore } from '../../store/auth'
 // import { RoleBadge } from '../../ui/components/RoleBadge'
 
 export function AppLayout ({ children }: PropsWithChildren): JSX.Element {
   const { user, logout } = useAuthStore()
+  const navigate = useNavigate()
+  const location = useLocation()
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
+  const [sidebarOpen, setSidebarOpen] = useState(true)
   const userMenuRef = useRef<HTMLDivElement | null>(null)
+
+  const selectedKey = useMemo(() => {
+    const p = location.pathname
+    if (p.startsWith('/portfolio')) return 'portfolio'
+    if (p.startsWith('/requests/new')) return 'new-request'
+    return 'dashboard'
+  }, [location.pathname])
 
   useEffect(() => {
     if (!userMenuOpen) return
@@ -31,8 +43,19 @@ export function AppLayout ({ children }: PropsWithChildren): JSX.Element {
   return (
     <div className="min-h-screen bg-[var(--core-color-surface-background)] text-[var(--core-color-text-primary)]">
       <div className="flex min-h-screen">
-        {/* Desktop navigation */}
-        <Navigation variant="desktop" />
+        {/* Desktop sidebar (Procur variant) */}
+        <div className="hidden lg:block">
+          <ProcurSidebar
+            open={sidebarOpen}
+            onToggle={() => setSidebarOpen((v) => !v)}
+            selectedKey={selectedKey}
+            onSelect={(key) => {
+              if (key === 'dashboard') navigate('/')
+              else if (key === 'new-request') navigate('/requests/new')
+              else if (key === 'portfolio') navigate('/portfolio')
+            }}
+          />
+        </div>
 
         {/* Mobile navigation */}
         {mobileNavOpen && (
@@ -71,6 +94,15 @@ export function AppLayout ({ children }: PropsWithChildren): JSX.Element {
                 aria-label="Open navigation"
               >
                 <Menu className="h-5 w-5" aria-hidden="true" />
+              </button>
+              {/* Desktop sidebar toggle */}
+              <button
+                type="button"
+                className="hidden rounded-sm border border-[var(--muted-2)] p-2 text-[var(--core-color-text-primary)] hover:bg-[var(--muted-1)] lg:inline-flex"
+                onClick={() => setSidebarOpen((v) => !v)}
+                aria-label="Toggle sidebar"
+              >
+                <ChevronsRight className={`h-5 w-5 transition-transform ${sidebarOpen ? 'rotate-180' : ''}`} />
               </button>
             </div>
 

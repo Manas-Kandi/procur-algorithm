@@ -39,8 +39,9 @@ def get_dashboard_metrics(
     # Calculate average cycle time (mock for now)
     avg_cycle_time = 14.5
     
-    # Calculate savings (mock for now)
-    total_savings = sum([r.target_price or 0 for r in requests]) * 0.15
+    # Calculate savings (mock for now): use budget_max as proxy when available
+    # Avoid referencing non-existent attributes on RequestRecord
+    total_savings = sum([(getattr(r, "budget_max", None) or 0) * 0.15 for r in requests])
     
     return {
         "total_requests": total_requests,

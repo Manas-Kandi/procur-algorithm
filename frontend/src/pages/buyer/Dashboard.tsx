@@ -7,7 +7,7 @@ import { api } from '../../services/api'
 import { SmartAlert } from '../../components/shared/SmartAlert'
 import { HeroInput } from '../../components/buyer/dashboard/HeroInput'
 import { ProgressTrackerCard } from '../../components/buyer/dashboard/ProgressTrackerCard'
-import { NegotiationStoryboard } from '../../components/buyer/dashboard/NegotiationStoryboard'
+// import { NegotiationStoryboard } from '../../components/buyer/dashboard/NegotiationStoryboard'
 // import { DecisionGate } from '../../components/buyer/dashboard/DecisionGate'
 // import type { Request, RequestStatus } from '../../types'
 
@@ -97,15 +97,26 @@ export function BuyerDashboard (): JSX.Element {
   const approvalsCount = useMemo(() => (Array.isArray(requests) ? requests.filter((r: any) => r?.status === 'approving').length : 0), [requests])
 
   return (
-    <div className="space-y-8">
-      {/* Hero Input */}
-      <div className="space-y-2">
-        <h1 className="text-2xl font-semibold text-[var(--core-color-text-primary)]">Describe a need</h1>
+    <div className="mx-auto max-w-[1180px] space-y-8 px-4 sm:px-6">
+      {/* Hero Input with soft band and pinned agent capsule */}
+      <div
+        className="relative rounded-[16px] border border-[var(--muted-2)] p-4 sm:p-5"
+        style={{ background: 'transparent' }}
+      >
+        <div className="mb-2">
+          <h1 className="text-2xl font-semibold text-[var(--core-color-text-primary)]">Describe a need</h1>
+        </div>
         <HeroInput />
+        <div className="absolute right-3 top-3">
+          <span className="inline-flex items-center gap-2 rounded-full border border-[var(--agent-accent)] bg-white px-2.5 py-1 text-xs font-medium text-[var(--core-color-text-primary)]">
+            <span className="flex h-4 w-4 items-center justify-center rounded-full bg-[var(--agent-accent)] text-[10px] text-white">A</span>
+            Agent Luna · Negotiating
+          </span>
+        </div>
       </div>
 
       {/* Minimal KPI strip (3 metrics, simplified labels) */}
-      <section className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <section className="grid grid-cols-1 gap-6 sm:grid-cols-3">
         <div className="rounded-lg border border-gray-200 bg-white p-4">
           <p className="text-xs text-[var(--core-color-text-secondary)]">Active</p>
           <p className="mt-1 text-2xl font-bold text-[var(--core-color-text-primary)]">{activeCount || '—'}</p>
@@ -117,6 +128,11 @@ export function BuyerDashboard (): JSX.Element {
         <div className="rounded-lg border border-gray-200 bg-white p-4">
           <p className="text-xs text-[var(--core-color-text-secondary)]">Avg. savings</p>
           <p className="mt-1 text-2xl font-bold text-[var(--core-color-text-primary)]">{savingsPercent ? `${savingsPercent.toFixed(1)}%` : '—'}</p>
+          {/* tiny sparkline */}
+          <svg width="100%" height="28" viewBox="0 0 200 28" className="mt-1">
+            <path d="M0 20 L20 18 L40 22 L60 14 L80 16 L100 10 L120 12 L140 8 L160 14 L180 12 L200 6" stroke="var(--agent-accent)" strokeWidth="2.5" fill="none" />
+            <path d="M0 28 L0 20 L200 6 L200 28 Z" fill="var(--agent-accent-soft)" />
+          </svg>
         </div>
       </section>
 
@@ -150,12 +166,12 @@ export function BuyerDashboard (): JSX.Element {
           <h2 className="text-lg font-semibold text-[var(--core-color-text-primary)]">{activeCount ? `${Math.min(activeCount, 3)} active requests` : 'No active requests'}</h2>
           <button
             onClick={() => navigate('/requests')}
-            className="text-sm text-[var(--color-ai-primary)] hover:underline"
+            className="text-sm text-[var(--agent-accent)] hover:underline"
           >
             View all
           </button>
         </div>
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
           {topActiveRequests.map((request: any) => (
             <ProgressTrackerCard
               key={request.request_id}
@@ -171,27 +187,7 @@ export function BuyerDashboard (): JSX.Element {
           ))}
         </div>
       </section>
-
-      {/* Live Negotiation Feed */}
-      {requests && requests.some(r => r.status === 'negotiating') && (
-        <section className="space-y-4">
-          <div>
-            <h2 className="text-lg font-semibold text-[var(--core-color-text-primary)]">Live negotiation</h2>
-            <p className="text-sm text-[var(--core-color-text-muted)]">Watch your agent negotiate in real-time</p>
-          </div>
-          <div className="rounded-lg border border-gray-200 bg-white p-6">
-            <NegotiationStoryboard messages={mockMessages} vendorName="Figma" />
-            <div className="mt-4">
-              <button
-                type="button"
-                className="inline-flex items-center gap-2 rounded-sm border border-[var(--accent-mint)] bg-white px-3 py-1.5 text-sm font-medium text-[var(--core-color-text-primary)] hover:bg-[var(--accent-mint)]/30"
-              >
-                Ask agent for one more round
-              </button>
-            </div>
-          </div>
-        </section>
-      )}
+      {/* Full thread removed from dashboard to keep preview-only; use card CTA to open */}
       {/* Decision Gate removed from default view to reduce layers */}
     </div>
   )
