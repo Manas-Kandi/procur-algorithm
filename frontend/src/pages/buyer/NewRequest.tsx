@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useEffect, useMemo, useState } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useMutation } from '@tanstack/react-query'
 import { api } from '../../services/api'
 import { Card } from '../../components/shared/Card'
@@ -35,6 +35,7 @@ type StepKey = 'budget' | 'scope' | 'requirements' | 'policy' | 'launch'
 
 export function NewRequest (): JSX.Element {
   const navigate = useNavigate()
+  const location = useLocation() as { state?: { description?: string } }
   const [currentStep, setCurrentStep] = useState<StepKey>('budget')
   const [draft, setDraft] = useState<RequestDraft>({
     budget_mode: 'see-pricing',
@@ -43,6 +44,15 @@ export function NewRequest (): JSX.Element {
     specs: {},
   })
   const [showSourcingProgress, setShowSourcingProgress] = useState(false)
+
+  // Prefill description from hero input and move to Scope step
+  useEffect(() => {
+    const prefill = location.state?.description?.trim()
+    if (prefill) {
+      setDraft((prev) => ({ ...prev, description: prefill }))
+      setCurrentStep('scope')
+    }
+  }, [location.state])
 
   const createRequest = useMutation({
     mutationFn: async () => {

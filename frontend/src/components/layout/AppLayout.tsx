@@ -1,4 +1,4 @@
-import { PropsWithChildren, useState } from 'react'
+import { PropsWithChildren, useEffect, useRef, useState } from 'react'
 import { Menu, Search, X } from 'lucide-react'
 import { Navigation } from './Navigation'
 import { useAuthStore } from '../../store/auth'
@@ -8,6 +8,25 @@ export function AppLayout ({ children }: PropsWithChildren): JSX.Element {
   const { user, logout } = useAuthStore()
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
+  const userMenuRef = useRef<HTMLDivElement | null>(null)
+
+  useEffect(() => {
+    if (!userMenuOpen) return
+    const onClick = (e: MouseEvent) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
+        setUserMenuOpen(false)
+      }
+    }
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setUserMenuOpen(false)
+    }
+    document.addEventListener('mousedown', onClick)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('mousedown', onClick)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [userMenuOpen])
 
   return (
     <div className="min-h-screen bg-[var(--core-color-surface-background)] text-[var(--core-color-text-primary)]">
@@ -73,7 +92,7 @@ export function AppLayout ({ children }: PropsWithChildren): JSX.Element {
             {/* Right section: user avatar only */}
             <div className="flex min-w-0 flex-1 items-center justify-end gap-4">
               {user && (
-                <div className="relative">
+                <div className="relative" ref={userMenuRef}>
                   <button
                     type="button"
                     onClick={() => setUserMenuOpen((v) => !v)}
