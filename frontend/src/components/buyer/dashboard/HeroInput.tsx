@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Sparkles, ArrowRight } from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
 
 interface HeroInputProps {
   onSubmit?: (description: string) => void
@@ -25,10 +25,7 @@ export function HeroInput({ onSubmit }: HeroInputProps) {
   return (
     <div className="relative">
       <form onSubmit={handleSubmit} className="relative">
-        <div className="flex items-center gap-3 rounded-lg border border-gray-200 bg-white p-2 shadow-sm transition-all focus-within:border-[var(--agent-accent)] focus-within:ring-2 focus-within:ring-[var(--agent-accent)]/30">
-          <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-md border border-[var(--agent-accent)] bg-white text-[var(--core-color-text-primary)]">
-            <Sparkles className="h-5 w-5" />
-          </div>
+        <div className="flex items-center gap-3 rounded-[1px] border border-[var(--muted-2)] bg-white/50 p-2 transition-all focus-within:border-[var(--agent-accent)] focus-within:ring-2 focus-within:ring-[var(--agent-accent)]/30">
           <input
             type="text"
             value={value}
@@ -39,7 +36,7 @@ export function HeroInput({ onSubmit }: HeroInputProps) {
           <button
             type="submit"
             disabled={!value.trim()}
-            className="flex h-11 items-center gap-2 rounded-md bg-[var(--agent-accent)] px-5 text-sm font-semibold text-white transition-all hover:opacity-95 disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--agent-accent)]/60"
+            className="flex h-11 items-center gap-2 rounded-[1px] bg-[var(--agent-accent)] px-5 text-sm font-semibold text-white transition-all hover:opacity-95 disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--agent-accent)]/60"
           >
             Describe
             <ArrowRight className="h-4 w-4" />

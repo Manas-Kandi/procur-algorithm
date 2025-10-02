@@ -98,41 +98,70 @@ export function BuyerDashboard (): JSX.Element {
 
   return (
     <div className="mx-auto max-w-[1180px] space-y-8 px-4 sm:px-6">
-      {/* Hero Input with soft band and pinned agent capsule */}
-      <div
-        className="relative rounded-[16px] border border-[var(--muted-2)] p-4 sm:p-5"
-        style={{ background: 'transparent' }}
-      >
-        <div className="mb-2">
-          <h1 className="text-2xl font-semibold text-[var(--core-color-text-primary)]">Describe a need</h1>
-        </div>
-        <HeroInput />
-        <div className="absolute right-3 top-3">
-          <span className="inline-flex items-center gap-2 rounded-full border border-[var(--agent-accent)] bg-white px-2.5 py-1 text-xs font-medium text-[var(--core-color-text-primary)]">
-            <span className="flex h-4 w-4 items-center justify-center rounded-full bg-[var(--agent-accent)] text-[10px] text-white">A</span>
-            Agent Luna · Negotiating
-          </span>
-        </div>
+      {/* Page Title */}
+      <div>
+        <h1 className="text-3xl font-thin text-[var(--core-color-text-primary)]">Dashboard</h1>
       </div>
 
-      {/* Minimal KPI strip (3 metrics, simplified labels) */}
-      <section className="grid grid-cols-1 gap-6 sm:grid-cols-3">
-        <div className="rounded-lg border border-gray-200 bg-white p-4">
-          <p className="text-xs text-[var(--core-color-text-secondary)]">Active</p>
-          <p className="mt-1 text-2xl font-bold text-[var(--core-color-text-primary)]">{activeCount || '—'}</p>
+      {/* Hero input only (title and container removed) */}
+      <HeroInput />
+
+      {/* Overview */}
+      <section className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h2 className="text-base font-semibold text-[var(--core-color-text-primary)]">Overview</h2>
         </div>
-        <div className="rounded-lg border border-gray-200 bg-white p-4">
-          <p className="text-xs text-[var(--core-color-text-secondary)]">Approvals</p>
-          <p className="mt-1 text-2xl font-bold text-[var(--core-color-text-primary)]">{approvalsCount || '—'}</p>
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
+          <div className="border border-gray-200 bg-white/50 p-4">
+            <p className="text-xs text-[var(--core-color-text-secondary)]">Active</p>
+            <p className="mt-1 text-2xl font-bold text-[var(--core-color-text-primary)]">{activeCount || '—'}</p>
+          </div>
+          <div className="border border-gray-200 bg-white/50 p-4">
+            <p className="text-xs text-[var(--core-color-text-secondary)]">Approvals</p>
+            <p className="mt-1 text-2xl font-bold text-[var(--core-color-text-primary)]">{approvalsCount || '—'}</p>
+          </div>
+          <div className="border border-gray-200 bg-white/50 p-4">
+            <p className="text-xs text-[var(--core-color-text-secondary)]">Avg. savings</p>
+            <p className="mt-1 text-2xl font-bold text-[var(--core-color-text-primary)]">{savingsPercent ? `${savingsPercent.toFixed(1)}%` : '—'}</p>
+            {/* tiny sparkline */}
+            <svg width="100%" height="28" viewBox="0 0 200 28" className="mt-1">
+              <path d="M0 20 L20 18 L40 22 L60 14 L80 16 L100 10 L120 12 L140 8 L160 14 L180 12 L200 6" stroke="var(--agent-accent)" strokeWidth="2.5" fill="none" />
+              <path d="M0 28 L0 20 L200 6 L200 28 Z" fill="var(--agent-accent-soft)" />
+            </svg>
+          </div>
         </div>
-        <div className="rounded-lg border border-gray-200 bg-white p-4">
-          <p className="text-xs text-[var(--core-color-text-secondary)]">Avg. savings</p>
-          <p className="mt-1 text-2xl font-bold text-[var(--core-color-text-primary)]">{savingsPercent ? `${savingsPercent.toFixed(1)}%` : '—'}</p>
-          {/* tiny sparkline */}
-          <svg width="100%" height="28" viewBox="0 0 200 28" className="mt-1">
-            <path d="M0 20 L20 18 L40 22 L60 14 L80 16 L100 10 L120 12 L140 8 L160 14 L180 12 L200 6" stroke="var(--agent-accent)" strokeWidth="2.5" fill="none" />
-            <path d="M0 28 L0 20 L200 6 L200 28 Z" fill="var(--agent-accent-soft)" />
-          </svg>
+      </section>
+
+      {/* Recent Activity */}
+      <section className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h2 className="text-base font-semibold text-[var(--core-color-text-primary)]">Recent activity</h2>
+          <button onClick={() => navigate('/requests')} className="text-sm text-[var(--agent-accent)] hover:underline">View all</button>
+        </div>
+        <div className="border border-[var(--muted-2)] bg-white">
+          <div className="grid grid-cols-12 border-b border-[var(--muted-2)] px-3 py-2 text-xs text-[var(--core-color-text-secondary)]">
+            <div className="col-span-5">Name</div>
+            <div className="col-span-3">Stage</div>
+            <div className="col-span-2">Budget</div>
+            <div className="col-span-2 text-right">Updated</div>
+          </div>
+          <div className="divide-y divide-[var(--muted-2)]">
+            {(Array.isArray(requests) ? [...requests] : [])
+              .sort((a: any, b: any) => new Date(b?.updated_at ?? b?.created_at ?? 0).getTime() - new Date(a?.updated_at ?? a?.created_at ?? 0).getTime())
+              .slice(0, 6)
+              .map((r: any) => (
+                <button
+                  key={r.request_id}
+                  onClick={() => navigate(`/requests/${r.request_id}/negotiate`)}
+                  className="grid w-full grid-cols-12 items-center px-3 py-2 text-left hover:bg-[var(--muted-1)]"
+                >
+                  <div className="col-span-5 truncate text-sm text-[var(--core-color-text-primary)]">{r.description}</div>
+                  <div className="col-span-3 text-xs text-[var(--core-color-text-secondary)]">{r.status}</div>
+                  <div className="col-span-2 text-xs text-[var(--core-color-text-secondary)]">{r.budget_max ? `$${r.budget_max.toLocaleString()}` : '—'}</div>
+                  <div className="col-span-2 text-right text-xs text-[var(--core-color-text-secondary)]">{new Date(r.updated_at ?? r.created_at ?? Date.now()).toLocaleDateString()}</div>
+                </button>
+              ))}
+          </div>
         </div>
       </section>
 

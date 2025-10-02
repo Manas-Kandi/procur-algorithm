@@ -2,6 +2,7 @@ import axios, { AxiosInstance, AxiosError } from 'axios'
 import type { Request, Vendor, Offer, NegotiationSession, Contract, User, DashboardMetrics } from '../types'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
+const DEMO = String(import.meta.env.VITE_DEMO_MODE || '').toLowerCase() === 'true'
 
 class ApiClient {
   private client: AxiosInstance
@@ -58,6 +59,28 @@ class ApiClient {
 
   // Request endpoints
   async createRequest(data: Partial<Request>): Promise<Request> {
+    if (DEMO) {
+      // Create a client-side mock request object to drive the demo flow
+      const now = new Date().toISOString()
+      const requestId = `req-demo-${Math.random().toString(36).slice(2, 10)}`
+      const mock: Request = {
+        request_id: requestId,
+        requester_id: 'demo-user',
+        type: (data as any)?.type || 'saas',
+        description: data.description || 'Demo request',
+        specs: data.specs || {},
+        quantity: data.quantity || 100,
+        budget_min: data.budget_min,
+        budget_max: data.budget_max || 110000,
+        currency: 'USD',
+        status: 'negotiating',
+        created_at: now,
+        updated_at: now,
+        must_haves: (data as any)?.must_haves || [],
+        compliance_requirements: (data as any)?.compliance_requirements || [],
+      }
+      return Promise.resolve(mock)
+    }
     const response = await this.client.post('/requests', data)
     return response.data
   }
@@ -100,16 +123,28 @@ class ApiClient {
   }
 
   async getNegotiation(sessionId: string): Promise<NegotiationSession> {
+    if (DEMO) {
+      const response = await this.client.get(`/demo/negotiations/${sessionId}`)
+      return response.data
+    }
     const response = await this.client.get(`/negotiations/${sessionId}`)
     return response.data
   }
 
   async getNegotiationsForRequest(requestId: string): Promise<NegotiationSession[]> {
+    if (DEMO) {
+      const response = await this.client.get(`/demo/negotiations/request/${requestId}`)
+      return response.data
+    }
     const response = await this.client.get(`/negotiations/request/${requestId}`)
     return response.data
   }
 
   async startNegotiations(requestId: string): Promise<NegotiationSession[]> {
+    if (DEMO) {
+      const response = await this.client.post(`/demo/negotiations/start/${requestId}`)
+      return response.data
+    }
     const response = await this.client.post(`/sourcing/start/${requestId}`)
     return response.data
   }

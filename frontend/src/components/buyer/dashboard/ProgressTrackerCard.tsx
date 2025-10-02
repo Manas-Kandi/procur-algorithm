@@ -45,16 +45,15 @@ export function ProgressTrackerCard({
     <button
       onClick={onClick}
       className={clsx(
-        'group relative w-full rounded-[16px] border p-[18px] text-left transition-transform duration-200 bg-[var(--surface)]',
-        isActive ? 'border-[var(--agent-accent)] ring-2 ring-[var(--agent-accent)]/20' : 'border-[var(--muted-2)]',
-        'hover:-translate-y-0.5 hover:shadow-[var(--shadow-soft)]'
+        'group relative w-full border p-[18px] text-left transition-transform duration-200 bg-white/50',
+        isActive ? 'border-[var(--agent-accent)]' : 'border-[var(--muted-2)]',
+        'hover:-translate-y-0.5'
       )}
     >
       <div className="flex items-start gap-3">
         {/* Vendor avatar */}
         <div
-          className="mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full border border-gray-200 bg-white text-xs font-semibold text-[var(--core-color-text-primary)]"
-          style={isActive ? { boxShadow: '0 0 0 8px var(--agent-accent-soft)', transform: 'scale(1.02)', transition: 'transform 200ms' } : undefined}
+          className="mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center border border-gray-200 bg-white text-xs font-semibold text-[var(--core-color-text-primary)]"
         >
           {(vendor || title).charAt(0).toUpperCase()}
         </div>
@@ -72,23 +71,28 @@ export function ProgressTrackerCard({
 
           {/* Status badge + summary */}
           <div className="mt-1 flex items-center gap-2">
-            <span className="inline-flex items-center rounded-[8px] border border-gray-200 bg-white px-2 py-0.5 text-[11px] font-medium text-[var(--core-color-text-secondary)]">
+            <span className="inline-flex items-center border border-gray-200 bg-white px-2 py-0.5 text-[11px] font-medium text-[var(--core-color-text-secondary)]">
               {nextAction ?? config.label}
             </span>
           </div>
 
-          {/* Inline micro-progress dots (3 steps) */}
+          {/* Inline micro-progress squares (3 steps) */}
           <div className="mt-1 flex items-center gap-1.5" aria-hidden="true">
             {(['sourcing','negotiating','approving'] as StageKey[]).map((s) => {
               const order = ['sourcing','negotiating','approving']
               const reached = order.indexOf(stage as any) >= order.indexOf(s as any)
-              return <span key={s} className={clsx('h-1.5 w-1.5 rounded-full', reached ? 'bg-[var(--agent-accent)]' : 'bg-[var(--muted-2)]')} />
+              return (
+                <span
+                  key={s}
+                  className={clsx('h-2 w-2', reached ? 'bg-[var(--agent-accent)]' : 'border border-[var(--muted-2)] bg-transparent')}
+                />
+              )
             })}
           </div>
 
           {/* Negotiation preview (subtle bubble) */}
           {preview && (
-            <div className="mt-2 inline-flex max-w-full items-center rounded-md bg-gray-50 px-2 py-1 text-[11px] text-[var(--core-color-text-secondary)]">
+            <div className="mt-2 inline-flex max-w-full items-center bg-white/50 px-2 py-1 text-[11px] text-[var(--core-color-text-secondary)]">
               <span className="truncate">{preview}</span>
             </div>
           )}
@@ -100,14 +104,14 @@ export function ProgressTrackerCard({
         <button
           type="button"
           onClick={onClick}
-          className="inline-flex items-center gap-1 rounded-sm border border-[var(--accent-mint)] bg-white px-2.5 py-1.5 text-xs font-medium text-[var(--core-color-text-primary)] hover:bg-[var(--accent-mint)]/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-mint)]/60"
+          className="inline-flex items-center gap-1 border border-[var(--agent-accent)] bg-white px-2.5 py-1.5 text-xs font-medium text-[var(--core-color-text-primary)] hover:bg-[var(--agent-accent)]/10 focus:outline-2 focus:outline-[var(--agent-accent)]"
         >
           <MessageSquare className="h-3.5 w-3.5" /> Open negotiation
         </button>
         <button
           type="button"
           aria-label="More options"
-          className="inline-flex h-7 w-7 items-center justify-center rounded-sm border border-gray-200 bg-white text-[var(--core-color-text-secondary)] opacity-0 transition-opacity group-hover:opacity-100 hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-200"
+          className="inline-flex h-7 w-7 items-center justify-center border border-gray-200 bg-white text-[var(--core-color-text-secondary)] opacity-0 transition-opacity group-hover:opacity-100 hover:bg-gray-50 focus:outline-2 focus:outline-gray-300"
         >
           <MoreHorizontal className="h-4 w-4" />
         </button>
