@@ -28,16 +28,9 @@ export function ProcurSidebar({ open, selectedKey = 'dashboard', onSelect, onTog
     >
       {/* Title / Brand */}
       <div className="flex items-center gap-2 px-2 py-3">
-        <div
-          className="grid h-9 w-9 place-content-center rounded-lg border"
-          style={{ borderColor: 'var(--muted-2)', boxShadow: '0 0 0 6px var(--agent-accent-soft)' }}
-        >
-          <div className="h-3 w-3 rounded-sm bg-[var(--agent-accent)]" />
-        </div>
         {open && (
           <div className="min-w-0">
             <div className="text-sm font-semibold text-[var(--text)]">Procur</div>
-            <div className="text-[11px] text-[var(--core-color-text-secondary)]">Buyer workspace</div>
           </div>
         )}
       </div>
@@ -52,15 +45,15 @@ export function ProcurSidebar({ open, selectedKey = 'dashboard', onSelect, onTog
               className={clsx(
                 'relative my-1 flex h-11 w-full items-center rounded-[12px] text-left transition-colors',
                 selected
-                  ? 'bg-gradient-to-r from-fuchsia-500 to-pink-500 text-white shadow-sm'
+                  ? 'bg-[var(--muted-1)] text-[var(--text)]'
                   : 'hover:bg-[var(--muted-1)] text-[var(--core-color-text-secondary)]'
               )}
             >
               <div className="grid h-full w-12 place-content-center">
-                <Icon className={clsx('h-4 w-4', selected ? 'text-white' : 'text-[var(--core-color-text-secondary)]')} />
+                <Icon className={clsx('h-4 w-4', selected ? 'text-[var(--text)]' : 'text-[var(--core-color-text-secondary)]')} />
               </div>
               {open && (
-                <span className={clsx('text-sm font-medium', selected ? 'text-white' : 'text-[var(--text)]')}>
+                <span className={clsx('text-sm font-medium', selected ? 'text-[var(--text)]' : 'text-[var(--text)]')}>
                   {label}
                 </span>
               )}
