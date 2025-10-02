@@ -28,11 +28,9 @@ export function ProcurSidebar({ open, selectedKey = 'dashboard', onSelect, onTog
     >
       {/* Title / Brand */}
       <div className="flex items-center gap-2 px-2 py-3">
-        {open && (
-          <div className="min-w-0">
-            <div className="text-sm font-semibold text-[var(--text)]">Procur</div>
-          </div>
-        )}
+        <div className="min-w-0">
+          <div className="text-sm font-semibold text-[var(--text)]">{open ? 'Procur' : 'P.'}</div>
+        </div>
       </div>
 
       <div className="px-2">
