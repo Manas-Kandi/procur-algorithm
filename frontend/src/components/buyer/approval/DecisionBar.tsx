@@ -10,7 +10,7 @@ interface DecisionBarProps {
   sticky?: boolean
 }
 
-export function DecisionBar ({
+export function DecisionBar({
   isCommentMode,
   comment,
   onCommentChange,
@@ -21,9 +21,11 @@ export function DecisionBar ({
 }: DecisionBarProps): JSX.Element {
   return (
     <div
-      className={sticky
-        ? 'sticky bottom-0 left-0 right-0 border-t border-[var(--core-color-border-default)] bg-[var(--core-color-surface-canvas)] px-4 py-4 shadow-200 sm:px-6'
-        : 'border-t border-[var(--core-color-border-default)] px-3 py-3 sm:px-4'}
+      className={
+        sticky
+          ? 'sticky bottom-0 left-0 right-0 border-t border-[var(--core-color-border-default)] bg-[var(--core-color-surface-canvas)] px-4 py-4 shadow-200 sm:px-6'
+          : 'border-t border-[var(--core-color-border-default)] px-3 py-3 sm:px-4'
+      }
     >
       <div className="mx-auto flex max-w-[960px] flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div className="flex-1">
@@ -34,7 +36,9 @@ export function DecisionBar ({
               </label>
               <textarea
                 value={comment}
-                onChange={(event) => onCommentChange(event.target.value)}
+                onChange={(event) => {
+                  onCommentChange(event.target.value)
+                }}
                 rows={3}
                 className="mt-2 w-full rounded-lg border border-[var(--core-color-border-default)] bg-white px-3 py-2 text-sm text-[var(--core-color-text-primary)] focus:border-[var(--core-color-border-focus)] focus:outline-none focus:ring-2 focus:ring-[var(--core-color-border-focus)]/40"
                 placeholder="Add your rationale for this decision…"
@@ -43,10 +47,18 @@ export function DecisionBar ({
           )}
         </div>
         <div className="flex flex-col gap-2 sm:flex-row">
-          <Button variant="primary" onClick={onApprove} disabled={disableActions}>
+          <Button
+            variant="primary"
+            onClick={onApprove}
+            disabled={disableActions}
+          >
             Approve
           </Button>
-          <Button variant="outline" onClick={onRequestChanges} disabled={disableActions}>
+          <Button
+            variant="outline"
+            onClick={onRequestChanges}
+            disabled={disableActions}
+          >
             Request changes
           </Button>
         </div>

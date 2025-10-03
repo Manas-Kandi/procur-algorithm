@@ -2,7 +2,16 @@ import { useMemo } from 'react'
 import { MessageSquare, MoreHorizontal } from 'lucide-react'
 import clsx from 'clsx'
 
-type StageKey = 'draft' | 'intake' | 'sourcing' | 'negotiating' | 'approving' | 'contracted' | 'provisioning' | 'completed' | 'cancelled'
+type StageKey =
+  | 'draft'
+  | 'intake'
+  | 'sourcing'
+  | 'negotiating'
+  | 'approving'
+  | 'contracted'
+  | 'provisioning'
+  | 'completed'
+  | 'cancelled'
 
 interface ProgressTrackerCardProps {
   title: string
@@ -52,10 +61,8 @@ export function ProgressTrackerCard({
     >
       <div className="flex items-start gap-3">
         {/* Vendor avatar */}
-        <div
-          className="mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center border border-gray-200 bg-white text-xs font-semibold text-[var(--core-color-text-primary)]"
-        >
-          {(vendor || title).charAt(0).toUpperCase()}
+        <div className="mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center border border-gray-200 bg-white text-xs font-semibold text-[var(--core-color-text-primary)]">
+          {(vendor ?? title).charAt(0).toUpperCase()}
         </div>
 
         {/* Content */}
@@ -65,7 +72,11 @@ export function ProgressTrackerCard({
               <h3 className="truncate text-sm font-semibold text-[var(--core-color-text-primary)]">
                 {title}
               </h3>
-              {vendor && (<p className="mt-0.5 text-xs text-[var(--core-color-text-muted)]">{vendor}</p>)}
+              {vendor && (
+                <p className="mt-0.5 text-xs text-[var(--core-color-text-muted)]">
+                  {vendor}
+                </p>
+              )}
             </div>
           </div>
 
@@ -78,16 +89,23 @@ export function ProgressTrackerCard({
 
           {/* Inline micro-progress squares (3 steps) */}
           <div className="mt-1 flex items-center gap-1.5" aria-hidden="true">
-            {(['sourcing','negotiating','approving'] as StageKey[]).map((s) => {
-              const order = ['sourcing','negotiating','approving']
-              const reached = order.indexOf(stage as any) >= order.indexOf(s as any)
-              return (
-                <span
-                  key={s}
-                  className={clsx('h-2 w-2', reached ? 'bg-[var(--agent-accent)]' : 'border border-[var(--muted-2)] bg-transparent')}
-                />
-              )
-            })}
+            {(['sourcing', 'negotiating', 'approving'] as StageKey[]).map(
+              (s) => {
+                const order = ['sourcing', 'negotiating', 'approving']
+                const reached = order.indexOf(stage) >= order.indexOf(s)
+                return (
+                  <span
+                    key={s}
+                    className={clsx(
+                      'h-2 w-2',
+                      reached
+                        ? 'bg-[var(--agent-accent)]'
+                        : 'border border-[var(--muted-2)] bg-transparent'
+                    )}
+                  />
+                )
+              }
+            )}
           </div>
 
           {/* Negotiation preview (subtle bubble) */}

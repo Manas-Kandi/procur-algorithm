@@ -17,7 +17,7 @@ export function HeroInput({ onSubmit }: HeroInputProps) {
         onSubmit(value)
       } else {
         // Navigate to new request with pre-filled description
-        navigate('/requests/new', { state: { description: value } })
+        void navigate('/requests/new', { state: { description: value } })
       }
     }
   }
@@ -29,7 +29,9 @@ export function HeroInput({ onSubmit }: HeroInputProps) {
           <input
             type="text"
             value={value}
-            onChange={(e) => setValue(e.target.value)}
+            onChange={(e) => {
+              setValue(e.target.value)
+            }}
             placeholder="Need 200 design seats · Budget $1,000/seat/year · SOC2 required"
             className="flex-1 bg-transparent py-2 text-base text-[var(--core-color-text-primary)] placeholder:text-[var(--core-color-text-muted)] focus:outline-none"
           />

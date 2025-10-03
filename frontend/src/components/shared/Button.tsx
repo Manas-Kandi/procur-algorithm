@@ -1,4 +1,4 @@
-import { ButtonHTMLAttributes, ReactNode } from 'react'
+import { type ButtonHTMLAttributes, type ReactNode } from 'react'
 import clsx from 'clsx'
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -27,29 +27,45 @@ export function Button({
         'rounded-sm', // 2px border radius from design system
         {
           // Primary Button
-          'bg-brand-primary text-text-inverse hover:bg-brand-hover active:bg-brand-active focus:ring-brand-primary': variant === 'primary',
+          'bg-brand-primary text-text-inverse hover:bg-brand-hover active:bg-brand-active focus:ring-brand-primary':
+            variant === 'primary',
           // Secondary/Outline Button
-          'bg-surface-raised text-text-primary border border-border-medium hover:border-border-strong hover:bg-background-secondary focus:ring-brand-primary': variant === 'secondary' || variant === 'outline',
+          'bg-surface-raised text-text-primary border border-border-medium hover:border-border-strong hover:bg-background-secondary focus:ring-brand-primary':
+            variant === 'secondary' || variant === 'outline',
           // Ghost Button
-          'bg-transparent text-text-secondary hover:bg-background-secondary hover:text-text-primary focus:ring-brand-primary': variant === 'ghost',
+          'bg-transparent text-text-secondary hover:bg-background-secondary hover:text-text-primary focus:ring-brand-primary':
+            variant === 'ghost',
           // Danger Button
-          'bg-danger text-text-inverse hover:bg-danger/90 focus:ring-danger': variant === 'danger',
+          'bg-danger text-text-inverse hover:bg-danger/90 focus:ring-danger':
+            variant === 'danger',
           // Sizes from design system
-          'px-3 py-1.5 text-xs': size === 'sm',    // Small: 6px 12px
-          'px-5 py-2.5 text-sm': size === 'md',    // Medium: 10px 20px
-          'px-6 py-3 text-base': size === 'lg',    // Large: 12px 24px
+          'px-3 py-1.5 text-xs': size === 'sm', // Small: 6px 12px
+          'px-5 py-2.5 text-sm': size === 'md', // Medium: 10px 20px
+          'px-6 py-3 text-base': size === 'lg', // Large: 12px 24px
           'w-full': fullWidth,
-          'opacity-50 cursor-not-allowed pointer-events-none': disabled || loading,
+          'opacity-50 cursor-not-allowed pointer-events-none':
+            disabled ?? loading,
         },
         className
       )}
-      disabled={disabled || loading}
+      disabled={disabled ?? loading}
       {...props}
     >
       {loading ? (
         <>
-          <svg className="animate-spin -ml-1 mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+          <svg
+            className="animate-spin -ml-1 mr-2 h-4 w-4"
+            fill="none"
+            viewBox="0 0 24 24"
+          >
+            <circle
+              className="opacity-25"
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              strokeWidth="4"
+            />
             <path
               className="opacity-75"
               fill="currentColor"

@@ -1,4 +1,4 @@
-import { ReactNode } from 'react'
+import { type ReactNode } from 'react'
 import clsx from 'clsx'
 import { Card } from './Card'
 import { StatusBadge } from './StatusBadge'
@@ -30,25 +30,40 @@ interface StageBoardProps {
   emptyLabel?: string
 }
 
-export function StageBoard ({ columns, emptyLabel }: StageBoardProps): JSX.Element {
+export function StageBoard({
+  columns,
+  emptyLabel,
+}: StageBoardProps): JSX.Element {
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-5">
       {columns.map((column) => (
-        <div key={column.id} className="flex min-w-[280px] flex-col rounded-sm bg-background-secondary">
+        <div
+          key={column.id}
+          className="flex min-w-[280px] flex-col rounded-sm bg-background-secondary"
+        >
           <header className="flex items-center justify-between px-4 py-3">
             <div>
-              <p className="text-sm font-semibold text-text-primary">{column.title}</p>
+              <p className="text-sm font-semibold text-text-primary">
+                {column.title}
+              </p>
               {column.count !== undefined && (
-                <p className="text-xs text-text-tertiary">{column.count} in stage</p>
+                <p className="text-xs text-text-tertiary">
+                  {column.count} in stage
+                </p>
               )}
             </div>
             <span
-              className={clsx('inline-flex h-5 min-w-[2rem] items-center justify-center rounded-sm px-2 text-xs font-semibold', {
-                'bg-brand-primary/10 text-brand-primary': column.tone === 'brand',
-                'bg-info/10 text-info': column.tone === 'buyer',
-                'bg-warning/10 text-warning': column.tone === 'seller',
-                'bg-surface-raised text-text-tertiary': !column.tone || column.tone === 'neutral',
-              })}
+              className={clsx(
+                'inline-flex h-5 min-w-[2rem] items-center justify-center rounded-sm px-2 text-xs font-semibold',
+                {
+                  'bg-brand-primary/10 text-brand-primary':
+                    column.tone === 'brand',
+                  'bg-info/10 text-info': column.tone === 'buyer',
+                  'bg-warning/10 text-warning': column.tone === 'seller',
+                  'bg-surface-raised text-text-tertiary':
+                    !column.tone || column.tone === 'neutral',
+                }
+              )}
             >
               {column.count ?? column.items.length}
             </span>
@@ -69,13 +84,21 @@ export function StageBoard ({ columns, emptyLabel }: StageBoardProps): JSX.Eleme
               >
                 <div className="space-y-2">
                   <div>
-                    <p className="text-sm font-semibold text-text-primary">{item.title}</p>
+                    <p className="text-sm font-semibold text-text-primary">
+                      {item.title}
+                    </p>
                     {item.subtitle && (
-                      <p className="mt-1 text-xs text-text-secondary">{item.subtitle}</p>
+                      <p className="mt-1 text-xs text-text-secondary">
+                        {item.subtitle}
+                      </p>
                     )}
                   </div>
                   <div className="flex flex-wrap items-center gap-2 text-xs text-text-tertiary">
-                    {item.budgetLabel && <span className="font-medium text-text-primary">{item.budgetLabel}</span>}
+                    {item.budgetLabel && (
+                      <span className="font-medium text-text-primary">
+                        {item.budgetLabel}
+                      </span>
+                    )}
                     {item.timeInStage && <span>{item.timeInStage}</span>}
                   </div>
                   <StatusBadge status={item.status} size="sm" />
@@ -84,9 +107,14 @@ export function StageBoard ({ columns, emptyLabel }: StageBoardProps): JSX.Eleme
                 {item.metadata && item.metadata.length > 0 && (
                   <div className="grid gap-1.5 text-xs">
                     {item.metadata.map((meta) => (
-                      <div key={meta.label} className="flex justify-between text-text-secondary">
+                      <div
+                        key={meta.label}
+                        className="flex justify-between text-text-secondary"
+                      >
                         <span>{meta.label}</span>
-                        <span className="font-semibold text-text-primary">{meta.value}</span>
+                        <span className="font-semibold text-text-primary">
+                          {meta.value}
+                        </span>
                       </div>
                     ))}
                   </div>

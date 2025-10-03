@@ -12,7 +12,10 @@ interface FlowStepperProps {
   onStepSelect?: (id: string) => void
 }
 
-export function FlowStepper ({ steps, onStepSelect }: FlowStepperProps): JSX.Element {
+export function FlowStepper({
+  steps,
+  onStepSelect,
+}: FlowStepperProps): JSX.Element {
   return (
     <nav aria-label="Request flow" className="w-full">
       <ol className="flex flex-col gap-4 sm:flex-row sm:items-stretch">
@@ -20,12 +23,20 @@ export function FlowStepper ({ steps, onStepSelect }: FlowStepperProps): JSX.Ele
           const isLast = index === steps.length - 1
           const statusClass = {
             complete: 'border-none bg-brand-primary text-text-inverse',
-            current: 'border-2 border-brand-primary text-brand-primary bg-surface-raised',
-            upcoming: 'border-2 border-border-subtle text-text-tertiary bg-surface-raised',
+            current:
+              'border-2 border-brand-primary text-brand-primary bg-surface-raised',
+            upcoming:
+              'border-2 border-border-subtle text-text-tertiary bg-surface-raised',
           }[step.status]
 
           return (
-            <li key={step.id} className={clsx('relative flex flex-1 flex-col sm:flex-row sm:items-center', !isLast && 'sm:pr-10')}>
+            <li
+              key={step.id}
+              className={clsx(
+                'relative flex flex-1 flex-col sm:flex-row sm:items-center',
+                !isLast && 'sm:pr-10'
+              )}
+            >
               <button
                 type="button"
                 onClick={() => onStepSelect?.(step.id)}
@@ -38,7 +49,12 @@ export function FlowStepper ({ steps, onStepSelect }: FlowStepperProps): JSX.Ele
                   )}
                 >
                   {step.status === 'complete' ? (
-                    <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+                    <svg
+                      className="h-5 w-5"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                      aria-hidden="true"
+                    >
                       <path
                         fillRule="evenodd"
                         d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
@@ -50,9 +66,13 @@ export function FlowStepper ({ steps, onStepSelect }: FlowStepperProps): JSX.Ele
                   )}
                 </span>
                 <span className="ml-3">
-                  <span className="block text-sm font-semibold text-text-primary">{step.label}</span>
+                  <span className="block text-sm font-semibold text-text-primary">
+                    {step.label}
+                  </span>
                   {step.description && (
-                    <span className="mt-1 block text-xs text-text-secondary">{step.description}</span>
+                    <span className="mt-1 block text-xs text-text-secondary">
+                      {step.description}
+                    </span>
                   )}
                 </span>
               </button>

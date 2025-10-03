@@ -1,11 +1,21 @@
-import axios, { AxiosInstance, AxiosError } from 'axios'
-import type { Request, Vendor, Offer, NegotiationSession, Contract, User, DashboardMetrics } from '../types'
+import axios, { type AxiosInstance, type AxiosError } from 'axios'
+import type {
+  Request,
+  Vendor,
+  Offer,
+  NegotiationSession,
+  Contract,
+  User,
+  DashboardMetrics,
+} from '../types'
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
-const DEMO = String(import.meta.env.VITE_DEMO_MODE || '').toLowerCase() === 'true'
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000'
+const DEMO =
+  String(import.meta.env.VITE_DEMO_MODE ?? '').toLowerCase() === 'true'
 
 class ApiClient {
-  private client: AxiosInstance
+  private readonly client: AxiosInstance
 
   constructor() {
     this.client = axios.create({
@@ -25,30 +35,43 @@ class ApiClient {
         }
         return config
       },
-      (error) => Promise.reject(error)
+      async (error) => await Promise.reject(error)
     )
 
     // Response interceptor
     this.client.interceptors.response.use(
       (response) => response,
-      (error: AxiosError) => {
+      async (error: AxiosError) => {
         if (error.response?.status === 401) {
           localStorage.removeItem('auth_token')
           window.location.href = '/login'
         }
-        return Promise.reject(error)
+        return await Promise.reject(error)
       }
     )
   }
 
   // Auth endpoints
   async login(email: string, password: string) {
-    const response = await this.client.post('/auth/login', { username: email, password })
+    const response = await this.client.post('/auth/login', {
+      username: email,
+      password,
+    })
     return response.data
   }
 
-  async register(email: string, password: string, username: string, role: string) {
-    const response = await this.client.post('/auth/register', { email, password, username, role })
+  async register(
+    email: string,
+    password: string,
+    username: string,
+    role: string
+  ) {
+    const response = await this.client.post('/auth/register', {
+      email,
+      password,
+      username,
+      role,
+    })
     return response.data
   }
 
@@ -66,20 +89,20 @@ class ApiClient {
       const mock: Request = {
         request_id: requestId,
         requester_id: 'demo-user',
-        type: (data as any)?.type || 'saas',
-        description: data.description || 'Demo request',
-        specs: data.specs || {},
-        quantity: data.quantity || 100,
+        type: (data as any)?.type ?? 'saas',
+        description: data.description ?? 'Demo request',
+        specs: data.specs ?? {},
+        quantity: data.quantity ?? 100,
         budget_min: data.budget_min,
-        budget_max: data.budget_max || 110000,
+        budget_max: data.budget_max ?? 110000,
         currency: 'USD',
         status: 'negotiating',
         created_at: now,
         updated_at: now,
-        must_haves: (data as any)?.must_haves || [],
-        compliance_requirements: (data as any)?.compliance_requirements || [],
+        must_haves: (data as any)?.must_haves ?? [],
+        compliance_requirements: (data as any)?.compliance_requirements ?? [],
       }
-      return Promise.resolve(mock)
+      return await Promise.resolve(mock)
     }
     const response = await this.client.post('/requests', data)
     return response.data
@@ -95,7 +118,10 @@ class ApiClient {
     return response.data
   }
 
-  async updateRequest(requestId: string, data: Partial<Request>): Promise<Request> {
+  async updateRequest(
+    requestId: string,
+    data: Partial<Request>
+  ): Promise<Request> {
     const response = await this.client.patch(`/requests/${requestId}`, data)
     return response.data
   }
@@ -111,14 +137,26 @@ class ApiClient {
     return response.data
   }
 
-  async searchVendors(query: string, filters?: Record<string, any>): Promise<Vendor[]> {
-    const response = await this.client.post('/vendors/search', { query, ...filters })
+  async searchVendors(
+    query: string,
+    filters?: Record<string, any>
+  ): Promise<Vendor[]> {
+    const response = await this.client.post('/vendors/search', {
+      query,
+      ...filters,
+    })
     return response.data
   }
 
   // Negotiation endpoints
-  async startNegotiation(requestId: string, vendorIds: string[]): Promise<NegotiationSession[]> {
-    const response = await this.client.post(`/negotiations/start`, { request_id: requestId, vendor_ids: vendorIds })
+  async startNegotiation(
+    requestId: string,
+    vendorIds: string[]
+  ): Promise<NegotiationSession[]> {
+    const response = await this.client.post(`/negotiations/start`, {
+      request_id: requestId,
+      vendor_ids: vendorIds,
+    })
     return response.data
   }
 
@@ -131,9 +169,13 @@ class ApiClient {
     return response.data
   }
 
-  async getNegotiationsForRequest(requestId: string): Promise<NegotiationSession[]> {
+  async getNegotiationsForRequest(
+    requestId: string
+  ): Promise<NegotiationSession[]> {
     if (DEMO) {
-      const response = await this.client.get(`/demo/negotiations/request/${requestId}`)
+      const response = await this.client.get(
+        `/demo/negotiations/request/${requestId}`
+      )
       return response.data
     }
     const response = await this.client.get(`/negotiations/request/${requestId}`)
@@ -142,20 +184,34 @@ class ApiClient {
 
   async startNegotiations(requestId: string): Promise<NegotiationSession[]> {
     if (DEMO) {
-      const response = await this.client.post(`/demo/negotiations/start/${requestId}`)
+      const response = await this.client.post(
+        `/demo/negotiations/start/${requestId}`
+      )
       return response.data
     }
     const response = await this.client.post(`/sourcing/start/${requestId}`)
     return response.data
   }
 
-  async submitOffer(sessionId: string, offer: Partial<Offer>): Promise<NegotiationSession> {
-    const response = await this.client.post(`/negotiations/${sessionId}/offer`, offer)
+  async submitOffer(
+    sessionId: string,
+    offer: Partial<Offer>
+  ): Promise<NegotiationSession> {
+    const response = await this.client.post(
+      `/negotiations/${sessionId}/offer`,
+      offer
+    )
     return response.data
   }
 
-  async acceptOffer(sessionId: string, offerId: string): Promise<NegotiationSession> {
-    const response = await this.client.post(`/negotiations/${sessionId}/accept`, { offer_id: offerId })
+  async acceptOffer(
+    sessionId: string,
+    offerId: string
+  ): Promise<NegotiationSession> {
+    const response = await this.client.post(
+      `/negotiations/${sessionId}/accept`,
+      { offer_id: offerId }
+    )
     return response.data
   }
 
@@ -165,8 +221,14 @@ class ApiClient {
     return response.data
   }
 
-  async generateContract(requestId: string, offerId: string): Promise<Contract> {
-    const response = await this.client.post(`/contracts/generate`, { request_id: requestId, offer_id: offerId })
+  async generateContract(
+    requestId: string,
+    offerId: string
+  ): Promise<Contract> {
+    const response = await this.client.post(`/contracts/generate`, {
+      request_id: requestId,
+      offer_id: offerId,
+    })
     return response.data
   }
 
@@ -187,7 +249,9 @@ class ApiClient {
   }
 
   async getUpcomingRenewals(daysAhead: number = 60): Promise<any[]> {
-    const response = await this.client.get('/dashboard/renewals', { params: { days_ahead: daysAhead } })
+    const response = await this.client.get('/dashboard/renewals', {
+      params: { days_ahead: daysAhead },
+    })
     return response.data
   }
 

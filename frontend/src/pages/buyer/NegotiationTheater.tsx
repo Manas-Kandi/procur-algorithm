@@ -7,23 +7,32 @@ import { NegotiationControl } from '../../components/buyer/negotiation/Negotiati
 import { SmartAlert } from '../../components/shared/SmartAlert'
 import type { NegotiationSession } from '../../types'
 
-export function NegotiationTheater (): JSX.Element {
+export function NegotiationTheater(): JSX.Element {
   const { requestId } = useParams<{ requestId: string }>()
 
   const { data: sessions, isLoading } = useQuery({
     queryKey: ['negotiations', requestId],
-    queryFn: () => api.getNegotiationsForRequest(requestId!),
+    queryFn: async () => {
+      if (!requestId) return []
+      return await api.getNegotiationsForRequest(requestId)
+    },
     enabled: Boolean(requestId),
   })
 
   if (isLoading) {
-    return <div className="py-12 text-center text-sm text-[var(--core-color-text-muted)]">Loading negotiation insights…</div>
+    return (
+      <div className="py-12 text-center text-sm text-[var(--core-color-text-muted)]">
+        Loading negotiation insights…
+      </div>
+    )
   }
 
   if (!sessions || sessions.length === 0) {
     return (
       <div className="space-y-6">
-        <h1 className="text-2xl font-bold text-[var(--core-color-text-primary)]">Negotiation theater</h1>
+        <h1 className="text-2xl font-bold text-[var(--core-color-text-primary)]">
+          Negotiation theater
+        </h1>
         <SmartAlert
           severity="info"
           title="No negotiations in progress"
@@ -33,7 +42,9 @@ export function NegotiationTheater (): JSX.Element {
     )
   }
 
-  const activeSessions = sessions.filter((session) => session.status === 'active')
+  const activeSessions = sessions.filter(
+    (session) => session.status === 'active'
+  )
   const topSessions = activeSessions.slice(0, 3)
 
   const getStatus = (index: number): 'leading' | 'contender' | 'fallback' => {
@@ -45,26 +56,44 @@ export function NegotiationTheater (): JSX.Element {
   return (
     <div className="space-y-8">
       <header className="space-y-1">
-        <h1 className="text-2xl font-bold text-[var(--core-color-text-primary)]">Negotiation theater</h1>
-        <p className="text-sm text-[var(--core-color-text-muted)]">Watch your agent orchestrate offers in real-time. Intervene when needed.</p>
+        <h1 className="text-2xl font-bold text-[var(--core-color-text-primary)]">
+          Negotiation theater
+        </h1>
+        <p className="text-sm text-[var(--core-color-text-muted)]">
+          Watch your agent orchestrate offers in real-time. Intervene when
+          needed.
+        </p>
       </header>
 
       <section className="space-y-4">
         <div>
-          <h2 className="text-lg font-semibold text-[var(--core-color-text-primary)]">Current best offers</h2>
-          <p className="text-sm text-[var(--core-color-text-muted)]">AI ranks offers based on budget fit, feature coverage, and risk.</p>
+          <h2 className="text-lg font-semibold text-[var(--core-color-text-primary)]">
+            Current best offers
+          </h2>
+          <p className="text-sm text-[var(--core-color-text-muted)]">
+            AI ranks offers based on budget fit, feature coverage, and risk.
+          </p>
         </div>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
           {topSessions.map((session, index) => (
-            <OfferCard key={session.session_id} session={session} rank={index + 1} status={getStatus(index)} />
+            <OfferCard
+              key={session.session_id}
+              session={session}
+              rank={index + 1}
+              status={getStatus(index)}
+            />
           ))}
         </div>
       </section>
 
       <section className="space-y-4">
         <div>
-          <h2 className="text-lg font-semibold text-[var(--core-color-text-primary)]">Live negotiation feed</h2>
-          <p className="text-sm text-[var(--core-color-text-muted)]">Reasoning transparency for every move across active vendors.</p>
+          <h2 className="text-lg font-semibold text-[var(--core-color-text-primary)]">
+            Live negotiation feed
+          </h2>
+          <p className="text-sm text-[var(--core-color-text-muted)]">
+            Reasoning transparency for every move across active vendors.
+          </p>
         </div>
         <div className="grid gap-4 lg:grid-cols-2">
           {activeSessions.map((session: NegotiationSession) => (
@@ -74,10 +103,18 @@ export function NegotiationTheater (): JSX.Element {
       </section>
 
       <NegotiationControl
-        onAdjustBudget={() => console.log('adjust budget')}
-        onAddRequirement={() => console.log('add requirement')}
-        onStop={() => console.log('pause negotiations')}
-        onAcceptBest={() => console.log('accept best offer')}
+        onAdjustBudget={() => {
+          console.log('adjust budget')
+        }}
+        onAddRequirement={() => {
+          console.log('add requirement')
+        }}
+        onStop={() => {
+          console.log('pause negotiations')
+        }}
+        onAcceptBest={() => {
+          console.log('accept best offer')
+        }}
       />
     </div>
   )

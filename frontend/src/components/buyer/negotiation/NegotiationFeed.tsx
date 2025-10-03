@@ -6,7 +6,9 @@ interface NegotiationFeedProps {
   session: NegotiationSession
 }
 
-export function NegotiationFeed ({ session }: NegotiationFeedProps): JSX.Element {
+export function NegotiationFeed({
+  session,
+}: NegotiationFeedProps): JSX.Element {
   const latestMessages = session.messages.slice(-3).reverse()
 
   return (
@@ -16,7 +18,9 @@ export function NegotiationFeed ({ session }: NegotiationFeedProps): JSX.Element
           <h3 className="text-sm font-semibold text-[var(--core-color-text-primary)]">
             Vendor {session.vendor_id.slice(0, 8)}
           </h3>
-          <p className="text-xs text-[var(--core-color-text-muted)]">Round {session.current_round}</p>
+          <p className="text-xs text-[var(--core-color-text-muted)]">
+            Round {session.current_round}
+          </p>
         </div>
         <span className="inline-flex items-center rounded-full bg-[rgba(124,58,237,0.12)] px-3 py-1 text-xs font-semibold text-[var(--core-color-brand-secondary)]">
           Active
@@ -35,7 +39,9 @@ export function NegotiationFeed ({ session }: NegotiationFeedProps): JSX.Element
                   {message.actor === 'buyer' ? 'Our agent' : 'Vendor response'}
                 </p>
                 <p className="mt-1 text-sm text-[var(--core-color-text-primary)]">
-                  ${message.proposal.unit_price}/seat • {message.proposal.term_months}mo term • {message.proposal.payment_terms}
+                  ${message.proposal.unit_price}/seat •{' '}
+                  {message.proposal.term_months}mo term •{' '}
+                  {message.proposal.payment_terms}
                 </p>
                 {message.justification_bullets.length > 0 && (
                   <ul className="mt-2 list-disc space-y-1 pl-5 text-xs text-[var(--core-color-text-muted)]">
@@ -48,9 +54,14 @@ export function NegotiationFeed ({ session }: NegotiationFeedProps): JSX.Element
               <AIExplainer
                 title="this move"
                 reasoning={[
-                  { label: 'Strategy', value: message.machine_rationale.concession_taken },
+                  {
+                    label: 'Strategy',
+                    value: message.machine_rationale.concession_taken,
+                  },
                   { label: 'Next step', value: message.next_step_hint },
-                  ...Object.entries(message.machine_rationale.score_components).map(([label, value]) => ({
+                  ...Object.entries(
+                    message.machine_rationale.score_components
+                  ).map(([label, value]) => ({
                     label,
                     value: value.toFixed(2),
                   })),
@@ -62,7 +73,10 @@ export function NegotiationFeed ({ session }: NegotiationFeedProps): JSX.Element
       </div>
 
       <div className="border-t border-[var(--core-color-border-default)] pt-3 text-xs text-[var(--core-color-text-muted)]">
-        Next step: <span className="font-semibold text-[var(--core-color-text-primary)]">{latestMessages[0]?.next_step_hint ?? 'Waiting for vendor response'}</span>
+        Next step:{' '}
+        <span className="font-semibold text-[var(--core-color-text-primary)]">
+          {latestMessages[0]?.next_step_hint ?? 'Waiting for vendor response'}
+        </span>
       </div>
     </Card>
   )

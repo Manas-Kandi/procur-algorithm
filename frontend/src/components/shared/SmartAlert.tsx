@@ -1,4 +1,4 @@
-import { ReactNode } from 'react'
+import { type ReactNode } from 'react'
 import { AlertTriangle, CheckCircle2, Info, OctagonAlert } from 'lucide-react'
 import { Button } from './Button'
 
@@ -40,7 +40,7 @@ const SEVERITY_CONFIG = {
   },
 } as const
 
-export function SmartAlert ({
+export function SmartAlert({
   title,
   message,
   emphasis,
@@ -54,8 +54,12 @@ export function SmartAlert ({
   const Icon = config.icon
 
   return (
-    <div className={`flex items-start gap-4 rounded-sm border ${config.borderClass} ${config.bgClass} px-4 py-4`}>
-      <div className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-sm ${config.badgeClass}`}>
+    <div
+      className={`flex items-start gap-4 rounded-sm border ${config.borderClass} ${config.bgClass} px-4 py-4`}
+    >
+      <div
+        className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-sm ${config.badgeClass}`}
+      >
         <Icon className="h-5 w-5" aria-hidden="true" />
       </div>
       <div className="flex-1 min-w-0">
@@ -64,16 +68,26 @@ export function SmartAlert ({
             <p className="text-sm font-semibold text-text-primary">{title}</p>
             <p className="mt-1 text-sm text-text-secondary leading-relaxed">
               {message}{' '}
-              {emphasis && <span className="font-semibold text-text-primary">{emphasis}</span>}
+              {emphasis && (
+                <span className="font-semibold text-text-primary">
+                  {emphasis}
+                </span>
+              )}
             </p>
           </div>
           {actionLabel && (
-            <Button size={compact ? 'sm' : 'md'} variant={severity === 'critical' ? 'danger' : 'outline'} onClick={onAction}>
+            <Button
+              size={compact ? 'sm' : 'md'}
+              variant={severity === 'critical' ? 'danger' : 'outline'}
+              onClick={onAction}
+            >
               {actionLabel}
             </Button>
           )}
         </div>
-        {footer && <div className="mt-3 text-xs text-text-tertiary">{footer}</div>}
+        {footer && (
+          <div className="mt-3 text-xs text-text-tertiary">{footer}</div>
+        )}
       </div>
     </div>
   )

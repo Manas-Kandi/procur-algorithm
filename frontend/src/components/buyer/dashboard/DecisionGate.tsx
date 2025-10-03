@@ -1,5 +1,4 @@
 import { ShieldCheck, Zap, BadgeDollarSign, Info } from 'lucide-react'
-import clsx from 'clsx'
 
 interface DecisionCardProps {
   title: string
@@ -14,7 +13,12 @@ const ICONS = {
   risk: <ShieldCheck className="h-4 w-4" />,
 } as const
 
-function DecisionCard({ title, highlight, rationale, onSelect }: DecisionCardProps) {
+function DecisionCard({
+  title,
+  highlight,
+  rationale,
+  onSelect,
+}: DecisionCardProps) {
   return (
     <button
       onClick={onSelect}
@@ -22,8 +26,12 @@ function DecisionCard({ title, highlight, rationale, onSelect }: DecisionCardPro
     >
       <div className="flex items-start justify-between">
         <div>
-          <h3 className="text-sm font-semibold text-[var(--core-color-text-primary)]">{title}</h3>
-          <p className="mt-1 text-2xl font-bold text-[var(--core-color-text-primary)]">{highlight}</p>
+          <h3 className="text-sm font-semibold text-[var(--core-color-text-primary)]">
+            {title}
+          </h3>
+          <p className="mt-1 text-2xl font-bold text-[var(--core-color-text-primary)]">
+            {highlight}
+          </p>
         </div>
         <div className="rounded-full border border-gray-200 bg-gray-50 p-2 text-[var(--color-ai-primary)]">
           <Info className="h-4 w-4" />
@@ -32,8 +40,13 @@ function DecisionCard({ title, highlight, rationale, onSelect }: DecisionCardPro
 
       <div className="mt-3 space-y-1">
         {rationale.map((r, idx) => (
-          <div key={idx} className="flex items-center gap-2 text-xs text-[var(--core-color-text-secondary)]">
-            <span className="text-[var(--color-ai-primary)]">{ICONS[r.icon]}</span>
+          <div
+            key={idx}
+            className="flex items-center gap-2 text-xs text-[var(--core-color-text-secondary)]"
+          >
+            <span className="text-[var(--color-ai-primary)]">
+              {ICONS[r.icon]}
+            </span>
             <span>{r.text}</span>
           </div>
         ))}

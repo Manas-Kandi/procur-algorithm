@@ -28,7 +28,16 @@ export interface Request {
   compliance_requirements: string[]
 }
 
-export type RequestStatus = 'draft' | 'intake' | 'sourcing' | 'negotiating' | 'approving' | 'contracted' | 'provisioning' | 'completed' | 'cancelled'
+export type RequestStatus =
+  | 'draft'
+  | 'intake'
+  | 'sourcing'
+  | 'negotiating'
+  | 'approving'
+  | 'contracted'
+  | 'provisioning'
+  | 'completed'
+  | 'cancelled'
 
 export interface Vendor {
   vendor_id: string

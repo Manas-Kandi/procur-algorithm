@@ -8,15 +8,18 @@ interface RoleBadgeProps {
 const ROLE_MAP: Record<UserRole, { label: string; className: string }> = {
   buyer: {
     label: 'Buyer',
-    className: 'bg-[rgba(15,118,110,0.12)] text-[var(--persona-color-buyer-accent)]',
+    className:
+      'bg-[rgba(15,118,110,0.12)] text-[var(--persona-color-buyer-accent)]',
   },
   seller: {
     label: 'Seller',
-    className: 'bg-[rgba(249,115,22,0.12)] text-[var(--persona-color-seller-accent)]',
+    className:
+      'bg-[rgba(249,115,22,0.12)] text-[var(--persona-color-seller-accent)]',
   },
   approver: {
     label: 'Approver',
-    className: 'bg-[rgba(37,99,235,0.12)] text-[var(--core-color-brand-primary)]',
+    className:
+      'bg-[rgba(37,99,235,0.12)] text-[var(--core-color-brand-primary)]',
   },
   admin: {
     label: 'Admin',

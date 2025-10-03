@@ -47,7 +47,7 @@ class UserAccount(Base, TimestampMixin, SoftDeleteMixin):
     is_superuser: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     
     # Organization and team
-    organization_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("organizations.id"), nullable=True, index=True)
+    organization_id: Mapped[str | None] = mapped_column(String(100), nullable=True, index=True)
     team: Mapped[str | None] = mapped_column(String(100), nullable=True)
     
     # Password policy
@@ -90,9 +90,8 @@ class UserAccount(Base, TimestampMixin, SoftDeleteMixin):
     oauth_connections: Mapped[List["OAuthConnection"]] = relationship(
         "OAuthConnection", back_populates="user", cascade="all, delete-orphan"
     )
-    organization: Mapped["Organization | None"] = relationship(
-        "Organization", back_populates="users"
-    )
+    # Note: organization relationship removed due to string-based foreign key
+    # Use organization_id directly to query Organization table
     
     def __repr__(self) -> str:
         return f"<UserAccount(id={self.id}, email='{self.email}', role='{self.role}')>"

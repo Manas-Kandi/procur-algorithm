@@ -1,5 +1,19 @@
-import { createContext, PropsWithChildren, useContext, useLayoutEffect } from 'react'
-import { breakpoint, color, grid, motion, radius, shadow, space, typography } from '../tokens'
+import {
+  createContext,
+  type PropsWithChildren,
+  useContext,
+  useLayoutEffect,
+} from 'react'
+import {
+  breakpoint,
+  color,
+  grid,
+  motion,
+  radius,
+  shadow,
+  space,
+  typography,
+} from '../tokens'
 
 export interface DesignTokens {
   color: typeof color
@@ -20,7 +34,7 @@ const tokenContext = createContext<DesignTokens>({
   radius,
   shadow,
   breakpoint,
-  motion
+  motion,
 })
 
 const CSS_VARIABLE_MAP: Array<[string, string]> = [
@@ -49,10 +63,10 @@ const CSS_VARIABLE_MAP: Array<[string, string]> = [
   ['--motion-duration-fast', motion.duration.fast],
   ['--motion-duration-base', motion.duration.base],
   ['--motion-easing-default', motion.easing.default],
-  ['--motion-easing-overlay', motion.easing.overlay]
+  ['--motion-easing-overlay', motion.easing.overlay],
 ]
 
-export function ThemeProvider ({ children }: PropsWithChildren): JSX.Element {
+export function ThemeProvider({ children }: PropsWithChildren): JSX.Element {
   useLayoutEffect(() => {
     const root = document.documentElement
     CSS_VARIABLE_MAP.forEach(([name, value]) => {
@@ -62,13 +76,22 @@ export function ThemeProvider ({ children }: PropsWithChildren): JSX.Element {
 
   return (
     <tokenContext.Provider
-      value={{ color, typography, space, grid, radius, shadow, breakpoint, motion }}
+      value={{
+        color,
+        typography,
+        space,
+        grid,
+        radius,
+        shadow,
+        breakpoint,
+        motion,
+      }}
     >
       {children}
     </tokenContext.Provider>
   )
 }
 
-export function useTokens (): DesignTokens {
+export function useTokens(): DesignTokens {
   return useContext(tokenContext)
 }

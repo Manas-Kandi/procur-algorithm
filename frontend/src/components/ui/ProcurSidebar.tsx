@@ -15,7 +15,12 @@ const items = [
   { key: 'portfolio', label: 'Portfolio', Icon: Briefcase },
 ]
 
-export function ProcurSidebar({ open, selectedKey = 'dashboard', onSelect, onToggle }: ProcurSidebarProps) {
+export function ProcurSidebar({
+  open,
+  selectedKey = 'dashboard',
+  onSelect,
+  onToggle,
+}: ProcurSidebarProps) {
   const widthClass = open ? 'w-64' : 'w-16'
 
   return (
@@ -29,7 +34,14 @@ export function ProcurSidebar({ open, selectedKey = 'dashboard', onSelect, onTog
       {/* Title / Brand */}
       <div className="flex items-center gap-2 px-2 py-3">
         <div className="min-w-0">
-          <div className={clsx('text-sm font-semibold', open ? 'text-[var(--text)]' : 'text-[var(--color-text-tertiary)]')}>Procur</div>
+          <div
+            className={clsx(
+              'text-sm font-semibold',
+              open ? 'text-[var(--text)]' : 'text-[var(--color-text-tertiary)]'
+            )}
+          >
+            Procur
+          </div>
         </div>
       </div>
 
@@ -48,10 +60,22 @@ export function ProcurSidebar({ open, selectedKey = 'dashboard', onSelect, onTog
               )}
             >
               <div className="grid h-full w-12 place-content-center">
-                <Icon className={clsx('h-4 w-4', selected ? 'text-[var(--text)]' : 'text-[var(--core-color-text-secondary)]')} />
+                <Icon
+                  className={clsx(
+                    'h-4 w-4',
+                    selected
+                      ? 'text-[var(--text)]'
+                      : 'text-[var(--core-color-text-secondary)]'
+                  )}
+                />
               </div>
               {open && (
-                <span className={clsx('text-sm font-medium', selected ? 'text-[var(--text)]' : 'text-[var(--text)]')}>
+                <span
+                  className={clsx(
+                    'text-sm font-medium',
+                    selected ? 'text-[var(--text)]' : 'text-[var(--text)]'
+                  )}
+                >
                   {label}
                 </span>
               )}
@@ -75,7 +99,11 @@ export function ProcurSidebar({ open, selectedKey = 'dashboard', onSelect, onTog
               )}
             />
           </div>
-          {open && <span className="text-sm text-[var(--core-color-text-secondary)]">Hide</span>}
+          {open && (
+            <span className="text-sm text-[var(--core-color-text-secondary)]">
+              Hide
+            </span>
+          )}
         </div>
       </button>
     </aside>

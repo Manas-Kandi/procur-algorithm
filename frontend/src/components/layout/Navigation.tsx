@@ -13,8 +13,6 @@ import {
   Brain,
   MapPinned,
   ChevronsLeft,
-  ChevronsRight,
-  LogOut,
 } from 'lucide-react'
 import { useAuthStore } from '../../store/auth'
 import type { UserRole } from '../../types'
@@ -116,21 +114,37 @@ const SECTION_CONFIG = {
   },
 }
 
-export function Navigation ({ variant = 'desktop', onNavigate }: NavigationProps): JSX.Element | null {
+export function Navigation({
+  variant = 'desktop',
+  onNavigate,
+}: NavigationProps): JSX.Element | null {
   const location = useLocation()
   const { user, logout } = useAuthStore()
 
   const [collapsed, setCollapsed] = useState<boolean>(() => {
-    try { return localStorage.getItem('nav_collapsed') === '1' } catch { return false }
+    try {
+      return localStorage.getItem('nav_collapsed') === '1'
+    } catch {
+      return false
+    }
   })
   useEffect(() => {
-    try { localStorage.setItem('nav_collapsed', collapsed ? '1' : '0') } catch {}
+    try {
+      localStorage.setItem('nav_collapsed', collapsed ? '1' : '0')
+    } catch {}
   }, [collapsed])
-  const toggleCollapsed = () => setCollapsed(prev => !prev)
+  const toggleCollapsed = () => {
+    setCollapsed((prev) => !prev)
+  }
 
   if (!user) return null
 
-  const sections: Array<{ key: 'buyer' | 'seller'; label: string; accent: string; items: NavItem[] }> = []
+  const sections: Array<{
+    key: 'buyer' | 'seller'
+    label: string
+    accent: string
+    items: NavItem[]
+  }> = []
   if (['buyer', 'approver', 'admin'].includes(user.role)) {
     sections.push({ key: 'buyer', ...SECTION_CONFIG.buyer })
   }
@@ -141,7 +155,8 @@ export function Navigation ({ variant = 'desktop', onNavigate }: NavigationProps
   const containerClass = clsx(
     'flex flex-col bg-surface-raised transition-[width] duration-200 ease-in-out',
     collapsed ? 'w-16' : 'w-60',
-    variant === 'desktop' && 'hidden h-screen overflow-hidden border-r border-border-subtle lg:flex',
+    variant === 'desktop' &&
+      'hidden h-screen overflow-hidden border-r border-border-subtle lg:flex',
     variant === 'mobile' && 'h-full shadow-medium'
   )
 
@@ -152,7 +167,11 @@ export function Navigation ({ variant = 'desktop', onNavigate }: NavigationProps
           <div className="flex h-8 w-8 items-center justify-center rounded-sm bg-brand-primary text-text-inverse text-sm font-bold">
             P
           </div>
-          {!collapsed && <span className="text-sm font-semibold text-text-primary">Procur</span>}
+          {!collapsed && (
+            <span className="text-sm font-semibold text-text-primary">
+              Procur
+            </span>
+          )}
         </Link>
         {!collapsed && (
           <Tooltip content="Collapse">
@@ -172,13 +191,18 @@ export function Navigation ({ variant = 'desktop', onNavigate }: NavigationProps
           <div key={section.key} className="mb-8">
             {!collapsed && (
               <div className="flex items-center gap-2 px-6 text-xs font-semibold uppercase tracking-wide text-text-tertiary">
-                <span className={clsx('h-1 w-1 rounded-full', section.accent)} aria-hidden="true" />
+                <span
+                  className={clsx('h-1 w-1 rounded-full', section.accent)}
+                  aria-hidden="true"
+                />
                 {section.label}
               </div>
             )}
-            <div className={clsx('mt-2 space-y-0.5', collapsed ? 'px-2' : 'px-3')}>
+            <div
+              className={clsx('mt-2 space-y-0.5', collapsed ? 'px-2' : 'px-3')}
+            >
               {section.items
-                .filter(item => item.roles.includes(user.role))
+                .filter((item) => item.roles.includes(user.role))
                 .map((item) => {
                   const isRoot = item.href === '/'
                   const isActive = isRoot
@@ -198,24 +222,26 @@ export function Navigation ({ variant = 'desktop', onNavigate }: NavigationProps
                           : 'text-text-secondary hover:bg-background-secondary hover:text-text-primary'
                       )}
                     >
-                      <span className={clsx(
-                        'flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-sm transition-colors',
-                        isActive
-                          ? 'bg-brand-primary/10 text-brand-primary'
-                          : 'bg-background-secondary text-text-tertiary group-hover:text-text-secondary'
-                      )}>
+                      <span
+                        className={clsx(
+                          'flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-sm transition-colors',
+                          isActive
+                            ? 'bg-brand-primary/10 text-brand-primary'
+                            : 'bg-background-secondary text-text-tertiary group-hover:text-text-secondary'
+                        )}
+                      >
                         <ItemIcon className="h-4 w-4" aria-hidden="true" />
                       </span>
                       {!collapsed && (
-                        <span className="flex flex-col">
-                          {item.name}
-                        </span>
+                        <span className="flex flex-col">{item.name}</span>
                       )}
                     </Link>
                   )
 
                   return collapsed ? (
-                    <Tooltip key={item.href} content={item.name}>{link}</Tooltip>
+                    <Tooltip key={item.href} content={item.name}>
+                      {link}
+                    </Tooltip>
                   ) : (
                     <span key={item.href}>{link}</span>
                   )
@@ -232,8 +258,12 @@ export function Navigation ({ variant = 'desktop', onNavigate }: NavigationProps
               {(user.full_name ?? user.username).charAt(0).toUpperCase()}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-text-primary truncate">{user.full_name ?? user.username}</p>
-              <p className="text-xs text-text-tertiary truncate">{user.email}</p>
+              <p className="text-sm font-semibold text-text-primary truncate">
+                {user.full_name ?? user.username}
+              </p>
+              <p className="text-xs text-text-tertiary truncate">
+                {user.email}
+              </p>
             </div>
             <RoleBadge role={user.role} />
           </div>

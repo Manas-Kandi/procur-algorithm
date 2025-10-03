@@ -120,8 +120,11 @@ class Organization(Base, TimestampMixin):
     
     # Organization details
     name: Mapped[str] = mapped_column(String(255), nullable=False)
-    display_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     domain: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    industry: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    size: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    country: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    billing_email: Mapped[str | None] = mapped_column(String(255), nullable=True)
     
     # Settings
     settings: Mapped[dict | None] = mapped_column(JSON, nullable=True)
@@ -130,14 +133,10 @@ class Organization(Base, TimestampMixin):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     
     # Subscription
-    plan: Mapped[str | None] = mapped_column(String(50), nullable=True)
-    max_users: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    plan: Mapped[str] = mapped_column(String(50), nullable=False)
     
-    # Relationships
-    users: Mapped[list["UserAccount"]] = relationship(
-        "UserAccount",
-        back_populates="organization"
-    )
+    # Note: users relationship removed due to string-based foreign key
+    # Query UserAccount with organization_id filter instead
     
     def __repr__(self) -> str:
         return f"<Organization(id={self.id}, organization_id='{self.organization_id}', name='{self.name}')>"

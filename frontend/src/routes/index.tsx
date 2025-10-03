@@ -1,4 +1,10 @@
-import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom'
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  Navigate,
+  Outlet,
+} from 'react-router-dom'
 import { AppLayout } from '../components/layout/AppLayout'
 import { useAuthStore } from '../store/auth'
 import { Login } from '../pages/auth/Login'
@@ -13,7 +19,7 @@ import { SellerGuardrails } from '../pages/seller/SellerGuardrails'
 import { SellerIntelligence } from '../pages/seller/SellerIntelligence'
 import { SellerTerritory } from '../pages/seller/SellerTerritory'
 
-function ProtectedApp (): JSX.Element {
+function ProtectedApp(): JSX.Element {
   const { isAuthenticated } = useAuthStore()
 
   if (!isAuthenticated) {
@@ -27,7 +33,7 @@ function ProtectedApp (): JSX.Element {
   )
 }
 
-export function AppRoutes (): JSX.Element {
+export function AppRoutes(): JSX.Element {
   return (
     <BrowserRouter>
       <Routes>
@@ -37,7 +43,10 @@ export function AppRoutes (): JSX.Element {
           <Route index element={<BuyerDashboard />} />
           <Route path="requests">
             <Route path="new" element={<NewRequest />} />
-            <Route path=":requestId/negotiate" element={<NegotiationTheater />} />
+            <Route
+              path=":requestId/negotiate"
+              element={<NegotiationTheater />}
+            />
           </Route>
           <Route path="approvals" element={<ApprovalWorkspace />} />
           <Route path="portfolio" element={<Portfolio />} />
