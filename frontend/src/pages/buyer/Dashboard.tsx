@@ -10,11 +10,14 @@ import { SmartAlert } from '../../components/shared/SmartAlert'
 import { Tooltip } from '../../components/shared/Tooltip'
 import { HeroInput } from '../../components/buyer/dashboard/HeroInput'
 import { BreathingNumber } from '../../components/ui/BreathingNumber'
+import { OverviewCards } from '../../components/ui/OverviewCards'
 import { ProgressTrackerCard } from '../../components/buyer/dashboard/ProgressTrackerCard'
 import type { Request, DashboardMetrics } from '../../types'
+import { useAuthStore } from '../../store/auth'
 
 export function BuyerDashboard(): JSX.Element {
   const navigate = useNavigate()
+  const { user } = useAuthStore()
 
   const {
     data: metrics,
@@ -151,18 +154,12 @@ export function BuyerDashboard(): JSX.Element {
         <>
           {/* Overview */}
           <Box my={6}>
-            <Heading as="h2" size="sm" color="fg" mb={3}>
-              Overview
-            </Heading>
-            <SimpleGrid columns={{ base: 1, sm: 3 }} gap={6}>
-              <StatCard
-                label="Active"
-                value={<BreathingNumber base={activeCount || 0} amplitude={2} periodMs={2400} />}
-                accent="linear(to-br, teal.400, cyan.400)"
-              />
-              <StatCard label="Approvals" value={approvalsCount || '—'} accent="linear(to-br, orange.400, pink.400)" />
-              <StatCard label="Avg. savings" value={savingsPercent ? `${savingsPercent.toFixed(1)}%` : '—'} accent="linear(to-br, pink.400, purple.400)" />
-            </SimpleGrid>
+            <OverviewCards
+              income={(metrics as any)?.income_total ?? null}
+              paid={(metrics as any)?.paid_total ?? null}
+              active={<BreathingNumber base={activeCount || 0} amplitude={2} periodMs={2400} />}
+              avatarName={user?.full_name ?? user?.username}
+            />
           </Box>
 
           {/* Recent activity */}
