@@ -1,6 +1,7 @@
 import { Box, Flex, Icon, Text } from '@chakra-ui/react'
 import { ChevronRight } from 'lucide-react'
 import { Tooltip } from '../shared/Tooltip'
+import { useState } from 'react'
 
 export type ActiveRow = {
   id: string
@@ -27,9 +28,11 @@ const PALETTE: Record<string, string> = {
 export interface ActiveRequestsListProps {
   items: ActiveRow[]
   onRowClick?: (id: string) => void
+  hoverMs?: number
 }
 
-export function ActiveRequestsList({ items, onRowClick }: ActiveRequestsListProps) {
+export function ActiveRequestsList({ items, onRowClick, hoverMs = 250 }: ActiveRequestsListProps) {
+  const [expandedId, setExpandedId] = useState<string | null>(null)
   return (
     <Box>
       {items.map((it, idx) => {
@@ -41,12 +44,12 @@ export function ActiveRequestsList({ items, onRowClick }: ActiveRequestsListProp
             align="center"
             justify="space-between"
             px={3}
-            py={2.5}
-            borderTopWidth={idx === 0 ? '0' : '1px'}
-            borderColor="border"
+            py={3}
+            mt={idx === 0 ? 0 : 1.5}
             _hover={{ bg: 'bg.subtle' }}
             cursor="pointer"
             onClick={() => onRowClick?.(it.id)}
+            data-expanded={expandedId === it.id ? 'true' : 'false'}
           >
             {/* Left: Name + subtle details */}
             <Box flex={1} minW={0} pr={3}>
@@ -62,9 +65,21 @@ export function ActiveRequestsList({ items, onRowClick }: ActiveRequestsListProp
                   <Text>{it.status}</Text>
                 </Flex>
               </Flex>
-              {/* Hover-only extra metadata */}
+              {/* Hover/expand metadata */}
               {(it.preview || it.budget || it.nextAction) && (
-                <Flex align="center" gap={3} mt={1} color="fg.muted" fontSize="xs" opacity={0} transform="translateY(-2px)" transition="all 220ms ease" _groupHover={{ opacity: 1, transform: 'translateY(0)' }}>
+                <Flex
+                  align="center"
+                  gap={3}
+                  mt={1}
+                  color="fg.muted"
+                  fontSize="xs"
+                  transition={`all ${hoverMs}ms ease`}
+                  opacity={expandedId === it.id ? 1 : 0}
+                  transform={expandedId === it.id ? 'translateY(0)' : 'translateY(-2px)'}
+                  maxH={expandedId === it.id ? '48px' : '0px'}
+                  overflow="hidden"
+                  _groupHover={{ opacity: 1, transform: 'translateY(0)', maxH: '48px' }}
+                >
                   {it.preview && <Text truncate>{it.preview}</Text>}
                   {it.budget && <Text>{it.budget}</Text>}
                   {it.nextAction && <Text>{it.nextAction}</Text>}
@@ -73,7 +88,22 @@ export function ActiveRequestsList({ items, onRowClick }: ActiveRequestsListProp
             </Box>
 
             {/* Right: chevron */}
-            <Icon as={ChevronRight} boxSize={4} color="fg.muted" _groupHover={{ transform: 'translateX(2px)' }} transition="transform 200ms ease" />
+            <Box
+              as="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                setExpandedId((prev) => (prev === it.id ? null : it.id))
+              }}
+              aria-label={expandedId === it.id ? 'Collapse details' : 'Expand details'}
+            >
+              <Icon
+                as={ChevronRight}
+                boxSize={4}
+                color="fg.muted"
+                transition={`transform ${hoverMs}ms ease`}
+                transform={expandedId === it.id ? 'rotate(90deg)' : undefined}
+              />
+            </Box>
           </Flex>
         )
       })}
