@@ -1,8 +1,9 @@
 import { Box, Heading, Text, Flex, type BoxProps } from '@chakra-ui/react'
+import type { ReactNode } from 'react'
 
 interface StatCardProps extends BoxProps {
   label: string
-  value: string | number
+  value: ReactNode
   accent?: string // Chakra bgGradient value
 }
 
