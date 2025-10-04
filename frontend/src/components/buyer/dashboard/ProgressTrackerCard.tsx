@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { MessageSquare, MoreHorizontal } from 'lucide-react'
-import clsx from 'clsx'
+import { Box, Flex, Text, Button, Icon, IconButton } from '@chakra-ui/react'
 
 type StageKey =
   | 'draft'
@@ -50,90 +50,125 @@ export function ProgressTrackerCard({
     return STAGE_CONFIG[stage] ?? { label: 'In progress' }
   }, [stage])
 
+  const borderLight = isActive ? 'teal.400' : 'gray.200'
+  const borderDark = isActive ? 'teal.300' : '#262626'
+
   return (
-    <button
+    <Box
+      as="button"
       onClick={onClick}
-      className={clsx(
-        'group relative w-full border p-[18px] text-left transition-transform duration-200 bg-white/50',
-        isActive ? 'border-[var(--agent-accent)]' : 'border-[var(--muted-2)]',
-        'hover:-translate-y-0.5'
-      )}
+      w="full"
+      textAlign="left"
+      p={4}
+      borderWidth="1px"
+      borderColor={borderLight}
+      bg="white"
+      transition="transform 0.2s ease"
+      _hover={{ transform: 'translateY(-2px)' }}
+      _dark={{ bg: '#0F0F0F', borderColor: borderDark }}
     >
-      <div className="flex items-start gap-3">
+      <Flex align="start" gap={3}>
         {/* Vendor avatar */}
-        <div className="mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center border border-gray-200 bg-white text-xs font-semibold text-[var(--core-color-text-primary)]">
+        <Box
+          mt="0.5"
+          h="32px"
+          w="32px"
+          flexShrink={0}
+          display="flex"
+          alignItems="center"
+          justifyContent="center"
+          borderWidth="1px"
+          borderColor="gray.200"
+          bg="white"
+          fontSize="xs"
+          fontWeight="semibold"
+          color="gray.900"
+          _dark={{ borderColor: '#262626', bg: '#111', color: '#FAFAFA' }}
+        >
           {(vendor ?? title).charAt(0).toUpperCase()}
-        </div>
+        </Box>
 
         {/* Content */}
-        <div className="min-w-0 flex-1">
-          <div className="flex items-start justify-between gap-2">
-            <div className="flex-1 min-w-0">
-              <h3 className="truncate text-sm font-semibold text-[var(--core-color-text-primary)]">
+        <Box minW={0} flex={1}>
+          <Flex align="start" justify="space-between" gap={2}>
+            <Box minW={0} flex={1}>
+              <Text as="h3" truncate fontSize="sm" fontWeight="semibold" color="gray.900" _dark={{ color: '#FAFAFA' }}>
                 {title}
-              </h3>
+              </Text>
               {vendor && (
-                <p className="mt-0.5 text-xs text-[var(--core-color-text-muted)]">
+                <Text mt={0.5} fontSize="xs" color="gray.600" _dark={{ color: '#A1A1AA' }}>
                   {vendor}
-                </p>
+                </Text>
               )}
-            </div>
-          </div>
+            </Box>
+          </Flex>
 
           {/* Status badge + summary */}
-          <div className="mt-1 flex items-center gap-2">
-            <span className="inline-flex items-center border border-gray-200 bg-white px-2 py-0.5 text-[11px] font-medium text-[var(--core-color-text-secondary)]">
+          <Flex mt={1} align="center" gap={2}>
+            <Box
+              as="span"
+              display="inline-flex"
+              alignItems="center"
+              borderWidth="1px"
+              borderColor="gray.200"
+              bg="white"
+              px={2}
+              py={0.5}
+              fontSize="xs"
+              fontWeight="medium"
+              color="gray.700"
+              _dark={{ borderColor: '#262626', bg: '#111', color: '#A1A1AA' }}
+            >
               {nextAction ?? config.label}
-            </span>
-          </div>
+            </Box>
+          </Flex>
 
           {/* Inline micro-progress squares (3 steps) */}
-          <div className="mt-1 flex items-center gap-1.5" aria-hidden="true">
-            {(['sourcing', 'negotiating', 'approving'] as StageKey[]).map(
-              (s) => {
-                const order = ['sourcing', 'negotiating', 'approving']
-                const reached = order.indexOf(stage) >= order.indexOf(s)
-                return (
-                  <span
-                    key={s}
-                    className={clsx(
-                      'h-2 w-2',
-                      reached
-                        ? 'bg-[var(--agent-accent)]'
-                        : 'border border-[var(--muted-2)] bg-transparent'
-                    )}
-                  />
-                )
-              }
-            )}
-          </div>
+          <Flex mt={1} align="center" gap={1.5} aria-hidden="true">
+            {(['sourcing', 'negotiating', 'approving'] as StageKey[]).map((s) => {
+              const order = ['sourcing', 'negotiating', 'approving']
+              const reached = order.indexOf(stage) >= order.indexOf(s)
+              return (
+                <Box
+                  key={s}
+                  h="8px"
+                  w="8px"
+                  borderWidth={reached ? 0 : '1px'}
+                  borderColor="gray.300"
+                  bg={reached ? 'teal.400' : 'transparent'}
+                  _dark={{ borderColor: '#262626', bg: reached ? 'teal.300' : 'transparent' }}
+                />
+              )
+            })}
+          </Flex>
 
           {/* Negotiation preview (subtle bubble) */}
           {preview && (
-            <div className="mt-2 inline-flex max-w-full items-center bg-white/50 px-2 py-1 text-[11px] text-[var(--core-color-text-secondary)]">
-              <span className="truncate">{preview}</span>
-            </div>
+            <Box mt={2} display="inline-flex" maxW="full" alignItems="center" bg="gray.50" px={2} py={1} fontSize="xs" color="gray.700" _dark={{ bg: 'whiteAlpha.100', color: '#A1A1AA' }}>
+              <Text truncate>{preview}</Text>
+            </Box>
           )}
-        </div>
-      </div>
+        </Box>
+      </Flex>
 
       {/* Single primary CTA + overflow */}
-      <div className="mt-3 flex items-center justify-between">
-        <button
-          type="button"
+      <Flex mt={3} align="center" justify="space-between">
+        <Button
           onClick={onClick}
-          className="inline-flex items-center gap-1 border border-[var(--agent-accent)] bg-white px-2.5 py-1.5 text-xs font-medium text-[var(--core-color-text-primary)] hover:bg-[var(--agent-accent)]/10 focus:outline-2 focus:outline-[var(--agent-accent)]"
+          size="sm"
+          variant="outline"
+          borderColor="teal.400"
+          color="gray.900"
+          _hover={{ bg: 'teal.50' }}
+          _dark={{ color: '#FAFAFA', borderColor: 'teal.300', _hover: { bg: 'whiteAlpha.100' } }}
         >
-          <MessageSquare className="h-3.5 w-3.5" /> Open negotiation
-        </button>
-        <button
-          type="button"
-          aria-label="More options"
-          className="inline-flex h-7 w-7 items-center justify-center border border-gray-200 bg-white text-[var(--core-color-text-secondary)] opacity-0 transition-opacity group-hover:opacity-100 hover:bg-gray-50 focus:outline-2 focus:outline-gray-300"
-        >
-          <MoreHorizontal className="h-4 w-4" />
-        </button>
-      </div>
-    </button>
+          <Icon as={MessageSquare} boxSize={3.5} mr={2} />
+          Open negotiation
+        </Button>
+        <IconButton aria-label="More options" size="sm" variant="ghost" color="gray.600" _dark={{ color: '#A1A1AA' }}>
+          <Icon as={MoreHorizontal} boxSize={4} />
+        </IconButton>
+      </Flex>
+    </Box>
   )
 }

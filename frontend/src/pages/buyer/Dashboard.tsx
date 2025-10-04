@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { formatDistanceToNow } from 'date-fns'
 import { Box, Heading, Text, SimpleGrid, Button as CButton, Spinner } from '@chakra-ui/react'
+import { StatCard } from '../../components/ui/StatCard'
+import { SurfaceCard } from '../../components/ui/SurfaceCard'
 import { api } from '../../services/api'
 import { SmartAlert } from '../../components/shared/SmartAlert'
 import { HeroInput } from '../../components/buyer/dashboard/HeroInput'
@@ -97,7 +99,7 @@ export function BuyerDashboard(): JSX.Element {
     <Box maxW="1180px" mx="auto" px={{ base: 4, sm: 6 }} py={0}>
       {/* Heading */}
       <Box mb={8}>
-        <Heading as="h1" size="xl" fontWeight="thin" color="gray.900" _dark={{ color: '#FAFAFA' }}>
+        <Heading as="h1" size="xl" fontWeight="thin" color="gray.100" _dark={{ color: '#FAFAFA' }}>
           Dashboard
         </Heading>
       </Box>
@@ -136,36 +138,27 @@ export function BuyerDashboard(): JSX.Element {
         <>
           {/* Overview */}
           <Box my={6}>
-            <Heading as="h2" size="sm" color="gray.900" _dark={{ color: '#FAFAFA' }} mb={3}>
+            <Heading as="h2" size="sm" color="gray.100" _dark={{ color: '#FAFAFA' }} mb={3}>
               Overview
             </Heading>
             <SimpleGrid columns={{ base: 1, sm: 3 }} gap={6}>
-              <Box borderWidth="1px" borderColor="gray.200" bg="white" p={4} _dark={{ bg: '#0F0F0F', borderColor: '#262626' }}>
-                <Text fontSize="xs" color="gray.600" _dark={{ color: '#A1A1AA' }}>Active</Text>
-                <Heading as="p" size="lg" mt={1} color="gray.900" _dark={{ color: '#FAFAFA' }}>{activeCount || '—'}</Heading>
-              </Box>
-              <Box borderWidth="1px" borderColor="gray.200" bg="white" p={4} _dark={{ bg: '#0F0F0F', borderColor: '#262626' }}>
-                <Text fontSize="xs" color="gray.600" _dark={{ color: '#A1A1AA' }}>Approvals</Text>
-                <Heading as="p" size="lg" mt={1} color="gray.900" _dark={{ color: '#FAFAFA' }}>{approvalsCount || '—'}</Heading>
-              </Box>
-              <Box borderWidth="1px" borderColor="gray.200" bg="white" p={4} _dark={{ bg: '#0F0F0F', borderColor: '#262626' }}>
-                <Text fontSize="xs" color="gray.600" _dark={{ color: '#A1A1AA' }}>Avg. savings</Text>
-                <Heading as="p" size="lg" mt={1} color="gray.900" _dark={{ color: '#FAFAFA' }}>{savingsPercent ? `${savingsPercent.toFixed(1)}%` : '—'}</Heading>
-              </Box>
+              <StatCard label="Active" value={activeCount || '—'} accent="linear(to-br, teal.400, cyan.400)" />
+              <StatCard label="Approvals" value={approvalsCount || '—'} accent="linear(to-br, orange.400, pink.400)" />
+              <StatCard label="Avg. savings" value={savingsPercent ? `${savingsPercent.toFixed(1)}%` : '—'} accent="linear(to-br, pink.400, purple.400)" />
             </SimpleGrid>
           </Box>
 
           {/* Recent activity */}
-          <Box my={6}>
-            <Box display="flex" alignItems="center" justifyContent="space-between">
-              <Heading as="h2" size="sm" color="gray.900" _dark={{ color: '#FAFAFA' }}>
-                Recent activity
-              </Heading>
+          <SurfaceCard
+            title="Recent activity"
+            actions={(
               <CButton onClick={() => void navigate('/requests')} size="sm" variant="plain" colorPalette="gray" _hover={{ textDecoration: 'underline' }}>
                 View all
               </CButton>
-            </Box>
-            <Box mt={2} borderWidth="1px" borderColor="gray.200" bg="white" _dark={{ bg: '#0F0F0F', borderColor: '#262626' }}>
+            )}
+            my={6}
+          >
+            <Box borderWidth="1px" borderColor="gray.200" bg="white" _dark={{ bg: '#0F0F0F', borderColor: '#262626' }}>
               <Box display="grid" gridTemplateColumns="5fr 3fr 2fr 2fr" borderBottomWidth="1px" borderColor="gray.200" px={3} py={2} fontSize="xs" color="gray.600" _dark={{ borderColor: '#262626', color: '#A1A1AA' }}>
                 <Box>Name</Box>
                 <Box>Stage</Box>
@@ -199,7 +192,7 @@ export function BuyerDashboard(): JSX.Element {
                   ))}
               </Box>
             </Box>
-          </Box>
+          </SurfaceCard>
 
           {/* Alerts */}
           <Box my={6}>
@@ -227,15 +220,15 @@ export function BuyerDashboard(): JSX.Element {
           </Box>
 
           {/* Active requests */}
-          <Box my={6}>
-            <Box display="flex" alignItems="center" justifyContent="space-between">
-              <Heading as="h2" size="md" color="gray.900" _dark={{ color: '#FAFAFA' }}>
-                {activeCount ? `${Math.min(activeCount, 3)} active requests` : 'No active requests'}
-              </Heading>
+          <SurfaceCard
+            title={activeCount ? `${Math.min(activeCount, 3)} active requests` : 'No active requests'}
+            actions={(
               <CButton onClick={() => void navigate('/requests')} size="sm" variant="plain" colorPalette="gray" _hover={{ textDecoration: 'underline' }}>
                 View all
               </CButton>
-            </Box>
+            )}
+            my={6}
+          >
             <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} gap={6} mt={2}>
               {topActiveRequests.map((request) => (
                 <ProgressTrackerCard
@@ -257,7 +250,7 @@ export function BuyerDashboard(): JSX.Element {
                 />
               ))}
             </SimpleGrid>
-          </Box>
+          </SurfaceCard>
         </>
       )}
     </Box>

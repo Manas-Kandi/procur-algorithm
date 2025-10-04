@@ -18,6 +18,8 @@ export function AppLayout({ children }: PropsWithChildren): JSX.Element {
     return 'dashboard'
   }, [location.pathname])
 
+  const isDashboard = selectedKey === 'dashboard'
+
   return (
     <div className="min-h-screen bg-[var(--core-color-surface-background)] text-[var(--core-color-text-primary)]">
       <div className="flex min-h-screen">
@@ -75,7 +77,7 @@ export function AppLayout({ children }: PropsWithChildren): JSX.Element {
         )}
 
         <div className="flex w-full flex-col">
-          <main className="flex-1 overflow-y-auto">
+          <main className={`flex-1 overflow-y-auto ${isDashboard ? 'bg-[#0A0A0A]' : ''}`}>
             <div className="mx-auto w-full max-w-[1320px] px-4 py-6 sm:px-6 lg:px-8">
               {children}
             </div>

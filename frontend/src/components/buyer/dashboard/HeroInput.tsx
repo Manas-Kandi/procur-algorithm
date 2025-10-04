@@ -57,8 +57,10 @@ export function HeroInput({ onSubmit }: HeroInputProps) {
           <Button
             type="submit"
             disabled={!value.trim()}
-            colorScheme="primary"
             height={11}
+            bgGradient="linear(to-r, teal.400, cyan.400)"
+            color="white"
+            _hover={{ bgGradient: 'linear(to-r, teal.500, cyan.500)' }}
           >
             Describe <Icon as={ArrowRight} boxSize={4} ml={2} />
           </Button>
