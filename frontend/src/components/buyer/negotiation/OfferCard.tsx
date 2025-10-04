@@ -37,7 +37,10 @@ export function OfferCard({
         }
       )}
     >
-      <span className="absolute -top-3.5 -right-3.5 inline-flex h-8 w-8 items-center justify-center rounded-full bg-[var(--core-color-brand-primary)] text-xs font-semibold text-white shadow-200">
+      <span
+        className="absolute top-2 right-2 inline-flex h-7 w-7 items-center justify-center rounded-full bg-[var(--core-color-brand-primary)] text-[10px] font-semibold text-white shadow-200"
+        aria-label={`Rank ${rank}`}
+      >
         #{rank}
       </span>
 
@@ -69,7 +72,7 @@ export function OfferCard({
               </p>
             </div>
 
-            <div className="space-y-2 rounded-lg bg-[var(--core-color-surface-subtle)] p-3">
+            <div className="space-y-2 rounded-2xl border border-[var(--core-color-border-default)] bg-[var(--core-color-surface-subtle)] p-3">
               <div className="flex items-center justify-between text-xs text-[var(--core-color-text-muted)]">
                 <span>Utility score</span>
                 <span className="font-semibold text-[var(--core-color-text-primary)]">

@@ -47,6 +47,56 @@ export const color = {
   },
 }
 
+// Dark mode palette with the same shape as `color`
+export const colorDark: typeof color = {
+  core: {
+    brand: {
+      primary: '#3B82F6', // slightly brighter in dark
+      secondary: '#A78BFA',
+      inverse: '#0B1220',
+    },
+    surface: {
+      background: '#000000',
+      canvas: '#0F0F0F',
+      subtle: '#1A1A1A',
+      elevated: '#141414',
+    },
+    text: {
+      primary: '#FAFAFA',
+      muted: '#A1A1AA',
+      disabled: '#3F3F46',
+    },
+    border: {
+      default: '#262626',
+      focus: '#2563EB',
+    },
+    data: {
+      positive: '#22C55E',
+      warning: '#F59E0B',
+      critical: '#EF4444',
+      info: '#06B6D4',
+    },
+  },
+  persona: {
+    buyer: {
+      accent: '#2DD4BF',
+    },
+    seller: {
+      accent: '#FB923C',
+    },
+  },
+  status: {
+    draft: '#9CA3AF',
+    sourcing: '#38BDF8',
+    negotiating: '#A78BFA',
+    approving: '#F59E0B',
+    contracted: '#22C55E',
+    provisioning: '#60A5FA',
+    atRisk: '#F87171',
+    blocked: '#F87171',
+  },
+}
+
 export const typography = {
   font: {
     base: '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',

@@ -18,15 +18,14 @@ export function Card({
 
   return (
     <Box
-      bg="white"
+      bg="var(--core-color-surface-canvas)"
       borderWidth="1px"
-      borderColor="gray.200"
+      borderColor="var(--core-color-border-default)"
       rounded="0"
       p={paddingMap}
       transition="all 150ms"
       cursor={hover ? 'pointer' : undefined}
-      _hover={hover ? { borderColor: 'gray.300', _dark: { borderColor: '#333333' } } : undefined}
-      _dark={{ bg: '#0F0F0F', borderColor: '#262626' }}
+      _hover={hover ? { borderColor: 'var(--core-color-border-focus)' } : undefined}
       className={className}
       {...props}
     >

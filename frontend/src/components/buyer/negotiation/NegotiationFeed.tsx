@@ -28,48 +28,59 @@ export function NegotiationFeed({
       </div>
 
       <div className="space-y-3">
-        {latestMessages.map((message, index) => (
-          <div
-            key={`${message.actor}-${index}`}
-            className="rounded-lg border border-[var(--core-color-border-default)] bg-[var(--core-color-surface-subtle)] p-3"
-          >
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex-1">
-                <p className="text-xs font-semibold text-[var(--core-color-text-primary)]">
-                  {message.actor === 'buyer' ? 'Our agent' : 'Vendor response'}
-                </p>
-                <p className="mt-1 text-sm text-[var(--core-color-text-primary)]">
-                  ${message.proposal.unit_price}/seat •{' '}
-                  {message.proposal.term_months}mo term •{' '}
-                  {message.proposal.payment_terms}
-                </p>
-                {message.justification_bullets.length > 0 && (
-                  <ul className="mt-2 list-disc space-y-1 pl-5 text-xs text-[var(--core-color-text-muted)]">
-                    {message.justification_bullets.map((bullet) => (
-                      <li key={bullet}>{bullet}</li>
-                    ))}
-                  </ul>
-                )}
+        {latestMessages.map((message, index) => {
+          const currency = (message as any)?.proposal?.currency ??
+            (session.best_offer as any)?.components?.currency ?? 'USD'
+          const priceDisplay = new Intl.NumberFormat('en-US', {
+            style: 'currency',
+            currency,
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          }).format(message.proposal.unit_price)
+
+          return (
+            <div
+              key={`${message.actor}-${index}`}
+              className="rounded-lg border border-[var(--core-color-border-default)] bg-[var(--core-color-surface-subtle)] p-3"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex-1">
+                  <p className="text-xs font-semibold text-[var(--core-color-text-primary)]">
+                    {message.actor === 'buyer' ? 'Our agent' : 'Vendor response'}
+                  </p>
+                  <p className="mt-1 text-sm text-[var(--core-color-text-primary)]">
+                    {priceDisplay}/seat •{' '}
+                    {message.proposal.term_months}mo term •{' '}
+                    {message.proposal.payment_terms}
+                  </p>
+                  {message.justification_bullets.length > 0 && (
+                    <ul className="mt-2 list-disc space-y-1 pl-5 text-xs text-[var(--core-color-text-muted)]">
+                      {message.justification_bullets.map((bullet) => (
+                        <li key={bullet}>{bullet}</li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+                <AIExplainer
+                  title="this move"
+                  reasoning={[
+                    {
+                      label: 'Strategy',
+                      value: message.machine_rationale.concession_taken,
+                    },
+                    { label: 'Next step', value: message.next_step_hint },
+                    ...Object.entries(
+                      message.machine_rationale.score_components
+                    ).map(([label, value]) => ({
+                      label,
+                      value: value.toFixed(2),
+                    })),
+                  ]}
+                />
               </div>
-              <AIExplainer
-                title="this move"
-                reasoning={[
-                  {
-                    label: 'Strategy',
-                    value: message.machine_rationale.concession_taken,
-                  },
-                  { label: 'Next step', value: message.next_step_hint },
-                  ...Object.entries(
-                    message.machine_rationale.score_components
-                  ).map(([label, value]) => ({
-                    label,
-                    value: value.toFixed(2),
-                  })),
-                ]}
-              />
             </div>
-          </div>
-        ))}
+          )
+        })}
       </div>
 
       <div className="border-t border-[var(--core-color-border-default)] pt-3 text-xs text-[var(--core-color-text-muted)]">
