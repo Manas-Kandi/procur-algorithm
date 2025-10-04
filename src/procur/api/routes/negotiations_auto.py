@@ -154,12 +154,14 @@ async def negotiation_websocket(
     session_id: str,
 ):
     """WebSocket endpoint for real-time negotiation streaming."""
-    await websocket.accept()
+    from ..websocket_manager import manager
+
+    await manager.connect(websocket, session_id)
 
     try:
         # Send initial connection confirmation
-        await _stream_negotiation_event(
-            websocket,
+        await manager.send_event(
+            session_id,
             "connected",
             {"session_id": session_id, "message": "Connected to negotiation stream"},
         )
@@ -179,10 +181,11 @@ async def negotiation_websocket(
                 await websocket.send_text("ping")
 
     except WebSocketDisconnect:
+        await manager.disconnect(websocket, session_id)
         print(f"WebSocket disconnected for session {session_id}")
     except Exception as e:
+        await manager.disconnect(websocket, session_id)
         print(f"WebSocket error for session {session_id}: {e}")
-        await websocket.close()
 
 
 @router.post(
@@ -282,9 +285,25 @@ async def auto_negotiate(
     # Create buyer agent
     buyer_agent = _create_buyer_agent()
 
-    # Run negotiation
+    # Run negotiation with streaming
     try:
-        offers_dict = buyer_agent.negotiate(request_model, [vendor_model])
+        # Import streaming wrapper
+        from ..streaming_negotiation import StreamingNegotiationWrapper
+        from ..websocket_manager import manager
+
+        # Emit start event
+        await manager.send_event(session_id, "negotiation_start", {
+            "vendor_name": vendor_model.name,
+            "vendor_id": vendor_model.vendor_id,
+            "max_rounds": request_data.max_rounds,
+        })
+
+        # Wrap agent for streaming
+        streaming_wrapper = StreamingNegotiationWrapper(buyer_agent, session_id)
+        offers_dict = await streaming_wrapper.negotiate_with_streaming(
+            request_model,
+            [vendor_model]
+        )
 
         # Get the final offer for this vendor
         final_offer = offers_dict.get(vendor_model.vendor_id)

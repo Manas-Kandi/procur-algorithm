@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { Box, VStack, HStack, Text, Badge, Divider, Icon } from '@chakra-ui/react'
+import { Box, VStack, HStack, Text, Badge, Icon } from '@chakra-ui/react'
 import { FiArrowRight, FiCheck, FiX, FiZap } from 'react-icons/fi'
 import type { NegotiationEvent } from '../../../hooks/useNegotiationStream'
 
@@ -188,7 +188,9 @@ export function LiveNegotiationFeed({
                 </VStack>
               </HStack>
 
-              {index < events.length - 1 && <Divider my={2} />}
+              {index < events.length - 1 && (
+                <Box as="hr" borderTopWidth="1px" borderColor="var(--core-color-border-default)" my={2} />
+              )}
             </Box>
           )
         })}

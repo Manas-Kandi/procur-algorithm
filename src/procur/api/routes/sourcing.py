@@ -1,8 +1,9 @@
 """Sourcing and negotiation initiation endpoints."""
 
+import asyncio
 from typing import List
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from ...db import get_session
@@ -12,22 +13,57 @@ from ...db.repositories import (
     VendorRepository,
     NegotiationRepository,
 )
-from ..schemas import NegotiationResponse
+from ..schemas import NegotiationResponse, AutoNegotiateRequest
 from ..security import get_current_user
 
 router = APIRouter(prefix="/sourcing", tags=["Sourcing"])
+
+
+async def _trigger_auto_negotiations(session_ids: List[str], user_id: int):
+    """Background task to trigger auto-negotiations for all sessions."""
+    from .negotiations_auto import auto_negotiate
+    from ...db import SessionLocal
+
+    # Create new DB session for background task
+    db = SessionLocal()
+    try:
+        # Import here to avoid circular dependency
+        from ...db.repositories import UserRepository
+        user_repo = UserRepository(db)
+        user = user_repo.get_by_id(user_id)
+
+        if not user:
+            return
+
+        # Trigger negotiations for all sessions in parallel
+        tasks = []
+        for session_id in session_ids:
+            task = auto_negotiate(
+                session_id=session_id,
+                request_data=AutoNegotiateRequest(max_rounds=8, stream_updates=True),
+                current_user=user,
+                db_session=db,
+            )
+            tasks.append(task)
+
+        # Run all negotiations in parallel
+        await asyncio.gather(*tasks, return_exceptions=True)
+    finally:
+        db.close()
 
 
 @router.post(
     "/start/{request_id}",
     response_model=List[NegotiationResponse],
     summary="Start negotiations for a request",
-    description="Find vendors and initiate negotiation sessions for a request",
+    description="Find vendors and initiate negotiation sessions for a request, then auto-negotiate with all vendors",
 )
-def start_negotiations(
+async def start_negotiations(
     request_id: str,
+    background_tasks: BackgroundTasks,
     current_user: UserAccount = Depends(get_current_user),
     db_session: Session = Depends(get_session),
+    auto_negotiate: bool = True,
 ):
     """Start negotiations for a request by creating negotiation sessions with vendors."""
     request_repo = RequestRepository(db_session)
@@ -94,8 +130,17 @@ def start_negotiations(
         
         session = neg_repo.create(session_data)
         created_sessions.append(session)
-    
+
     # Update request status to negotiating
     request_repo.update(request.id, status="negotiating")
-    
+
+    # Trigger auto-negotiations in background if requested
+    if auto_negotiate and created_sessions:
+        session_ids = [s.session_id for s in created_sessions]
+        background_tasks.add_task(
+            _trigger_auto_negotiations,
+            session_ids,
+            current_user.id
+        )
+
     return created_sessions

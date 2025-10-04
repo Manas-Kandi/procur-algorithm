@@ -1,15 +1,16 @@
 import { useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { Box, Heading, SimpleGrid, Text, VStack } from '@chakra-ui/react'
+import { Box, Heading, SimpleGrid, Text, VStack, Badge, HStack } from '@chakra-ui/react'
 import { api } from '../../services/api'
 import { OfferCard } from '../../components/buyer/negotiation/OfferCard'
-import { NegotiationFeed } from '../../components/buyer/negotiation/NegotiationFeed'
+import { NegotiationFeedWrapper } from '../../components/buyer/negotiation/NegotiationFeedWrapper'
 import { NegotiationControl } from '../../components/buyer/negotiation/NegotiationControl'
 import { SmartAlert } from '../../components/shared/SmartAlert'
-import type { NegotiationSession } from '../../types'
+import { useEffect, useState } from 'react'
 
 export function NegotiationTheater(): JSX.Element {
   const { requestId } = useParams<{ requestId: string }>()
+  const [activeStreams, setActiveStreams] = useState<Set<string>>(new Set())
 
   const { data: sessions, isLoading } = useQuery({
     queryKey: ['negotiations', requestId],
@@ -20,6 +21,23 @@ export function NegotiationTheater(): JSX.Element {
     enabled: Boolean(requestId),
   })
 
+  // Calculate active sessions (safe to do before early returns since it uses ?? for null safety)
+  const activeSessions = (sessions ?? []).filter(
+    (session) => session.status === 'active'
+  )
+  const topSessions = activeSessions.slice(0, 3)
+
+  // Auto-connect to WebSocket for all active sessions
+  // This hook must be called BEFORE any conditional returns
+  useEffect(() => {
+    if (activeSessions.length > 0) {
+      activeSessions.forEach((session) => {
+        setActiveStreams((prev) => new Set(prev).add(session.session_id))
+      })
+    }
+  }, [activeSessions])
+
+  // Now it's safe to have conditional returns after all hooks
   if (isLoading) {
     return (
       <Box py={12} textAlign="center">
@@ -44,11 +62,6 @@ export function NegotiationTheater(): JSX.Element {
       </VStack>
     )
   }
-
-  const activeSessions = sessions.filter(
-    (session) => session.status === 'active'
-  )
-  const topSessions = activeSessions.slice(0, 3)
 
   const getStatus = (index: number): 'leading' | 'contender' | 'fallback' => {
     if (index === 0) return 'leading'
@@ -94,19 +107,26 @@ export function NegotiationTheater(): JSX.Element {
 
       <Box as="hr" borderTopWidth="1px" borderColor="var(--core-color-border-default)" />
 
-      {/* Live negotiation feed */}
+      {/* Live negotiation feed with real-time WebSocket updates */}
       <VStack gap={4} align="stretch">
         <Box>
-          <Heading size="md" color="var(--core-color-text-primary)">
-            Live negotiation feed
-          </Heading>
-          <Text mt={1} fontSize="sm" color="var(--core-color-text-muted)">
-            Reasoning transparency for every move across active vendors.
-          </Text>
+          <HStack justify="space-between">
+            <Box>
+              <Heading size="md" color="var(--core-color-text-primary)">
+                Live negotiation feed
+              </Heading>
+              <Text mt={1} fontSize="sm" color="var(--core-color-text-muted)">
+                Real-time AI negotiations with full transparency
+              </Text>
+            </Box>
+            <Badge colorScheme="green" fontSize="sm">
+              {activeSessions.length} active
+            </Badge>
+          </HStack>
         </Box>
         <SimpleGrid columns={{ base: 1, lg: 2 }} gap={4}>
-          {activeSessions.map((session: NegotiationSession) => (
-            <NegotiationFeed key={session.session_id} session={session} />
+          {activeSessions.map((session) => (
+            <NegotiationFeedWrapper key={session.session_id} session={session} />
           ))}
         </SimpleGrid>
       </VStack>

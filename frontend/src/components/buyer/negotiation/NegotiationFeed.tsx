@@ -12,7 +12,7 @@ export function NegotiationFeed({
   const latestMessages = session.messages.slice(-3).reverse()
 
   return (
-    <Card className="space-y-4 border-[var(--core-color-border-default)] bg-[var(--core-color-surface-canvas)]">
+    <Card variant="canvas" elevation="200" rounded="md" className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-sm font-semibold text-[var(--core-color-text-primary)]">
@@ -39,9 +39,12 @@ export function NegotiationFeed({
           }).format(message.proposal.unit_price)
 
           return (
-            <div
+            <Card
               key={`${message.actor}-${index}`}
-              className="rounded-lg border border-[var(--core-color-border-default)] bg-[var(--core-color-surface-subtle)] p-3"
+              variant="subtle"
+              elevation="none"
+              rounded="md"
+              padding="sm"
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="flex-1">
@@ -78,7 +81,7 @@ export function NegotiationFeed({
                   ]}
                 />
               </div>
-            </div>
+            </Card>
           )
         })}
       </div>

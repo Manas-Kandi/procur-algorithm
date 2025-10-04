@@ -24,6 +24,7 @@ from .routes import (
     vendors_router,
     demo_router,
     portfolio_router,
+    explanations_router,
 )
 
 
@@ -99,6 +100,7 @@ def create_app() -> FastAPI:
     app.include_router(sourcing_router)
     app.include_router(demo_router)
     app.include_router(portfolio_router)
+    app.include_router(explanations_router)
     
     # Custom exception handlers
     @app.exception_handler(RequestValidationError)

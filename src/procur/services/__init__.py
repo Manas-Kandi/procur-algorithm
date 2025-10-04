@@ -10,6 +10,15 @@ from .policy_engine import PolicyEngine, PolicyResult, PolicyViolation
 from .retrieval_service import RetrievalService, RetrievalResult
 from .scoring_service import ScoringService, ScoreWeights
 from .contract_generator import ContractGenerator, ContractGenerationError
+from .llm_explainability import (
+    LLMExplainabilityService,
+    ExplanationRecord,
+    RationaleFact,
+    PolicyEvent,
+    NumericSnapshot,
+    RecommendedAction,
+    ExplainabilityTrace,
+)
 
 __all__ = [
     "ComplianceService",
@@ -31,4 +40,11 @@ __all__ = [
     "ScoreWeights",
     "ContractGenerator",
     "ContractGenerationError",
+    "LLMExplainabilityService",
+    "ExplanationRecord",
+    "RationaleFact",
+    "PolicyEvent",
+    "NumericSnapshot",
+    "RecommendedAction",
+    "ExplainabilityTrace",
 ]

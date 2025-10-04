@@ -313,3 +313,61 @@ class HealthResponse(BaseModel):
     timestamp: datetime
     version: str
     database: str
+
+
+# ============================================================================
+# Explainability Schemas
+# ============================================================================
+
+class RationaleFactResponse(BaseModel):
+    """A single fact-to-implication pair."""
+    fact: str
+    implication: str
+
+
+class PolicyEventResponse(BaseModel):
+    """A policy or guardrail enforcement event."""
+    policy_id: str
+    outcome: str
+    note: str
+
+
+class NumericSnapshotResponse(BaseModel):
+    """Canonical numeric facts for audits and charts."""
+    latest_unit_price: float
+    budget_per_unit: float
+    tco: float
+    tco_vs_budget_pct: float
+    acceptance_probability: float
+
+
+class RecommendedActionResponse(BaseModel):
+    """A suggested next action with priority and type."""
+    priority: int
+    type: str
+    text: str
+
+
+class ExplainabilityTraceResponse(BaseModel):
+    """Internal trace for debugging."""
+    step: str
+    detail: str
+
+
+class ExplanationResponse(BaseModel):
+    """Complete explanation record for a negotiation state."""
+    explanation_version: str
+    short_summary: str
+    detailed_explanation: str
+    rationale: List[RationaleFactResponse]
+    policy_summary: List[PolicyEventResponse]
+    numeric_snapshots: NumericSnapshotResponse
+    recommended_actions: List[RecommendedActionResponse]
+    confidence: float
+    explainability_trace: List[ExplainabilityTraceResponse]
+
+
+class ExplainNegotiationRequest(BaseModel):
+    """Request to generate explanation for a negotiation round."""
+    round_number: Optional[int] = None  # If not provided, explain latest round
+    include_trace: bool = Field(default=False, description="Include debugging trace")

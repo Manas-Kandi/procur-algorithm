@@ -30,12 +30,12 @@ export function OfferCard({
 
   return (
     <Card
-      className={clsx(
-        'relative h-full border-[var(--core-color-border-default)] bg-[var(--core-color-surface-canvas)]',
-        {
-          'ring-2 ring-[var(--core-color-brand-primary)]': status === 'leading',
-        }
-      )}
+      variant="canvas"
+      elevation="200"
+      rounded="md"
+      className={clsx('relative h-full', {
+        'ring-2 ring-[var(--core-color-brand-primary)]': status === 'leading',
+      })}
     >
       <span
         className="absolute top-2 right-2 inline-flex h-7 w-7 items-center justify-center rounded-full bg-[var(--core-color-brand-primary)] text-[10px] font-semibold text-white shadow-200"

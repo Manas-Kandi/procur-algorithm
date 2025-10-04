@@ -11,6 +11,7 @@ from .dashboard import router as dashboard_router
 from .sourcing import router as sourcing_router
 from .demo import router as demo_router
 from .portfolio import router as portfolio_router
+from .explanations import router as explanations_router
 
 __all__ = [
     "auth_router",
@@ -24,4 +25,5 @@ __all__ = [
     "sourcing_router",
     "demo_router",
     "portfolio_router",
+    "explanations_router",
 ]
