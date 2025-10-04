@@ -1,13 +1,15 @@
 import { type ReactNode } from 'react'
 import { Tooltip as ChakraUITooltip } from '@/components/ui/tooltip'
+import { Box, type BoxProps } from '@chakra-ui/react'
 
 interface TooltipProps {
   content: ReactNode
   children: ReactNode
   className?: string
+  wrapperProps?: BoxProps
 }
 
-export function Tooltip({ content, children, className }: TooltipProps) {
+export function Tooltip({ content, children, className, wrapperProps }: TooltipProps) {
   return (
     <ChakraUITooltip
       content={content}
@@ -20,7 +22,9 @@ export function Tooltip({ content, children, className }: TooltipProps) {
         borderRadius: 'md',
       }}
     >
-      <span className={className}>{children}</span>
+      <Box as="span" className={className} {...wrapperProps}>
+        {children}
+      </Box>
     </ChakraUITooltip>
   )
 }
