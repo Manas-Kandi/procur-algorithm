@@ -64,10 +64,10 @@ export function OfferCard({
             Vendor
           </p>
           <h3 className="text-lg font-semibold text-[var(--core-color-text-primary)]">
-            Vendor {session.vendor_id.slice(0, 8)}
+            {session.vendor_name || `Vendor ${String(session.vendor_id || 'Unknown').slice(0, 8)}`}
           </h3>
           <p className="text-xs text-[var(--core-color-text-muted)]">
-            Round {session.current_round}
+            Round {session.current_round ?? 1}
           </p>
         </header>
 

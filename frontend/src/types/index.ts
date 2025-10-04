@@ -96,13 +96,25 @@ export interface NegotiationMessage {
 export interface NegotiationSession {
   session_id: string
   request_id: string
-  vendor_id: string
+  vendor_id: number
+  vendor_name?: string
   status: 'active' | 'completed' | 'failed' | 'stalled'
   current_round: number
+  max_rounds?: number
   messages: NegotiationMessage[]
   best_offer?: Offer
+  current_price?: number
+  total_cost?: number
+  utility_score?: number
+  rounds_completed?: number
   created_at: string
-  updated_at: string
+  updated_at?: string
+  started_at?: string
+  completed_at?: string | null
+  outcome?: string | null
+  outcome_reason?: string | null
+  total_messages?: number
+  savings_achieved?: number | null
 }
 
 export interface Contract {
