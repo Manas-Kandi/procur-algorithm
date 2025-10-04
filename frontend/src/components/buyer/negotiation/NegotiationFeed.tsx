@@ -9,25 +9,33 @@ interface NegotiationFeedProps {
 export function NegotiationFeed({
   session,
 }: NegotiationFeedProps): JSX.Element {
-  const latestMessages = session.messages.slice(-3).reverse()
+  // Add defensive checks for undefined messages
+  const messages = session.messages ?? []
+  const latestMessages = messages.slice(-3).reverse()
+  const vendorId = session.vendor_id?.toString() ?? 'Unknown'
 
   return (
     <Card variant="canvas" elevation="200" rounded="md" className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-sm font-semibold text-[var(--core-color-text-primary)]">
-            Vendor {session.vendor_id.slice(0, 8)}
+            Vendor {vendorId.slice(0, 8)}
           </h3>
           <p className="text-xs text-[var(--core-color-text-muted)]">
-            Round {session.current_round}
+            Round {session.current_round ?? 1}
           </p>
         </div>
         <span className="inline-flex items-center rounded-full bg-[rgba(124,58,237,0.12)] px-3 py-1 text-xs font-semibold text-[var(--core-color-brand-secondary)]">
-          Active
+          {session.status ?? 'Active'}
         </span>
       </div>
 
-      <div className="space-y-3">
+      {latestMessages.length === 0 ? (
+        <div className="py-8 text-center text-sm text-[var(--core-color-text-muted)]">
+          Waiting for negotiation to begin...
+        </div>
+      ) : (
+        <div className="space-y-3">
         {latestMessages.map((message, index) => {
           const currency = (message as any)?.proposal?.currency ??
             (session.best_offer as any)?.components?.currency ?? 'USD'
@@ -84,14 +92,17 @@ export function NegotiationFeed({
             </Card>
           )
         })}
-      </div>
+        </div>
+      )}
 
-      <div className="border-t border-[var(--core-color-border-default)] pt-3 text-xs text-[var(--core-color-text-muted)]">
-        Next step:{' '}
-        <span className="font-semibold text-[var(--core-color-text-primary)]">
-          {latestMessages[0]?.next_step_hint ?? 'Waiting for vendor response'}
-        </span>
-      </div>
+      {latestMessages.length > 0 && (
+        <div className="border-t border-[var(--core-color-border-default)] pt-3 text-xs text-[var(--core-color-text-muted)]">
+          Next step:{' '}
+          <span className="font-semibold text-[var(--core-color-text-primary)]">
+            {latestMessages[0]?.next_step_hint ?? 'Waiting for vendor response'}
+          </span>
+        </div>
+      )}
     </Card>
   )
 }

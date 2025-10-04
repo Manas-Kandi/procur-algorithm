@@ -30,8 +30,12 @@ def get_negotiations_for_request(
     db_session: Session = Depends(get_session),
 ):
     """Get all negotiations for a request."""
+    from ...db.repositories import VendorRepository
+    
     neg_repo = NegotiationRepository(db_session)
     request_repo = RequestRepository(db_session)
+    vendor_repo = VendorRepository(db_session)
+    offer_repo = OfferRepository(db_session)
     
     # Check if request exists and user has access (by request_id string)
     request = request_repo.get_by_request_id(request_id)
@@ -50,7 +54,55 @@ def get_negotiations_for_request(
     # Get all negotiations for the request using the integer ID
     negotiations = neg_repo.get_by_request(request.id)
     
-    return negotiations
+    # Enrich with vendor data and messages
+    enriched = []
+    for neg in negotiations:
+        # Get vendor name with fallback
+        vendor_name = f"Vendor {neg.vendor_id}"
+        try:
+            vendor = vendor_repo.get_by_id(neg.vendor_id)
+            if vendor:
+                vendor_name = vendor.name
+        except Exception as e:
+            print(f"Error fetching vendor {neg.vendor_id}: {e}")
+        
+        # Get offers for this session (messages)
+        offers = []
+        try:
+            offers = offer_repo.get_by_negotiation_session(neg.id)
+        except Exception as e:
+            print(f"Error fetching offers for session {neg.id}: {e}")
+        
+        # Calculate current metrics
+        current_price = offers[-1].unit_price if offers else None
+        total_cost = (current_price * request.quantity if current_price and request.quantity else None)
+        
+        # Build response using NegotiationResponse schema
+        from ..schemas import NegotiationResponse
+        neg_response = NegotiationResponse(
+            id=neg.id,
+            session_id=neg.session_id,
+            request_id=neg.request_id,
+            vendor_id=neg.vendor_id,
+            status=neg.status,
+            current_round=neg.current_round,
+            max_rounds=neg.max_rounds,
+            outcome=neg.outcome,
+            outcome_reason=neg.outcome_reason,
+            started_at=neg.started_at,
+            completed_at=neg.completed_at,
+            total_messages=neg.total_messages,
+            savings_achieved=neg.savings_achieved,
+            vendor_name=vendor_name,
+            current_price=current_price,
+            total_cost=total_cost,
+            utility_score=offers[-1].score if offers else None,
+            rounds_completed=neg.current_round,
+            messages=[],  # Will be populated by WebSocket events
+        )
+        enriched.append(neg_response)
+    
+    return enriched
 
 
 @router.get(

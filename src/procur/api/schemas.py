@@ -198,6 +198,14 @@ class NegotiationResponse(BaseModel):
     total_messages: int
     savings_achieved: Optional[float]
     
+    # Additional fields for frontend
+    vendor_name: Optional[str] = None
+    current_price: Optional[float] = None
+    total_cost: Optional[float] = None
+    utility_score: Optional[float] = None
+    rounds_completed: Optional[int] = None
+    messages: List[Dict[str, Any]] = Field(default_factory=list)
+    
     model_config = {"from_attributes": True}
 
 
