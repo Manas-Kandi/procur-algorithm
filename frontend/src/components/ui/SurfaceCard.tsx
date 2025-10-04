@@ -11,17 +11,16 @@ export function SurfaceCard({ title, actions, children, ...rest }: SurfaceCardPr
   return (
     <Box
       borderWidth="1px"
-      borderColor="gray.200"
-      bg="white"
+      borderColor="border"
+      bg="bg.panel"
       rounded="lg"
-      _dark={{ bg: '#0F0F0F', borderColor: '#262626' }}
       shadow="sm"
       {...rest}
     >
       {(title || actions) && (
-        <Flex align="center" justify="space-between" px={4} py={3} borderBottomWidth="1px" borderColor="gray.200" _dark={{ borderColor: '#262626' }}>
+        <Flex align="center" justify="space-between" px={4} py={3} borderBottomWidth="1px" borderColor="border">
           {title && (
-            <Heading as="h3" size="sm" color="gray.900" _dark={{ color: '#FAFAFA' }}>
+            <Heading as="h3" size="sm" color="fg">
               {title}
             </Heading>
           )}
@@ -36,3 +35,4 @@ export function SurfaceCard({ title, actions, children, ...rest }: SurfaceCardPr
 }
 
 export default SurfaceCard
+

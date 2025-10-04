@@ -1,17 +1,20 @@
 import { ReactNode } from 'react'
-import { ChakraProvider, defaultSystem } from '@chakra-ui/react'
+import { ChakraProvider } from '@chakra-ui/react'
 import { ThemeProvider as LegacyTokensProvider } from '../../ui/theme/ThemeProvider'
-import { ColorModeProvider } from '@/components/ui/color-mode'
+import { ColorModeProvider, DarkMode } from '@/components/ui/color-mode'
+import { system } from './chakra-system'
 
 export function Provider({ children }: { children: ReactNode }) {
   return (
-    <ColorModeProvider defaultTheme="dark">
-      <ChakraProvider value={defaultSystem}>
+    <ChakraProvider value={system}>
+      <ColorModeProvider defaultTheme="dark">
         {/* Keep legacy CSS variables available while migrating components to Chakra */}
         <LegacyTokensProvider>
-          {children}
+          <DarkMode>
+            {children}
+          </DarkMode>
         </LegacyTokensProvider>
-      </ChakraProvider>
-    </ColorModeProvider>
+      </ColorModeProvider>
+    </ChakraProvider>
   )
 }

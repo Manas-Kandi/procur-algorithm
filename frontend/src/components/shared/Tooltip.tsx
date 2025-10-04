@@ -13,16 +13,11 @@ export function Tooltip({ content, children, className }: TooltipProps) {
       content={content}
       positioning={{ placement: 'right' }}
       contentProps={{
-        bg: 'gray.800',
-        color: 'gray.100',
+        bg: 'bg.panel',
+        color: 'fg',
         borderWidth: '1px',
-        borderColor: 'gray.700',
-        borderRadius: '0',
-        _dark: {
-          bg: '#1A1A1A',
-          color: '#FAFAFA',
-          borderColor: '#333333',
-        },
+        borderColor: 'border',
+        borderRadius: 'md',
       }}
     >
       <span className={className}>{children}</span>

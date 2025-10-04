@@ -29,14 +29,14 @@ export function NegotiationStoryboard({
     expanded || messages.length <= 3 ? messages : messages.slice(-3)
   const hasMore = messages.length > 3
 
-  // Resolve color tokens once per render (hooks must not run inside loops)
-  const bubbleAgentBg = 'gray.100'
-  const bubbleVendorBg = 'gray.200'
-  const avatarAgentBg = 'gray.300'
-  const avatarVendorBg = 'gray.300'
-  const textPrimary = 'gray.800'
-  const textSecondary = 'gray.600'
-  const avatarText = 'gray.900'
+  // Use Chakra v3 semantic tokens
+  const bubbleAgentBg = 'bg.subtle'
+  const bubbleVendorBg = 'bg.subtle'
+  const avatarAgentBg = 'bg.subtle'
+  const avatarVendorBg = 'bg.subtle'
+  const textPrimary = 'fg'
+  const textSecondary = 'fg.muted'
+  const avatarText = 'fg'
 
   return (
     <VStack gap={3} align="stretch">
@@ -56,7 +56,6 @@ export function NegotiationStoryboard({
                 rounded="full"
                 bg={avatarBg}
                 color={avatarText}
-                _dark={{ bg: '#333333', color: '#FAFAFA' }}
               >
                 <Icon as={Bot} boxSize={3.5} />
               </Flex>
@@ -68,19 +67,18 @@ export function NegotiationStoryboard({
               px={4}
               py={2.5}
               bg={bubbleBg}
-              _dark={{ bg: '#1A1A1A' }}
             >
               <Flex align="baseline" gap={2}>
-                <Text fontSize="xs" fontWeight="semibold" color={textPrimary} _dark={{ color: '#FAFAFA' }}>
+                <Text fontSize="xs" fontWeight="semibold" color={textPrimary}>
                   {isAgent ? 'Agent' : vendorName}
                 </Text>
                 {message.timestamp && (
-                  <Text fontSize="xs" color={textSecondary} _dark={{ color: '#A1A1AA' }}>
+                  <Text fontSize="xs" color={textSecondary}>
                     {message.timestamp}
                   </Text>
                 )}
               </Flex>
-              <Text mt={1} fontSize="sm" color={textPrimary} _dark={{ color: '#FAFAFA' }}>
+              <Text mt={1} fontSize="sm" color={textPrimary}>
                 {message.content}
               </Text>
             </Box>
@@ -95,7 +93,6 @@ export function NegotiationStoryboard({
                 rounded="full"
                 bg={avatarBg}
                 color={avatarText}
-                _dark={{ bg: '#333333', color: '#FAFAFA' }}
               >
                 <Icon as={Building2} boxSize={3.5} />
               </Flex>
@@ -109,8 +106,8 @@ export function NegotiationStoryboard({
           <Button
             size="xs"
             variant="plain"
+            colorPalette="gray"
             color={textSecondary}
-            _dark={{ color: 'gray.400' }}
             _hover={{ textDecoration: 'underline' }}
             onClick={() => setExpanded((v) => !v)}
           >

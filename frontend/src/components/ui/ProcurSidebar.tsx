@@ -31,16 +31,15 @@ export function ProcurSidebar({
       h="100vh"
       flexShrink={0}
       borderRightWidth="1px"
-      borderColor="gray.200"
+      borderColor="border"
       transition="width 0.3s ease-in-out"
       w={open ? '16rem' : '4rem'}
-      bg="white"
-      _dark={{ borderColor: '#262626', bg: '#0F0F0F' }}
+      bg="bg.panel"
     >
       {/* Title / Brand */}
       <Flex align="center" justify="space-between" gap={2} px={2} py={3}>
         <Box minW={0}>
-          <Text fontSize="sm" fontWeight="semibold" color="gray.600" _dark={{ color: 'gray.400' }}>
+          <Text fontSize="sm" fontWeight="semibold" color="fg.muted">
             {open ? 'Procur' : 'P.'}
           </Text>
         </Box>
@@ -56,22 +55,10 @@ export function ProcurSidebar({
               onClick={() => onSelect?.(key)}
               justifyContent="flex-start"
               variant={selected ? 'solid' : 'ghost'}
-              colorScheme={selected ? 'gray' : undefined}
+              colorPalette={selected ? 'gray' : undefined}
               h="44px"
               pl={3}
-              // Default text/icon color: light gray. Selected: white on dark bg.
-              color={selected ? 'white' : 'gray.600'}
-              _dark={{ color: selected ? 'white' : 'gray.400' }}
-              // Ensure selected state has a clear background and doesn't disappear on hover
-              bg={selected ? 'gray.700' : 'transparent'}
-              _hover={{
-                bg: selected ? 'gray.700' : 'gray.100',
-                _dark: { bg: selected ? 'gray.700' : 'whiteAlpha.100' },
-              }}
-              _active={{
-                bg: selected ? 'gray.700' : 'gray.200',
-                _dark: { bg: selected ? 'gray.700' : 'whiteAlpha.200' },
-              }}
+              color={selected ? 'bg.inverted' : 'fg.muted'}
             >
               <Icon as={LIcon} boxSize={4} mr={open ? 2 : 0} />
               {open ? label : ''}
@@ -87,10 +74,10 @@ export function ProcurSidebar({
           variant="ghost"
           onClick={onToggle}
         >
-          <Icon as={ChevronsRight} boxSize={4} transform={open ? 'rotate(180deg)' : undefined} transition="transform 0.3s" color="gray.500" _dark={{ color: 'gray.400' }} />
+          <Icon as={ChevronsRight} boxSize={4} transform={open ? 'rotate(180deg)' : undefined} transition="transform 0.3s" color="fg.muted" />
         </IconButton>
         {open && (
-          <Text fontSize="sm" color="gray.500" _dark={{ color: 'gray.400' }} ml={2}>
+          <Text fontSize="sm" color="fg.muted" ml={2}>
             Hide
           </Text>
         )}
@@ -98,3 +85,4 @@ export function ProcurSidebar({
     </Box>
   )
 }
+

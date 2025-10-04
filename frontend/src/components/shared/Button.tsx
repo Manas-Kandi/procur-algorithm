@@ -18,11 +18,11 @@ export function Button({
   loading = false,
   ...props
 }: ButtonProps) {
-  const colorScheme =
+  const colorPalette =
     variant === 'primary'
-      ? 'primary'
+      ? 'blue'
       : variant === 'secondary'
-        ? 'secondary'
+        ? 'gray'
         : variant === 'danger'
           ? 'red'
           : undefined
@@ -32,7 +32,7 @@ export function Button({
 
   return (
     <ChakraButton
-      colorScheme={colorScheme}
+      colorPalette={colorPalette as any}
       variant={chakraVariant}
       size={chakraSize}
       width={fullWidth ? '100%' : undefined}
@@ -43,3 +43,4 @@ export function Button({
     </ChakraButton>
   )
 }
+

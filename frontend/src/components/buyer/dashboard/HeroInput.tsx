@@ -30,14 +30,12 @@ export function HeroInput({ onSubmit }: HeroInputProps) {
         <HStack
           gap={3}
           borderWidth="1px"
-          borderColor="gray.200"
-          bg="white"
+          borderColor="border"
+          bg="bg.panel"
           p={2}
           rounded="0"
-          _dark={{ borderColor: '#262626', bg: '#0F0F0F' }}
           _focusWithin={{
-            borderColor: 'primary.500',
-            boxShadow: { base: '0 0 0 2px rgba(37, 99, 235, 0.35)', _dark: '0 0 0 2px rgba(59, 130, 246, 0.35)' },
+            borderColor: 'blue.focusRing',
           }}
         >
           <Input
@@ -49,9 +47,8 @@ export function HeroInput({ onSubmit }: HeroInputProps) {
             py={2}
             fontSize="md"
             border="none"
-            color="gray.900"
-            _dark={{ color: '#FAFAFA' }}
-            _placeholder={{ color: 'gray.500', _dark: { color: '#71717A' } }}
+            color="fg"
+            _placeholder={{ color: 'fg.muted' }}
             _focus={{ border: 'none', boxShadow: 'none' }}
           />
           <Button
@@ -69,3 +66,4 @@ export function HeroInput({ onSubmit }: HeroInputProps) {
     </Box>
   )
 }
+

@@ -99,7 +99,7 @@ export function BuyerDashboard(): JSX.Element {
     <Box maxW="1180px" mx="auto" px={{ base: 4, sm: 6 }} py={0}>
       {/* Heading */}
       <Box mb={8}>
-        <Heading as="h1" size="xl" fontWeight="thin" color="gray.100" _dark={{ color: '#FAFAFA' }}>
+        <Heading as="h1" size="xl" fontWeight="thin" color="fg">
           Dashboard
         </Heading>
       </Box>
@@ -111,21 +111,21 @@ export function BuyerDashboard(): JSX.Element {
       <Box my={6}>
         {isLoading && (
           <Box display="flex" alignItems="center" justifyContent="center" py={10}>
-            <Spinner color="gray.700" _dark={{ color: '#A1A1AA' }} />
-            <Text ml={3} color="gray.600" _dark={{ color: '#A1A1AA' }}>
+            <Spinner color="fg.muted" />
+            <Text ml={3} color="fg.muted">
               Loading dashboard...
             </Text>
           </Box>
         )}
         {!isLoading && loadError && (
-          <Box display="flex" gap={3} alignItems="flex-start" bg="gray.50" borderColor="gray.200" borderWidth="1px" p={4} _dark={{ bg: '#0A0A0A', borderColor: '#262626' }}>
-            <Box boxSize={3} mt={1.5} bg="gray.800" _dark={{ bg: '#A1A1AA' }} borderRadius="full" aria-hidden="true" />
+          <Box display="flex" gap={3} alignItems="flex-start" bg="bg.subtle" borderColor="border" borderWidth="1px" p={4}>
+            <Box boxSize={3} mt={1.5} bg="fg.muted" borderRadius="full" aria-hidden="true" />
             <Box>
-              <Text fontWeight="semibold" color="gray.900" _dark={{ color: '#FAFAFA' }}>Failed to load dashboard</Text>
-              <Text mt={1} fontSize="sm" color="gray.600" _dark={{ color: '#A1A1AA' }}>
+              <Text fontWeight="semibold" color="fg">Failed to load dashboard</Text>
+              <Text mt={1} fontSize="sm" color="fg.muted">
                 {loadError.message || 'Unable to connect to the backend. Please ensure the API server is running.'}
               </Text>
-              <CButton mt={3} size="sm" onClick={() => window.location.reload()} variant="outline" colorScheme="gray">
+              <CButton mt={3} size="sm" onClick={() => window.location.reload()} variant="outline" colorPalette="gray">
                 Retry
               </CButton>
             </Box>
@@ -138,7 +138,7 @@ export function BuyerDashboard(): JSX.Element {
         <>
           {/* Overview */}
           <Box my={6}>
-            <Heading as="h2" size="sm" color="gray.100" _dark={{ color: '#FAFAFA' }} mb={3}>
+            <Heading as="h2" size="sm" color="fg" mb={3}>
               Overview
             </Heading>
             <SimpleGrid columns={{ base: 1, sm: 3 }} gap={6}>
@@ -158,8 +158,8 @@ export function BuyerDashboard(): JSX.Element {
             )}
             my={6}
           >
-            <Box borderWidth="1px" borderColor="gray.200" bg="white" _dark={{ bg: '#0F0F0F', borderColor: '#262626' }}>
-              <Box display="grid" gridTemplateColumns="5fr 3fr 2fr 2fr" borderBottomWidth="1px" borderColor="gray.200" px={3} py={2} fontSize="xs" color="gray.600" _dark={{ borderColor: '#262626', color: '#A1A1AA' }}>
+            <Box borderWidth="1px" borderColor="border" bg="bg.panel">
+              <Box display="grid" gridTemplateColumns="5fr 3fr 2fr 2fr" borderBottomWidth="1px" borderColor="border" px={3} py={2} fontSize="xs" color="fg.muted">
                 <Box>Name</Box>
                 <Box>Stage</Box>
                 <Box>Budget</Box>
@@ -180,12 +180,12 @@ export function BuyerDashboard(): JSX.Element {
                       textAlign="left"
                       px={3}
                       py={2}
-                      _hover={{ bg: 'gray.50', _dark: { bg: '#1A1A1A' } }}
+                      _hover={{ bg: 'bg.subtle' }}
                     >
-                      <Text truncate fontSize="sm" color="gray.900" _dark={{ color: '#FAFAFA' }}>{r.description}</Text>
-                      <Text fontSize="xs" color="gray.600" _dark={{ color: '#A1A1AA' }}>{r.status}</Text>
-                      <Text fontSize="xs" color="gray.600" _dark={{ color: '#A1A1AA' }}>{r.budget_max ? `$${r.budget_max.toLocaleString()}` : '—'}</Text>
-                      <Text fontSize="xs" color="gray.600" _dark={{ color: '#A1A1AA' }} textAlign="right">
+                      <Text truncate fontSize="sm" color="fg">{r.description}</Text>
+                      <Text fontSize="xs" color="fg.muted">{r.status}</Text>
+                      <Text fontSize="xs" color="fg.muted">{r.budget_max ? `$${r.budget_max.toLocaleString()}` : '—'}</Text>
+                      <Text fontSize="xs" color="fg.muted" textAlign="right">
                         {formatDistanceToNow(new Date(r.updated_at ?? r.created_at ?? Date.now()), { addSuffix: true })}
                       </Text>
                     </Box>

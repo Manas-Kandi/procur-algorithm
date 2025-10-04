@@ -4,6 +4,7 @@ import { X } from 'lucide-react'
 import { Navigation } from './Navigation'
 import { ProcurSidebar } from '../../components/ui/ProcurSidebar'
 // import { RoleBadge } from '../../ui/components/RoleBadge'
+import { Box, Flex } from '@chakra-ui/react'
 
 export function AppLayout({ children }: PropsWithChildren): JSX.Element {
   const navigate = useNavigate()
@@ -21,10 +22,10 @@ export function AppLayout({ children }: PropsWithChildren): JSX.Element {
   const isDashboard = selectedKey === 'dashboard'
 
   return (
-    <div className="min-h-screen bg-[var(--core-color-surface-background)] text-[var(--core-color-text-primary)]">
-      <div className="flex min-h-screen">
+    <Box minH="100vh" bg="bg" color="fg">
+      <Flex minH="100vh">
         {/* Desktop sidebar (Procur variant) */}
-        <div className="hidden lg:block">
+        <Box display={{ base: 'none', lg: 'block' }}>
           <ProcurSidebar
             open={sidebarOpen}
             onToggle={() => {
@@ -37,7 +38,7 @@ export function AppLayout({ children }: PropsWithChildren): JSX.Element {
               else if (key === 'portfolio') void navigate('/portfolio')
             }}
           />
-        </div>
+        </Box>
 
         {/* Mobile navigation */}
         {mobileNavOpen && (
@@ -76,14 +77,15 @@ export function AppLayout({ children }: PropsWithChildren): JSX.Element {
           </div>
         )}
 
-        <div className="flex w-full flex-col">
-          <main className={`flex-1 overflow-y-auto ${isDashboard ? 'bg-[#0A0A0A]' : ''}`}>
-            <div className="mx-auto w-full max-w-[1320px] px-4 py-6 sm:px-6 lg:px-8">
+        <Flex w="full" direction="column">
+          <Box as="main" flex="1" overflowY="auto" bg={isDashboard ? 'bg' : undefined}>
+            <Box mx="auto" w="full" maxW="1320px" px={{ base: 4, sm: 6, lg: 8 }} py={6}>
               {children}
-            </div>
-          </main>
-        </div>
-      </div>
-    </div>
+            </Box>
+          </Box>
+        </Flex>
+      </Flex>
+    </Box>
   )
 }
+

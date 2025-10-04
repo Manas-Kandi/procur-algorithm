@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { MessageSquare, MoreHorizontal } from 'lucide-react'
-import { Box, Flex, Text, Button, Icon, IconButton } from '@chakra-ui/react'
+import { Box, Flex, Text, Icon } from '@chakra-ui/react'
 
 type StageKey =
   | 'draft'
@@ -50,8 +50,7 @@ export function ProgressTrackerCard({
     return STAGE_CONFIG[stage] ?? { label: 'In progress' }
   }, [stage])
 
-  const borderLight = isActive ? 'teal.400' : 'gray.200'
-  const borderDark = isActive ? 'teal.300' : '#262626'
+  const borderColor = isActive ? 'teal.solid' : 'border'
 
   return (
     <Box
@@ -61,11 +60,10 @@ export function ProgressTrackerCard({
       textAlign="left"
       p={4}
       borderWidth="1px"
-      borderColor={borderLight}
-      bg="white"
+      borderColor={borderColor}
+      bg="bg.panel"
       transition="transform 0.2s ease"
       _hover={{ transform: 'translateY(-2px)' }}
-      _dark={{ bg: '#0F0F0F', borderColor: borderDark }}
     >
       <Flex align="start" gap={3}>
         {/* Vendor avatar */}
@@ -78,12 +76,11 @@ export function ProgressTrackerCard({
           alignItems="center"
           justifyContent="center"
           borderWidth="1px"
-          borderColor="gray.200"
-          bg="white"
+          borderColor="border"
+          bg="bg.panel"
           fontSize="xs"
           fontWeight="semibold"
-          color="gray.900"
-          _dark={{ borderColor: '#262626', bg: '#111', color: '#FAFAFA' }}
+          color="fg"
         >
           {(vendor ?? title).charAt(0).toUpperCase()}
         </Box>
@@ -92,11 +89,11 @@ export function ProgressTrackerCard({
         <Box minW={0} flex={1}>
           <Flex align="start" justify="space-between" gap={2}>
             <Box minW={0} flex={1}>
-              <Text as="h3" truncate fontSize="sm" fontWeight="semibold" color="gray.900" _dark={{ color: '#FAFAFA' }}>
+              <Text as="h3" truncate fontSize="sm" fontWeight="semibold" color="fg">
                 {title}
               </Text>
               {vendor && (
-                <Text mt={0.5} fontSize="xs" color="gray.600" _dark={{ color: '#A1A1AA' }}>
+                <Text mt={0.5} fontSize="xs" color="fg.muted">
                   {vendor}
                 </Text>
               )}
@@ -110,14 +107,13 @@ export function ProgressTrackerCard({
               display="inline-flex"
               alignItems="center"
               borderWidth="1px"
-              borderColor="gray.200"
-              bg="white"
+              borderColor="border"
+              bg="bg.panel"
               px={2}
               py={0.5}
               fontSize="xs"
               fontWeight="medium"
-              color="gray.700"
-              _dark={{ borderColor: '#262626', bg: '#111', color: '#A1A1AA' }}
+              color="fg.muted"
             >
               {nextAction ?? config.label}
             </Box>
@@ -134,9 +130,8 @@ export function ProgressTrackerCard({
                   h="8px"
                   w="8px"
                   borderWidth={reached ? 0 : '1px'}
-                  borderColor="gray.300"
-                  bg={reached ? 'teal.400' : 'transparent'}
-                  _dark={{ borderColor: '#262626', bg: reached ? 'teal.300' : 'transparent' }}
+                  borderColor="border"
+                  bg={reached ? 'teal.solid' : 'transparent'}
                 />
               )
             })}
@@ -144,7 +139,7 @@ export function ProgressTrackerCard({
 
           {/* Negotiation preview (subtle bubble) */}
           {preview && (
-            <Box mt={2} display="inline-flex" maxW="full" alignItems="center" bg="gray.50" px={2} py={1} fontSize="xs" color="gray.700" _dark={{ bg: 'whiteAlpha.100', color: '#A1A1AA' }}>
+            <Box mt={2} display="inline-flex" maxW="full" alignItems="center" bg="bg.subtle" px={2} py={1} fontSize="xs" color="fg.muted">
               <Text truncate>{preview}</Text>
             </Box>
           )}
@@ -162,10 +157,9 @@ export function ProgressTrackerCard({
           fontSize="sm"
           fontWeight="medium"
           borderWidth="1px"
-          borderColor="teal.400"
-          color="gray.900"
-          _hover={{ bg: 'teal.50' }}
-          _dark={{ color: '#FAFAFA', borderColor: 'teal.300', _hover: { bg: 'whiteAlpha.100' } }}
+          borderColor="teal.solid"
+          color="fg"
+          _hover={{ bg: 'teal.subtle' }}
         >
           <Icon as={MessageSquare} boxSize={3.5} mr={2} />
           Open negotiation
@@ -176,9 +170,8 @@ export function ProgressTrackerCard({
           alignItems="center"
           justifyContent="center"
           p={1.5}
-          color="gray.600"
-          _hover={{ bg: 'gray.100' }}
-          _dark={{ color: '#A1A1AA', _hover: { bg: 'whiteAlpha.100' } }}
+          color="fg.muted"
+          _hover={{ bg: 'bg.subtle' }}
           onClick={(e) => {
             e.stopPropagation()
             // Handle more options menu here
