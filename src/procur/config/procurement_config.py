@@ -41,6 +41,16 @@ class ProcurementConfig:
     seed_catalog_path: str = "assets/seeds.json"
     enable_live_enrichment: bool = False
 
+    def get_seed_catalog_path(self) -> "Path":
+        """Get absolute path to seed catalog."""
+        from pathlib import Path
+        if Path(self.seed_catalog_path).is_absolute():
+            return Path(self.seed_catalog_path)
+        # __file__ is in src/procur/config/procurement_config.py
+        # Need to go up 4 levels: procurement_config.py -> config -> procur -> src -> project_root
+        project_root = Path(__file__).parent.parent.parent.parent
+        return project_root / self.seed_catalog_path
+
     # Reporting & UX controls
     analytics_enabled: bool = True
     timezone: str = "UTC"

@@ -1,5 +1,6 @@
 import { useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
+import { Box, Heading, SimpleGrid, Text, VStack } from '@chakra-ui/react'
 import { api } from '../../services/api'
 import { OfferCard } from '../../components/buyer/negotiation/OfferCard'
 import { NegotiationFeed } from '../../components/buyer/negotiation/NegotiationFeed'
@@ -21,24 +22,26 @@ export function NegotiationTheater(): JSX.Element {
 
   if (isLoading) {
     return (
-      <div className="py-12 text-center text-sm text-[var(--core-color-text-muted)]">
-        Loading negotiation insights…
-      </div>
+      <Box py={12} textAlign="center">
+        <Text fontSize="sm" color="var(--core-color-text-muted)">
+          Loading negotiation insights…
+        </Text>
+      </Box>
     )
   }
 
   if (!sessions || sessions.length === 0) {
     return (
-      <div className="space-y-6">
-        <h1 className="text-2xl font-bold text-[var(--core-color-text-primary)]">
+      <VStack gap={6} align="stretch">
+        <Heading size="lg" color="var(--core-color-text-primary)">
           Negotiation theater
-        </h1>
+        </Heading>
         <SmartAlert
           severity="info"
           title="No negotiations in progress"
           message="Launch AI sourcing to start negotiating with vendors."
         />
-      </div>
+      </VStack>
     )
   }
 
@@ -54,27 +57,30 @@ export function NegotiationTheater(): JSX.Element {
   }
 
   return (
-    <div className="space-y-8">
-      <header className="space-y-1">
-        <h1 className="text-2xl font-bold text-[var(--core-color-text-primary)]">
+    <VStack gap={10} align="stretch">
+      {/* Page header */}
+      <Box>
+        <Heading size="lg" color="var(--core-color-text-primary)">
           Negotiation theater
-        </h1>
-        <p className="text-sm text-[var(--core-color-text-muted)]">
-          Watch your agent orchestrate offers in real-time. Intervene when
-          needed.
-        </p>
-      </header>
+        </Heading>
+        <Text mt={1} fontSize="sm" color="var(--core-color-text-muted)">
+          Watch your agent orchestrate offers in real-time. Intervene when needed.
+        </Text>
+      </Box>
 
-      <section className="space-y-4">
-        <div>
-          <h2 className="text-lg font-semibold text-[var(--core-color-text-primary)]">
+      <Box as="hr" borderTopWidth="1px" borderColor="var(--core-color-border-default)" />
+
+      {/* Current best offers */}
+      <VStack gap={4} align="stretch">
+        <Box>
+          <Heading size="md" color="var(--core-color-text-primary)">
             Current best offers
-          </h2>
-          <p className="text-sm text-[var(--core-color-text-muted)]">
+          </Heading>
+          <Text mt={1} fontSize="sm" color="var(--core-color-text-muted)">
             AI ranks offers based on budget fit, feature coverage, and risk.
-          </p>
-        </div>
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+          </Text>
+        </Box>
+        <SimpleGrid columns={{ base: 1, md: 2, xl: 3 }} gap={4}>
           {topSessions.map((session, index) => (
             <OfferCard
               key={session.session_id}
@@ -83,39 +89,50 @@ export function NegotiationTheater(): JSX.Element {
               status={getStatus(index)}
             />
           ))}
-        </div>
-      </section>
+        </SimpleGrid>
+      </VStack>
 
-      <section className="space-y-4">
-        <div>
-          <h2 className="text-lg font-semibold text-[var(--core-color-text-primary)]">
+      <Box as="hr" borderTopWidth="1px" borderColor="var(--core-color-border-default)" />
+
+      {/* Live negotiation feed */}
+      <VStack gap={4} align="stretch">
+        <Box>
+          <Heading size="md" color="var(--core-color-text-primary)">
             Live negotiation feed
-          </h2>
-          <p className="text-sm text-[var(--core-color-text-muted)]">
+          </Heading>
+          <Text mt={1} fontSize="sm" color="var(--core-color-text-muted)">
             Reasoning transparency for every move across active vendors.
-          </p>
-        </div>
-        <div className="grid gap-4 lg:grid-cols-2">
+          </Text>
+        </Box>
+        <SimpleGrid columns={{ base: 1, lg: 2 }} gap={4}>
           {activeSessions.map((session: NegotiationSession) => (
             <NegotiationFeed key={session.session_id} session={session} />
           ))}
-        </div>
-      </section>
+        </SimpleGrid>
+      </VStack>
 
-      <NegotiationControl
-        onAdjustBudget={() => {
-          console.log('adjust budget')
-        }}
-        onAddRequirement={() => {
-          console.log('add requirement')
-        }}
-        onStop={() => {
-          console.log('pause negotiations')
-        }}
-        onAcceptBest={() => {
-          console.log('accept best offer')
-        }}
-      />
-    </div>
+      <Box as="hr" borderTopWidth="1px" borderColor="var(--core-color-border-default)" />
+
+      {/* Control panel */}
+      <VStack gap={3} align="stretch">
+        <Heading size="md" color="var(--core-color-text-primary)">
+          Control panel
+        </Heading>
+        <NegotiationControl
+          onAdjustBudget={() => {
+            console.log('adjust budget')
+          }}
+          onAddRequirement={() => {
+            console.log('add requirement')
+          }}
+          onStop={() => {
+            console.log('pause negotiations')
+          }}
+          onAcceptBest={() => {
+            console.log('accept best offer')
+          }}
+        />
+      </VStack>
+    </VStack>
   )
 }

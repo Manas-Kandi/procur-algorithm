@@ -262,7 +262,11 @@ def _build_messages(
 
 def _build_sessions_for_request(request_id: str) -> List[Dict[str, Any]]:
     # Load seed vendors
-    seed_path = "assets/seeds.json"
+    from pathlib import Path
+    # __file__ is in src/procur/api/routes/demo.py
+    # Need to go up 5 levels: demo.py -> routes -> api -> procur -> src -> project_root
+    project_root = Path(__file__).parent.parent.parent.parent.parent
+    seed_path = project_root / "assets" / "seeds.json"
     vendors = build_vendor_profiles(load_seed_catalog(seed_path))
 
     # Keep it interesting: pick top 3 diverse vendors

@@ -18,6 +18,7 @@ from .routes import (
     dashboard_router,
     health_router,
     negotiations_router,
+    negotiations_auto_router,
     requests_router,
     sourcing_router,
     vendors_router,
@@ -92,6 +93,7 @@ def create_app() -> FastAPI:
     app.include_router(requests_router)
     app.include_router(vendors_router)
     app.include_router(negotiations_router)
+    app.include_router(negotiations_auto_router)
     app.include_router(contracts_router)
     app.include_router(dashboard_router)
     app.include_router(sourcing_router)

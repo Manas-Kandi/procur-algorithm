@@ -22,7 +22,11 @@ from ..services.scoring_service import ScoreWeights
 from ..agents import BuyerAgent, BuyerAgentConfig
 from .prompt_manager import PromptManager
 
-DEFAULT_SEED_PATH = Path("assets/seeds.json")
+# Get absolute path to seed catalog
+# __file__ is in src/procur/cli/buyer_console.py
+# Need to go up 4 levels: buyer_console.py -> cli -> procur -> src -> project_root
+_project_root = Path(__file__).parent.parent.parent.parent
+DEFAULT_SEED_PATH = _project_root / "assets" / "seeds.json"
 
 
 def build_live_pipeline(seeds_path: Path = DEFAULT_SEED_PATH) -> SaaSProcurementPipeline:

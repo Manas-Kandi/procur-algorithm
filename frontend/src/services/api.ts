@@ -218,6 +218,20 @@ class ApiClient {
     return response.data
   }
 
+  async autoNegotiate(sessionId: string, maxRounds: number = 8) {
+    const response = await this.client.post(
+      `/negotiations/${sessionId}/auto-negotiate`,
+      { max_rounds: maxRounds, stream_updates: true }
+    )
+    return response.data
+  }
+
+  createNegotiationWebSocket(sessionId: string): WebSocket {
+    const wsUrl = API_BASE_URL.replace('http', 'ws')
+    const token = localStorage.getItem('auth_token')
+    return new WebSocket(`${wsUrl}/negotiations/ws/${sessionId}?token=${token}`)
+  }
+
   // Contract endpoints
   async getContract(contractId: string): Promise<Contract> {
     const response = await this.client.get(`/contracts/${contractId}`)

@@ -207,6 +207,34 @@ class NegotiationApprove(BaseModel):
     notes: Optional[str] = Field(None, description="Approval notes")
 
 
+class AutoNegotiateRequest(BaseModel):
+    """Request to start auto-negotiation."""
+    max_rounds: int = Field(default=8, ge=1, le=15, description="Maximum negotiation rounds")
+    stream_updates: bool = Field(default=True, description="Stream real-time updates via WebSocket")
+
+
+class NegotiationEventResponse(BaseModel):
+    """Real-time negotiation event."""
+    type: str = Field(..., description="Event type")
+    timestamp: str = Field(..., description="Event timestamp")
+    round_number: Optional[int] = Field(None, description="Current round number")
+    actor: Optional[str] = Field(None, description="Actor (buyer/seller)")
+    offer: Optional[Dict[str, Any]] = Field(None, description="Offer details")
+    strategy: Optional[str] = Field(None, description="Negotiation strategy used")
+    rationale: Optional[List[str]] = Field(None, description="Reasoning for the move")
+    utility: Optional[float] = Field(None, description="Utility score")
+    tco: Optional[float] = Field(None, description="Total cost of ownership")
+
+
+class NegotiationProgressResponse(BaseModel):
+    """Negotiation progress and final outcome."""
+    session_id: str
+    status: str = Field(..., description="Negotiation status")
+    outcome: str = Field(..., description="Final outcome")
+    rounds_completed: int = Field(..., description="Number of rounds completed")
+    final_offer: Optional[Dict[str, Any]] = Field(None, description="Final offer details")
+
+
 # ============================================================================
 # Contract Schemas
 # ============================================================================
