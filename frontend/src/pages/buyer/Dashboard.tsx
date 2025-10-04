@@ -11,7 +11,7 @@ import { Tooltip } from '../../components/shared/Tooltip'
 import { HeroInput } from '../../components/buyer/dashboard/HeroInput'
 import { BreathingNumber } from '../../components/ui/BreathingNumber'
 import { OverviewCards } from '../../components/ui/OverviewCards'
-import { ProgressTrackerCard } from '../../components/buyer/dashboard/ProgressTrackerCard'
+import { ActiveRequestsList } from '../../components/ui/ActiveRequestsList'
 import type { Request, DashboardMetrics } from '../../types'
 import { useAuthStore } from '../../store/auth'
 
@@ -265,37 +265,30 @@ export function BuyerDashboard(): JSX.Element {
             )}
           </Box>
 
-          {/* Active requests */}
+          {/* Active requests - subtle list */}
           <SurfaceCard
-            title={activeCount ? `${Math.min(activeCount, 3)} active requests` : 'No active requests'}
+            title="Active requests"
             actions={(
-              <CButton onClick={() => void navigate('/requests')} size="sm" variant="plain" colorPalette="gray" _hover={{ textDecoration: 'underline' }}>
-                View all
-              </CButton>
+              <Box display="flex" alignItems="center" gap={3}>
+                <Text fontSize="xs" color="fg.muted">{activeCount} active</Text>
+                <CButton onClick={() => void navigate('/requests')} size="sm" variant="plain" colorPalette="gray" _hover={{ textDecoration: 'underline' }}>
+                  View all
+                </CButton>
+              </Box>
             )}
             my={6}
           >
-            <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} gap={6} mt={2}>
-              {topActiveRequests.map((request) => (
-                <ProgressTrackerCard
-                  key={request.request_id}
-                  title={request.description}
-                  vendor={request.type}
-                  stage={request.status as any}
-                  nextAction={
-                    request.status === 'negotiating'
-                      ? 'Negotiating · Round 2'
-                      : request.status === 'approving'
-                        ? 'Awaiting approval'
-                        : undefined
-                  }
-                  preview={request.status === 'negotiating' ? 'Agent offered $930 · vendor counter pending' : undefined}
-                  budget={request.budget_max ? `$${request.budget_max.toLocaleString()}` : undefined}
-                  isActive={request.status === 'negotiating'}
-                  onClick={() => void navigate(`/requests/${request.request_id}/negotiate`)}
-                />
-              ))}
-            </SimpleGrid>
+            <ActiveRequestsList
+              items={topActiveRequests.map((r) => ({
+                id: r.request_id,
+                name: r.description ?? '',
+                status: r.status,
+                budget: r.budget_max ? `$${r.budget_max.toLocaleString()}` : undefined,
+                nextAction: r.status === 'approving' ? 'Awaiting approval' : undefined,
+                preview: r.status === 'negotiating' ? 'Agent offered $930 · vendor counter pending' : undefined,
+              }))}
+              onRowClick={(id) => void navigate(`/requests/${id}/negotiate`)}
+            />
           </SurfaceCard>
         </>
       )}

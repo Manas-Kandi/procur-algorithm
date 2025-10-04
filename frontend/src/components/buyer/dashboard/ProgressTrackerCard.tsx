@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { MessageSquare, MoreHorizontal } from 'lucide-react'
-import { Box, Flex, Text, Icon } from '@chakra-ui/react'
+import { Box, Flex, Text, Icon, ProgressCircle } from '@chakra-ui/react'
 
 type StageKey =
   | 'draft'
@@ -36,6 +36,29 @@ const STAGE_CONFIG: Record<StageKey, { label: string }> = {
   cancelled: { label: 'Cancelled' },
 }
 
+const STAGE_ORDER: StageKey[] = [
+  'draft',
+  'intake',
+  'sourcing',
+  'negotiating',
+  'approving',
+  'contracted',
+  'provisioning',
+  'completed',
+]
+
+const STAGE_PALETTE: Partial<Record<StageKey, 'teal' | 'yellow' | 'gray' | 'green' | 'blue' | 'red'>> = {
+  negotiating: 'teal',
+  approving: 'yellow',
+  sourcing: 'blue',
+  contracted: 'green',
+  provisioning: 'blue',
+  completed: 'green',
+  draft: 'gray',
+  intake: 'gray',
+  cancelled: 'red',
+}
+
 export function ProgressTrackerCard({
   title,
   vendor,
@@ -51,6 +74,9 @@ export function ProgressTrackerCard({
   }, [stage])
 
   const borderColor = isActive ? 'teal.solid' : 'border'
+  const stageIndex = Math.max(0, STAGE_ORDER.indexOf(stage))
+  const percent = Math.round((stageIndex / (STAGE_ORDER.length - 1)) * 100)
+  const palette = STAGE_PALETTE[stage] ?? 'gray'
 
   return (
     <Box
@@ -63,7 +89,7 @@ export function ProgressTrackerCard({
       borderColor={borderColor}
       bg="bg.panel"
       transition="transform 0.2s ease"
-      _hover={{ transform: 'translateY(-2px)' }}
+      _hover={{ transform: 'translateY(-2px)', boxShadow: '300' }}
     >
       <Flex align="start" gap={3}>
         {/* Vendor avatar */}
@@ -98,25 +124,37 @@ export function ProgressTrackerCard({
                 </Text>
               )}
             </Box>
+            {/* Overall stage progress */}
+            <ProgressCircle.Root size="sm" value={percent} colorPalette={palette}>
+              <ProgressCircle.Circle css={{ '--thickness': '2px' }}>
+                <ProgressCircle.Track />
+                <ProgressCircle.Range strokeLinecap="round" />
+              </ProgressCircle.Circle>
+            </ProgressCircle.Root>
           </Flex>
 
           {/* Status badge + summary */}
-          <Flex mt={1} align="center" gap={2}>
+          <Flex mt={2} align="center" gap={2}>
+            {/* Pill badge */}
             <Box
               as="span"
               display="inline-flex"
               alignItems="center"
-              borderWidth="1px"
-              borderColor="border"
-              bg="bg.panel"
-              px={2}
+              px={3}
               py={0.5}
               fontSize="xs"
               fontWeight="medium"
-              color="fg.muted"
+              bg={`${palette}.subtle`}
+              color={`${palette}.fg`}
+              borderWidth="1px"
+              borderColor={`${palette}.emphasized`}
+              borderRadius="full"
             >
-              {nextAction ?? config.label}
+              {stage}
             </Box>
+            {nextAction && (
+              <Text fontSize="xs" color="fg.muted">{nextAction}</Text>
+            )}
           </Flex>
 
           {/* Inline micro-progress squares (3 steps) */}
@@ -131,7 +169,7 @@ export function ProgressTrackerCard({
                   w="8px"
                   borderWidth={reached ? 0 : '1px'}
                   borderColor="border"
-                  bg={reached ? 'teal.solid' : 'transparent'}
+                  bg={reached ? `${palette}.emphasized` : 'transparent'}
                 />
               )
             })}
