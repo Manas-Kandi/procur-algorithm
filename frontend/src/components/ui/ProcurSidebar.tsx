@@ -58,6 +58,7 @@ export function ProcurSidebar({
               variant={selected ? 'solid' : 'ghost'}
               colorScheme={selected ? 'gray' : undefined}
               h="44px"
+              pl={3}
               // Default text/icon color: light gray. Selected: white on dark bg.
               color={selected ? 'white' : 'gray.600'}
               _dark={{ color: selected ? 'white' : 'gray.400' }}
