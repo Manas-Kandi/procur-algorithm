@@ -10,9 +10,9 @@ export const system = createSystem(defaultConfig, {
         mono: { value: 'IBM Plex Mono, SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono, Courier New, monospace' },
       },
       radii: {
-        sm: { value: '6px' },
-        md: { value: '10px' },
-        lg: { value: '16px' },
+        sm: { value: '4px' },
+        md: { value: '8px' },
+        lg: { value: '12px' },
       },
       shadows: {
         100: { value: '0 1px 2px rgba(0,0,0,0.06)' },
@@ -34,6 +34,12 @@ export const system = createSystem(defaultConfig, {
         'blue.focusRing': { value: { base: 'blue.500', _dark: 'blue.400' } },
         'teal.solid': { value: { base: 'teal.500', _dark: 'teal.400' } },
         'teal.subtle': { value: { base: 'teal.50', _dark: '#0B2B2B' } },
+
+        // Brand accents (used subtly across the app)
+        'brand.solid': { value: { base: 'blue.600', _dark: '#2EC4B6' } },
+        'brand.subtle': { value: { base: 'blue.50', _dark: '#0F2324' } },
+        'brand.emphasized': { value: { base: 'blue.300', _dark: '#1E4E6A' } },
+        'brand.fg': { value: { base: 'blue.700', _dark: '#7FE6DE' } },
 
         // Severity palettes for SmartAlert
         'red.subtle': { value: { base: 'red.50', _dark: 'red.900' } },
@@ -58,6 +64,9 @@ export const system = createSystem(defaultConfig, {
           borderColor: { base: 'gray.200', _dark: '#1E2936' },
           borderRadius: 'lg',
           boxShadow: '200',
+          transitionProperty: 'transform, box-shadow',
+          transitionDuration: '150ms',
+          transitionTimingFunction: 'ease',
           _before: {
             content: '""',
             position: 'absolute',
@@ -67,6 +76,10 @@ export const system = createSystem(defaultConfig, {
             bg: { base: 'transparent', _dark: 'linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0))' },
           },
           position: 'relative',
+          _hover: {
+            boxShadow: '300',
+            transform: 'translateY(-1px)',
+          },
         },
       },
     },

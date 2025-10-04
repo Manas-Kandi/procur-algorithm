@@ -6,7 +6,7 @@ interface StatCardProps extends BoxProps {
   accent?: string // Chakra bgGradient value
 }
 
-export function StatCard({ label, value, accent = 'linear(to-br, #0ea5e9, #8b5cf6)', ...rest }: StatCardProps) {
+export function StatCard({ label, value, accent = 'linear(to-r, brand.emphasized, blue.emphasized)', ...rest }: StatCardProps) {
   return (
     <Box
       layerStyle="card"
