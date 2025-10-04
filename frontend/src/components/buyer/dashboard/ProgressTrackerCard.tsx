@@ -153,10 +153,15 @@ export function ProgressTrackerCard({
 
       {/* Single primary CTA + overflow */}
       <Flex mt={3} align="center" justify="space-between">
-        <Button
-          onClick={onClick}
-          size="sm"
-          variant="outline"
+        <Box
+          as="span"
+          display="inline-flex"
+          alignItems="center"
+          px={3}
+          py={1.5}
+          fontSize="sm"
+          fontWeight="medium"
+          borderWidth="1px"
           borderColor="teal.400"
           color="gray.900"
           _hover={{ bg: 'teal.50' }}
@@ -164,10 +169,23 @@ export function ProgressTrackerCard({
         >
           <Icon as={MessageSquare} boxSize={3.5} mr={2} />
           Open negotiation
-        </Button>
-        <IconButton aria-label="More options" size="sm" variant="ghost" color="gray.600" _dark={{ color: '#A1A1AA' }}>
+        </Box>
+        <Box
+          as="span"
+          display="inline-flex"
+          alignItems="center"
+          justifyContent="center"
+          p={1.5}
+          color="gray.600"
+          _hover={{ bg: 'gray.100' }}
+          _dark={{ color: '#A1A1AA', _hover: { bg: 'whiteAlpha.100' } }}
+          onClick={(e) => {
+            e.stopPropagation()
+            // Handle more options menu here
+          }}
+        >
           <Icon as={MoreHorizontal} boxSize={4} />
-        </IconButton>
+        </Box>
       </Flex>
     </Box>
   )

@@ -6,7 +6,7 @@ import { OfferCard } from '../../components/buyer/negotiation/OfferCard'
 import { NegotiationFeedWrapper } from '../../components/buyer/negotiation/NegotiationFeedWrapper'
 import { NegotiationControl } from '../../components/buyer/negotiation/NegotiationControl'
 import { SmartAlert } from '../../components/shared/SmartAlert'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 
 export function NegotiationTheater(): JSX.Element {
   const { requestId } = useParams<{ requestId: string }>()
@@ -21,19 +21,23 @@ export function NegotiationTheater(): JSX.Element {
     enabled: Boolean(requestId),
   })
 
-  // Calculate active sessions (safe to do before early returns since it uses ?? for null safety)
-  const activeSessions = (sessions ?? []).filter(
-    (session) => session.status === 'active'
+  // Memoize active sessions to prevent infinite re-renders
+  const activeSessions = useMemo(
+    () => (sessions ?? []).filter((session) => session.status === 'active'),
+    [sessions]
   )
-  const topSessions = activeSessions.slice(0, 3)
+
+  const topSessions = useMemo(
+    () => activeSessions.slice(0, 3),
+    [activeSessions]
+  )
 
   // Auto-connect to WebSocket for all active sessions
   // This hook must be called BEFORE any conditional returns
   useEffect(() => {
     if (activeSessions.length > 0) {
-      activeSessions.forEach((session) => {
-        setActiveStreams((prev) => new Set(prev).add(session.session_id))
-      })
+      const sessionIds = activeSessions.map((s) => s.session_id)
+      setActiveStreams(new Set(sessionIds))
     }
   }, [activeSessions])
 

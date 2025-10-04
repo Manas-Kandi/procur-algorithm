@@ -77,3 +77,16 @@ class VendorRepository(BaseRepository[VendorProfileRecord]):
         )
         result = self.session.execute(query)
         return list(result.scalars().all())
+    
+    def get_all_active(self) -> list[VendorProfileRecord]:
+        """
+        Get all active (non-deleted) vendors.
+        
+        Returns:
+            List of active vendor profile records
+        """
+        query = select(VendorProfileRecord).where(
+            VendorProfileRecord.deleted_at.is_(None)
+        )
+        result = self.session.execute(query)
+        return list(result.scalars().all())
