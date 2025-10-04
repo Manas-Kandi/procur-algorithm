@@ -268,6 +268,7 @@ export function BuyerDashboard(): JSX.Element {
           {/* Active requests - subtle list */}
           <SurfaceCard
             title="Active requests"
+            stickyHeader
             actions={(
               <Box display="flex" alignItems="center" gap={3}>
                 <Text fontSize="xs" color="fg.muted">{activeCount} active</Text>
