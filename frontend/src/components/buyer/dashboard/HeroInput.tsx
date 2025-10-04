@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useState, type FormEvent, type ChangeEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowRight } from 'lucide-react'
+import { Box, HStack, Input, Button, Icon } from '@chakra-ui/react'
 
 interface HeroInputProps {
   onSubmit?: (description: string) => void
@@ -9,8 +10,9 @@ interface HeroInputProps {
 export function HeroInput({ onSubmit }: HeroInputProps) {
   const navigate = useNavigate()
   const [value, setValue] = useState('')
+  // Static colors with dark-mode overrides handled via _dark props
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     if (value.trim()) {
       if (onSubmit) {
@@ -23,28 +25,45 @@ export function HeroInput({ onSubmit }: HeroInputProps) {
   }
 
   return (
-    <div className="relative">
-      <form onSubmit={handleSubmit} className="relative">
-        <div className="flex items-center gap-3 rounded-[1px] border border-[var(--muted-2)] bg-white/50 p-2 transition-all focus-within:border-[var(--agent-accent)] focus-within:ring-2 focus-within:ring-[var(--agent-accent)]/30">
-          <input
+    <Box>
+      <form onSubmit={handleSubmit}>
+        <HStack
+          gap={3}
+          borderWidth="1px"
+          borderColor="gray.200"
+          bg="white"
+          p={2}
+          rounded="0"
+          _dark={{ borderColor: '#262626', bg: '#0F0F0F' }}
+          _focusWithin={{
+            borderColor: 'primary.500',
+            boxShadow: { base: '0 0 0 2px rgba(37, 99, 235, 0.35)', _dark: '0 0 0 2px rgba(59, 130, 246, 0.35)' },
+          }}
+        >
+          <Input
             type="text"
             value={value}
-            onChange={(e) => {
-              setValue(e.target.value)
-            }}
+            onChange={(e: ChangeEvent<HTMLInputElement>) => setValue(e.target.value)}
             placeholder="Need 200 design seats · Budget $1,000/seat/year · SOC2 required"
-            className="flex-1 bg-transparent py-2 text-base text-[var(--core-color-text-primary)] placeholder:text-[var(--core-color-text-muted)] focus:outline-none"
+            variant="outline"
+            py={2}
+            fontSize="md"
+            border="none"
+            color="gray.900"
+            _dark={{ color: '#FAFAFA' }}
+            _placeholder={{ color: 'gray.500', _dark: { color: '#71717A' } }}
+            _focus={{ border: 'none', boxShadow: 'none' }}
           />
-          <button
+          <Button
             type="submit"
             disabled={!value.trim()}
-            className="flex h-11 items-center gap-2 rounded-[1px] bg-[var(--agent-accent)] px-5 text-sm font-semibold text-white transition-all hover:opacity-95 disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--agent-accent)]/60"
+            colorScheme="primary"
+            height={11}
           >
-            Describe
-            <ArrowRight className="h-4 w-4" />
-          </button>
-        </div>
+            Describe <Icon as={ArrowRight} boxSize={4} ml={2} />
+          </Button>
+        </HStack>
       </form>
-    </div>
+    </Box>
   )
 }

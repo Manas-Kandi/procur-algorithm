@@ -1,5 +1,5 @@
 import { type ReactNode, type HTMLAttributes } from 'react'
-import clsx from 'clsx'
+import { Box } from '@chakra-ui/react'
 
 interface CardProps extends HTMLAttributes<HTMLDivElement> {
   children: ReactNode
@@ -14,23 +14,23 @@ export function Card({
   className,
   ...props
 }: CardProps) {
+  const paddingMap = padding === 'none' ? 0 : padding === 'sm' ? 4 : padding === 'lg' ? 8 : 6
+
   return (
-    <div
-      className={clsx(
-        'bg-surface-raised border border-border-subtle rounded-sm',
-        {
-          'p-0': padding === 'none',
-          'p-4': padding === 'sm',
-          'p-6': padding === 'md',
-          'p-8': padding === 'lg',
-          'hover:border-border-medium transition-all duration-150 cursor-pointer':
-            hover,
-        },
-        className
-      )}
+    <Box
+      bg="white"
+      borderWidth="1px"
+      borderColor="gray.200"
+      rounded="0"
+      p={paddingMap}
+      transition="all 150ms"
+      cursor={hover ? 'pointer' : undefined}
+      _hover={hover ? { borderColor: 'gray.300', _dark: { borderColor: '#333333' } } : undefined}
+      _dark={{ bg: '#0F0F0F', borderColor: '#262626' }}
+      className={className}
       {...props}
     >
       {children}
-    </div>
+    </Box>
   )
 }

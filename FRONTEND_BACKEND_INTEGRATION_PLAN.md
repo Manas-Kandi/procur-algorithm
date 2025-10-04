@@ -18,7 +18,7 @@ This document outlines the comprehensive plan to integrate the Procur frontend w
 ### Test Accounts Available:
 
 **Buyer Accounts:**
-- `buyer@test.com / test123` (Demo Buyer)
+- `buyer@test.com / password123` (Demo Buyer)
 - `admin@acme.com / admin123` (Admin/Superuser)
 
 **Seller Accounts:**
@@ -409,7 +409,7 @@ export interface Contract {
 
 **User Journey:**
 
-1. **Login as Buyer** (`buyer@test.com / test123`)
+1. **Login as Buyer** (`buyer@test.com / password123`)
    - View dashboard with real metrics
    - See upcoming renewals from contracts table
 
@@ -563,7 +563,7 @@ cd frontend
 npm run dev
 
 # Test as buyer
-# Login: buyer@test.com / test123
+# Login: buyer@test.com / password123
 
 # Test as seller
 # Login: seller@apollocrm.com / apollo123
@@ -574,7 +574,7 @@ npm run dev
 ## 📝 Notes
 
 - Database seeding is idempotent - safe to run multiple times
-- All test passwords are simple for development (e.g., "test123", "apollo123")
+- All test passwords are simple for development (e.g., "password123", "apollo123")
 - Seller agents are linked to vendor organizations via `organization_id`
 - Current schema uses string-based organization_id (not foreign key)
 - Demo mode endpoints already exist for rapid prototyping

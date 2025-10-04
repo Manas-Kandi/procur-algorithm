@@ -26,7 +26,7 @@ npm run dev
 ### Buyer Accounts
 | Email | Password | Role | Notes |
 |-------|----------|------|-------|
-| `buyer@test.com` | `test123` | Buyer | Standard demo buyer |
+| `buyer@test.com` | `password123` | Buyer | Standard demo buyer |
 | `admin@acme.com` | `admin123` | Buyer | Superuser with admin privileges |
 
 ### Seller Accounts
@@ -50,7 +50,7 @@ npm run dev
 
 1. **Login as Buyer**
    - Navigate to http://localhost:5173
-   - Login: `buyer@test.com / test123`
+   - Login: `buyer@test.com / password123`
 
 2. **View Dashboard**
    - Check metrics are loading from API
@@ -104,7 +104,7 @@ npm run dev
 **Goal:** View and manage active subscriptions
 
 1. **Navigate to Portfolio**
-   - Login as `buyer@test.com / test123`
+   - Login as `buyer@test.com / password123`
    - Go to Portfolio page
 
 2. **View Subscriptions**
@@ -150,7 +150,7 @@ npm run dev
 # Login as buyer
 curl -X POST http://localhost:8000/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"username": "buyer@test.com", "password": "test123"}'
+  -d '{"username": "buyer@test.com", "password": "password123"}'
 
 # Response: {"access_token": "...", "token_type": "bearer"}
 ```

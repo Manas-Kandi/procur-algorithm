@@ -7,6 +7,9 @@ import type {
   Contract,
   User,
   DashboardMetrics,
+  Subscription,
+  UsageMetrics,
+  PortfolioAction,
 } from '../types'
 
 const API_BASE_URL =
@@ -258,6 +261,29 @@ class ApiClient {
   async getPendingApprovals(): Promise<any[]> {
     const response = await this.client.get('/dashboard/approvals')
     return response.data
+  }
+
+  // Portfolio endpoints
+  async getPortfolioSubscriptions(): Promise<Subscription[]> {
+    const response = await this.client.get('/portfolio/subscriptions')
+    return response.data
+  }
+
+  async getSubscriptionUsage(contractId: string): Promise<UsageMetrics> {
+    const response = await this.client.get(
+      `/portfolio/subscriptions/${contractId}/usage`
+    )
+    return response.data
+  }
+
+  async performPortfolioAction(
+    contractId: string,
+    action: PortfolioAction
+  ): Promise<void> {
+    await this.client.post(
+      `/portfolio/subscriptions/${contractId}/actions`,
+      action
+    )
   }
 }
 

@@ -1,6 +1,6 @@
 import { Bot, Building2 } from 'lucide-react'
-import clsx from 'clsx'
 import { useState } from 'react'
+import { VStack, Flex, Box, Text, Icon, Button } from '@chakra-ui/react'
 
 interface Message {
   id: string
@@ -29,74 +29,95 @@ export function NegotiationStoryboard({
     expanded || messages.length <= 3 ? messages : messages.slice(-3)
   const hasMore = messages.length > 3
 
+  // Resolve color tokens once per render (hooks must not run inside loops)
+  const bubbleAgentBg = 'gray.100'
+  const bubbleVendorBg = 'gray.200'
+  const avatarAgentBg = 'gray.300'
+  const avatarVendorBg = 'gray.300'
+  const textPrimary = 'gray.800'
+  const textSecondary = 'gray.600'
+  const avatarText = 'gray.900'
+
   return (
-    <div className="space-y-3">
+    <VStack gap={3} align="stretch">
       {visible.map((message) => {
         const isAgent = message.sender === 'agent'
+        const bubbleBg = isAgent ? bubbleAgentBg : bubbleVendorBg
+        const avatarBg = isAgent ? avatarAgentBg : avatarVendorBg
         return (
-          <div
-            key={message.id}
-            className={clsx(
-              'flex gap-3',
-              isAgent ? 'justify-start' : 'justify-end'
-            )}
-          >
+          <Flex key={message.id} gap={3} justify={isAgent ? 'flex-start' : 'flex-end'}>
             {isAgent && (
-              <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-[var(--accent-mint)] text-[var(--core-color-text-primary)]">
-                <Bot className="h-3.5 w-3.5" />
-              </div>
+              <Flex
+                h={7}
+                w={7}
+                flexShrink={0}
+                align="center"
+                justify="center"
+                rounded="full"
+                bg={avatarBg}
+                color={avatarText}
+                _dark={{ bg: '#333333', color: '#FAFAFA' }}
+              >
+                <Icon as={Bot} boxSize={3.5} />
+              </Flex>
             )}
 
-            <div
-              className={clsx(
-                'max-w-[75%] rounded-lg px-4 py-2.5',
-                isAgent
-                  ? 'bg-[var(--accent-mint)]/60'
-                  : 'bg-[var(--accent-peach)]/60'
-              )}
+            <Box
+              maxW="75%"
+              rounded="0"
+              px={4}
+              py={2.5}
+              bg={bubbleBg}
+              _dark={{ bg: '#1A1A1A' }}
             >
-              <div className="flex items-baseline gap-2">
-                <span
-                  className={clsx(
-                    'text-xs font-semibold',
-                    'text-[var(--core-color-text-primary)]'
-                  )}
-                >
+              <Flex align="baseline" gap={2}>
+                <Text fontSize="xs" fontWeight="semibold" color={textPrimary} _dark={{ color: '#FAFAFA' }}>
                   {isAgent ? 'Agent' : vendorName}
-                </span>
+                </Text>
                 {message.timestamp && (
-                  <span className="text-xs text-[var(--core-color-text-secondary)]">
+                  <Text fontSize="xs" color={textSecondary} _dark={{ color: '#A1A1AA' }}>
                     {message.timestamp}
-                  </span>
+                  </Text>
                 )}
-              </div>
-              <p className="mt-1 text-sm text-[var(--core-color-text-primary)]">
+              </Flex>
+              <Text mt={1} fontSize="sm" color={textPrimary} _dark={{ color: '#FAFAFA' }}>
                 {message.content}
-              </p>
-            </div>
+              </Text>
+            </Box>
 
             {!isAgent && (
-              <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-[var(--accent-peach)] text-[var(--core-color-text-primary)]">
-                <Building2 className="h-3.5 w-3.5" />
-              </div>
+              <Flex
+                h={7}
+                w={7}
+                flexShrink={0}
+                align="center"
+                justify="center"
+                rounded="full"
+                bg={avatarBg}
+                color={avatarText}
+                _dark={{ bg: '#333333', color: '#FAFAFA' }}
+              >
+                <Icon as={Building2} boxSize={3.5} />
+              </Flex>
             )}
-          </div>
+          </Flex>
         )
       })}
 
       {hasMore && (
-        <div className="pt-1">
-          <button
-            type="button"
-            onClick={() => {
-              setExpanded((v) => !v)
-            }}
-            className="text-xs text-[var(--core-color-text-secondary)] underline-offset-2 hover:underline"
+        <Box pt={1}>
+          <Button
+            size="xs"
+            variant="plain"
+            color={textSecondary}
+            _dark={{ color: 'gray.400' }}
+            _hover={{ textDecoration: 'underline' }}
+            onClick={() => setExpanded((v) => !v)}
           >
             {expanded ? 'Collapse' : `Show full thread (${messages.length})`}
-          </button>
-        </div>
+          </Button>
+        </Box>
       )}
-    </div>
+    </VStack>
   )
 }

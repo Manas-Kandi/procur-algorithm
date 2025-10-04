@@ -1,6 +1,7 @@
 import React from 'react'
 import { Home, FilePlus, Briefcase, ChevronsRight } from 'lucide-react'
-import clsx from 'clsx'
+import { Box, VStack, Button, Icon, IconButton, Flex, Text } from '@chakra-ui/react'
+import { ColorModeButton } from './color-mode'
 
 export interface ProcurSidebarProps {
   open: boolean
@@ -10,9 +11,9 @@ export interface ProcurSidebarProps {
 }
 
 const items = [
-  { key: 'dashboard', label: 'Dashboard', Icon: Home },
-  { key: 'new-request', label: 'New Request', Icon: FilePlus },
-  { key: 'portfolio', label: 'Portfolio', Icon: Briefcase },
+  { key: 'dashboard', label: 'Dashboard', Icon: Home, color: '#60A5FA' }, // blue
+  { key: 'new-request', label: 'New Request', Icon: FilePlus, color: '#34D399' }, // green
+  { key: 'portfolio', label: 'Portfolio', Icon: Briefcase, color: '#A78BFA' }, // purple
 ]
 
 export function ProcurSidebar({
@@ -21,91 +22,78 @@ export function ProcurSidebar({
   onSelect,
   onToggle,
 }: ProcurSidebarProps) {
-  const widthClass = open ? 'w-64' : 'w-16'
 
   return (
-    <aside
-      className={clsx(
-        'sticky top-0 h-screen shrink-0 border-r transition-all duration-300 ease-in-out',
-        widthClass,
-        'border-[var(--muted-2)] bg-[var(--surface)]'
-      )}
+    <Box
+      as="aside"
+      position="sticky"
+      top={0}
+      h="100vh"
+      flexShrink={0}
+      borderRightWidth="1px"
+      borderColor="gray.200"
+      transition="width 0.3s ease-in-out"
+      w={open ? '16rem' : '4rem'}
+      bg="white"
+      _dark={{ borderColor: '#262626', bg: '#0F0F0F' }}
     >
       {/* Title / Brand */}
-      <div className="flex items-center gap-2 px-2 py-3">
-        <div className="min-w-0">
-          <div
-            className={clsx(
-              'text-sm font-semibold',
-              open ? 'text-[var(--text)]' : 'text-[var(--color-text-tertiary)]'
-            )}
-          >
-            Procur
-          </div>
-        </div>
-      </div>
+      <Flex align="center" justify="space-between" gap={2} px={2} py={3}>
+        <Box minW={0}>
+          <Text fontSize="sm" fontWeight="semibold" color="gray.600" _dark={{ color: 'gray.400' }}>
+            {open ? 'Procur' : 'P.'}
+          </Text>
+        </Box>
+        {open && <ColorModeButton size="xs" />}
+      </Flex>
 
-      <div className="px-2">
-        {items.map(({ key, label, Icon }) => {
+      <VStack align="stretch" px={2} gap={1}>
+        {items.map(({ key, label, Icon: LIcon }) => {
           const selected = key === selectedKey
           return (
-            <button
+            <Button
               key={key}
               onClick={() => onSelect?.(key)}
-              className={clsx(
-                'relative my-1 flex h-11 w-full items-center rounded-[12px] text-left transition-colors',
-                selected
-                  ? 'bg-[var(--muted-1)] text-[var(--text)]'
-                  : 'hover:bg-[var(--muted-1)] text-[var(--core-color-text-secondary)]'
-              )}
+              justifyContent="flex-start"
+              variant={selected ? 'solid' : 'ghost'}
+              colorScheme={selected ? 'gray' : undefined}
+              h="44px"
+              // Default text/icon color: light gray. Selected: white on dark bg.
+              color={selected ? 'white' : 'gray.600'}
+              _dark={{ color: selected ? 'white' : 'gray.400' }}
+              // Ensure selected state has a clear background and doesn't disappear on hover
+              bg={selected ? 'gray.700' : 'transparent'}
+              _hover={{
+                bg: selected ? 'gray.700' : 'gray.100',
+                _dark: { bg: selected ? 'gray.700' : 'whiteAlpha.100' },
+              }}
+              _active={{
+                bg: selected ? 'gray.700' : 'gray.200',
+                _dark: { bg: selected ? 'gray.700' : 'whiteAlpha.200' },
+              }}
             >
-              <div className="grid h-full w-12 place-content-center">
-                <Icon
-                  className={clsx(
-                    'h-4 w-4',
-                    selected
-                      ? 'text-[var(--text)]'
-                      : 'text-[var(--core-color-text-secondary)]'
-                  )}
-                />
-              </div>
-              {open && (
-                <span
-                  className={clsx(
-                    'text-sm font-medium',
-                    selected ? 'text-[var(--text)]' : 'text-[var(--text)]'
-                  )}
-                >
-                  {label}
-                </span>
-              )}
-            </button>
+              <Icon as={LIcon} boxSize={4} mr={open ? 2 : 0} />
+              {open ? label : ''}
+            </Button>
           )
         })}
-      </div>
+      </VStack>
 
       {/* Toggle */}
-      <button
-        onClick={onToggle}
-        className="absolute bottom-0 left-0 right-0 px-2 py-2 text-left hover:bg-[var(--muted-1)]"
-        aria-label={open ? 'Collapse sidebar' : 'Expand sidebar'}
-      >
-        <div className="flex items-center">
-          <div className="grid h-10 w-10 place-content-center">
-            <ChevronsRight
-              className={clsx(
-                'h-4 w-4 text-[var(--core-color-text-secondary)] transition-transform duration-300',
-                open && 'rotate-180'
-              )}
-            />
-          </div>
-          {open && (
-            <span className="text-sm text-[var(--core-color-text-secondary)]">
-              Hide
-            </span>
-          )}
-        </div>
-      </button>
-    </aside>
+      <Flex position="absolute" bottom={0} left={0} right={0} px={2} py={2} align="center">
+        <IconButton
+          aria-label={open ? 'Collapse sidebar' : 'Expand sidebar'}
+          variant="ghost"
+          onClick={onToggle}
+        >
+          <Icon as={ChevronsRight} boxSize={4} transform={open ? 'rotate(180deg)' : undefined} transition="transform 0.3s" color="gray.500" _dark={{ color: 'gray.400' }} />
+        </IconButton>
+        {open && (
+          <Text fontSize="sm" color="gray.500" _dark={{ color: 'gray.400' }} ml={2}>
+            Hide
+          </Text>
+        )}
+      </Flex>
+    </Box>
   )
 }

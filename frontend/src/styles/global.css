@@ -3,64 +3,129 @@
 @tailwind utilities;
 
 :root {
-  /* Base Palette */
+  /* Base Palette - Light Mode */
   --color-background-primary: #FAFAFA;
   --color-background-secondary: #F4F4F5;
   --color-background-tertiary: #E4E4E7;
-  
+
   --color-surface-raised: #FFFFFF;
   --color-surface-sunken: #FAFAFA;
-  
+
   --color-border-subtle: #F3F4F6;
   --color-border-medium: #E5E7EB;
   --color-border-strong: #D1D5DB;
-  
+
   /* Text Hierarchy */
   --color-text-primary: #18181B;
   --color-text-secondary: #52525B;
   --color-text-tertiary: #A1A1AA;
   --color-text-disabled: #D4D4D8;
   --color-text-inverse: #FAFAFA;
+}
+
+.dark {
+  /* Base Palette - Dark Mode */
+  --color-background-primary: #000000;
+  --color-background-secondary: #0A0A0A;
+  --color-background-tertiary: #141414;
+
+  --color-surface-raised: #0F0F0F;
+  --color-surface-sunken: #050505;
+
+  --color-border-subtle: #1A1A1A;
+  --color-border-medium: #262626;
+  --color-border-strong: #333333;
+
+  /* Text Hierarchy */
+  --color-text-primary: #FAFAFA;
+  --color-text-secondary: #A1A1AA;
+  --color-text-tertiary: #71717A;
+  --color-text-disabled: #3F3F46;
+  --color-text-inverse: #18181B;
   
-  /* Pastel Minimal Palette (additive) */
+  /* Pastel Minimal Palette */
   --bg: #FBFBFC;
   --surface: #FFFFFF;
   --muted-line: rgba(15,23,42,0.06);
-  --text: #0F1724; /* darker primary text for AA */
-  --accent-mint: #BFEDE0;   /* agent */
-  --accent-peach: #FFE6D0;  /* vendor */
-  --accent-lilac: #EBDCF9;  /* alt */
-  --accent-blue: #DCEFFF;   /* charts */
-  --accent-yellow: #FFF7D6; /* highlight */
+  --text: #0F1724;
+  --accent-mint: #BFEDE0;
+  --accent-peach: #FFE6D0;
+  --accent-lilac: #EBDCF9;
+  --accent-blue: #DCEFFF;
+  --accent-yellow: #FFF7D6;
   --shadow: 0 6px 18px rgba(6,17,28,0.06);
 
   /* New minimal palette tokens */
-  --muted-1: #F3F5F7; /* light panels */
-  --muted-2: #E6E9EE; /* subtle separators */
-  --agent-accent: #25A78F; /* single accent — mint/teal */
+  --muted-1: #F3F5F7;
+  --muted-2: #E6E9EE;
+  --agent-accent: #25A78F;
   --agent-accent-soft: rgba(37,167,143,0.12);
+}
+
+.dark {
+  /* Pastel Minimal Palette - Dark Mode */
+  --bg: #000000;
+  --surface: #0F0F0F;
+  --muted-line: rgba(255,255,255,0.08);
+  --text: #FAFAFA;
+  --accent-mint: #2DD4BF;
+  --accent-peach: #FB923C;
+  --accent-lilac: #C084FC;
+  --accent-blue: #60A5FA;
+  --accent-yellow: #FCD34D;
+  --shadow: 0 6px 18px rgba(0,0,0,0.5);
+
+  /* New minimal palette tokens */
+  --muted-1: #141414;
+  --muted-2: #1A1A1A;
+  --agent-accent: #2DD4BF;
+  --agent-accent-soft: rgba(45,212,191,0.12);
   
-  /* Semantic Colors */
+  /* Semantic Colors - Light Mode */
   --color-brand-primary: #2563EB;
   --color-brand-hover: #1D4ED8;
   --color-brand-active: #1E40AF;
-  
+
   --color-success: #16A34A;
   --color-success-bg: #F0FDF4;
-  
+
   --color-warning: #EA580C;
   --color-warning-bg: #FFF7ED;
-  
+
   --color-danger: #DC2626;
   --color-danger-bg: #FEF2F2;
-  
+
   --color-info: #0891B2;
   --color-info-bg: #ECFEFF;
-  
+
   /* AI/Agent Colors */
   --color-ai-primary: #7C3AED;
   --color-ai-bg: #F5F3FF;
   --color-ai-accent: #A78BFA;
+}
+
+.dark {
+  /* Semantic Colors - Dark Mode */
+  --color-brand-primary: #3B82F6;
+  --color-brand-hover: #2563EB;
+  --color-brand-active: #1D4ED8;
+
+  --color-success: #22C55E;
+  --color-success-bg: #0A2E0F;
+
+  --color-warning: #F97316;
+  --color-warning-bg: #2E1505;
+
+  --color-danger: #EF4444;
+  --color-danger-bg: #2E0A0A;
+
+  --color-info: #06B6D4;
+  --color-info-bg: #052E33;
+
+  /* AI/Agent Colors */
+  --color-ai-primary: #A78BFA;
+  --color-ai-bg: #1E1433;
+  --color-ai-accent: #C4B5FD;
   
   /* Typography */
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;

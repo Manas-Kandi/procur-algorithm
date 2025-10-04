@@ -1,11 +1,12 @@
 import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../../services/api'
 import { Card } from '../../components/shared/Card'
 import { Button } from '../../components/shared/Button'
+import type { Subscription } from '../../types'
 import clsx from 'clsx'
 
-interface Subscription {
+interface PortfolioSubscription {
   id: string
   vendor_name: string
   category: string
@@ -15,6 +16,7 @@ interface Subscription {
   renewal_date: string
   utilization_percent: number
   risk_level: 'low' | 'medium' | 'high'
+  status: string
 }
 
 export function Portfolio() {
@@ -22,47 +24,64 @@ export function Portfolio() {
     'all'
   )
   const [selectedSubs, setSelectedSubs] = useState<string[]>([])
+  const queryClient = useQueryClient()
 
-  // Mock data - replace with actual API call
-  const subscriptions: Subscription[] = [
-    {
-      id: '1',
-      vendor_name: 'Salesforce',
-      category: 'CRM',
-      seats_total: 200,
-      seats_active: 142,
-      monthly_cost: 15000,
-      renewal_date: '2025-12-15',
-      utilization_percent: 71,
-      risk_level: 'medium',
-    },
-    {
-      id: '2',
-      vendor_name: 'Zoom',
-      category: 'Video Conferencing',
-      seats_total: 500,
-      seats_active: 298,
-      monthly_cost: 7500,
-      renewal_date: '2025-11-20',
-      utilization_percent: 60,
-      risk_level: 'high',
-    },
-    {
-      id: '3',
-      vendor_name: 'Slack',
-      category: 'Communication',
-      seats_total: 450,
-      seats_active: 423,
-      monthly_cost: 6750,
-      renewal_date: '2026-02-10',
-      utilization_percent: 94,
-      risk_level: 'low',
-    },
-  ]
+  // Fetch subscriptions from API
+  const {
+    data: apiSubscriptions,
+    isLoading,
+    error,
+  } = useQuery({
+    queryKey: ['portfolio-subscriptions'],
+    queryFn: async () => await api.getPortfolioSubscriptions(),
+  })
 
   const { data: renewals } = useQuery({
     queryKey: ['renewals'],
     queryFn: async () => await api.getUpcomingRenewals(60),
+  })
+
+  // Map API subscriptions to frontend format
+  const subscriptions: PortfolioSubscription[] =
+    apiSubscriptions?.map((sub: Subscription) => ({
+      id: sub.contract_id,
+      vendor_name: sub.vendor_name,
+      category: sub.service_name, // Using service_name as category for now
+      seats_total: sub.seats_licensed,
+      seats_active: sub.seats_active,
+      monthly_cost: sub.cost_per_month,
+      renewal_date: sub.renewal_date,
+      utilization_percent: sub.utilization_percent,
+      risk_level:
+        sub.utilization_percent >= 80
+          ? 'low'
+          : sub.utilization_percent >= 60
+            ? 'medium'
+            : 'high',
+      status: sub.status,
+    })) ?? []
+
+  // Mutation for bulk actions
+  const bulkActionMutation = useMutation({
+    mutationFn: async ({
+      action,
+      contractIds,
+      reason,
+    }: {
+      action: 'flag_renegotiation' | 'request_cancellation'
+      contractIds: string[]
+      reason?: string
+    }) => {
+      await Promise.all(
+        contractIds.map((contractId) =>
+          api.performPortfolioAction(contractId, { action, reason })
+        )
+      )
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['portfolio-subscriptions'] })
+      setSelectedSubs([])
+    },
   })
 
   const filteredSubs = subscriptions.filter((sub) => {
@@ -95,7 +114,65 @@ export function Portfolio() {
     (sum, sub) => sum + sub.seats_active,
     0
   )
-  const avgUtilization = (activeSeats / totalSeats) * 100
+  const avgUtilization = totalSeats > 0 ? (activeSeats / totalSeats) * 100 : 0
+
+  // Bulk action handlers
+  const handleBulkAction = (
+    action: 'flag_renegotiation' | 'request_cancellation'
+  ) => {
+    const reason =
+      action === 'flag_renegotiation'
+        ? 'Flagged for renegotiation via bulk action'
+        : 'Cancellation requested via bulk action'
+
+    bulkActionMutation.mutate({
+      action,
+      contractIds: selectedSubs,
+      reason,
+    })
+  }
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="p-6 space-y-6">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-blue-600 border-r-transparent"></div>
+            <p className="mt-4 text-gray-600">Loading portfolio...</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="p-6 space-y-6">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <p className="text-red-600 font-medium">
+              Failed to load portfolio
+            </p>
+            <p className="mt-2 text-gray-600">
+              {error instanceof Error ? error.message : 'Unknown error'}
+            </p>
+            <Button
+              className="mt-4"
+              onClick={() => {
+                queryClient.invalidateQueries({
+                  queryKey: ['portfolio-subscriptions'],
+                })
+              }}
+            >
+              Retry
+            </Button>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="p-6 space-y-6">
@@ -133,7 +210,17 @@ export function Portfolio() {
         </Card>
         <Card>
           <p className="text-sm text-gray-600">Renewals (60d)</p>
-          <p className="text-3xl font-bold text-gray-900 mt-2">2</p>
+          <p className="text-3xl font-bold text-gray-900 mt-2">
+            {
+              subscriptions.filter((sub) => {
+                const daysUntil = Math.floor(
+                  (new Date(sub.renewal_date).getTime() - Date.now()) /
+                    (1000 * 60 * 60 * 24)
+                )
+                return daysUntil <= 60
+              }).length
+            }
+          </p>
         </Card>
       </div>
 
@@ -164,20 +251,50 @@ export function Portfolio() {
 
         {selectedSubs.length > 0 && (
           <div className="flex gap-2">
-            <Button size="sm" variant="outline">
-              Flag for Renegotiation ({selectedSubs.length})
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                handleBulkAction('flag_renegotiation')
+              }}
+              disabled={bulkActionMutation.isPending}
+            >
+              {bulkActionMutation.isPending
+                ? 'Processing...'
+                : `Flag for Renegotiation (${selectedSubs.length})`}
             </Button>
-            <Button size="sm" variant="outline">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                handleBulkAction('request_cancellation')
+              }}
+              disabled={bulkActionMutation.isPending}
+            >
               Request Cancellation
             </Button>
           </div>
         )}
       </div>
 
+      {/* Empty State */}
+      {subscriptions.length === 0 && (
+        <Card>
+          <div className="text-center py-12">
+            <p className="text-gray-600 text-lg">No active subscriptions</p>
+            <p className="text-gray-500 text-sm mt-2">
+              Completed contracts will appear here once you approve and sign
+              them.
+            </p>
+          </div>
+        </Card>
+      )}
+
       {/* Subscriptions Table */}
-      <Card padding="none">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
+      {subscriptions.length > 0 && (
+        <Card padding="none">
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
                 <th scope="col" className="w-12 px-6 py-3">
@@ -333,7 +450,8 @@ export function Portfolio() {
             </tbody>
           </table>
         </div>
-      </Card>
+        </Card>
+      )}
 
       {/* Renewal Dashboard */}
       {renewals && renewals.length > 0 && (

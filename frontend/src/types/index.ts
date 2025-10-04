@@ -134,3 +134,30 @@ export interface RenewalAlert {
   potential_savings: number
   recommended_action: string
 }
+
+// Portfolio types
+export interface Subscription {
+  contract_id: string
+  vendor_name: string
+  service_name: string
+  cost_per_month: number
+  seats_licensed: number
+  seats_active: number
+  utilization_percent: number
+  renewal_date: string
+  auto_renew: boolean
+  status: 'active' | 'expiring_soon' | 'underutilized'
+}
+
+export interface UsageMetrics {
+  daily_active_users: number[]
+  feature_usage: Record<string, number>
+  cost_per_user: number
+  waste_estimate: number
+}
+
+export interface PortfolioAction {
+  action: 'flag_renegotiation' | 'request_cancellation' | 'adjust_seats'
+  reason?: string
+  target_seats?: number
+}
