@@ -1,4 +1,5 @@
 import { type ReactNode, useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
 import clsx from 'clsx'
 import { Card } from '../../shared/Card'
 import { AIExplainer } from '../../shared/AIExplainer'
@@ -9,6 +10,8 @@ interface OfferCardProps {
   rank: number
   status?: 'leading' | 'contender' | 'fallback'
   actions?: ReactNode
+  requestId?: string
+  clickable?: boolean
 }
 
 export function OfferCard({
@@ -16,7 +19,10 @@ export function OfferCard({
   rank,
   status = 'contender',
   actions,
+  requestId,
+  clickable = true,
 }: OfferCardProps): JSX.Element {
+  const navigate = useNavigate()
   const bestOffer = session.best_offer
   const currency = bestOffer?.components.currency ?? 'USD'
   const unitPriceDisplay = useMemo(() => {
@@ -28,6 +34,12 @@ export function OfferCard({
     }).format(bestOffer.components.unit_price)
   }, [bestOffer, currency])
 
+  const handleClick = () => {
+    if (clickable && requestId) {
+      navigate(`/negotiations/${requestId}/${session.session_id}`)
+    }
+  }
+
   return (
     <Card
       variant="canvas"
@@ -35,7 +47,9 @@ export function OfferCard({
       rounded="md"
       className={clsx('relative h-full', {
         'ring-2 ring-[var(--core-color-brand-primary)]': status === 'leading',
+        'cursor-pointer transition-all hover:shadow-lg hover:scale-[1.02]': clickable,
       })}
+      onClick={handleClick}
     >
       <span
         className="absolute top-2 right-2 inline-flex h-7 w-7 items-center justify-center rounded-full bg-[var(--core-color-brand-primary)] text-[10px] font-semibold text-white shadow-200"

@@ -100,6 +100,8 @@ export function NegotiationTheater(): JSX.Element {
               session={session}
               rank={index + 1}
               status={getStatus(index)}
+              requestId={requestId}
+              clickable={true}
             />
           ))}
         </SimpleGrid>
