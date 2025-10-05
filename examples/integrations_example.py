@@ -21,10 +21,10 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 from procur.integrations.slack_integration import SlackIntegration
 from procur.integrations.docusign_integration import DocuSignIntegration
-from procur.integrations.erp_integration import SAPIntegration, NetSuiteIntegration
-from procur.integrations.email_service import SendGridService, AWSEmailService
+from procur.integrations.erp_integration import SAPIntegration
+from procur.integrations.email_service import SendGridService
 from procur.integrations.payment_processors import StripeIntegration
-from procur.integrations.storage_service import S3Storage, GoogleDriveStorage
+from procur.integrations.storage_service import S3Storage
 from procur.integrations.calendar_integration import GoogleCalendarIntegration
 from procur.integrations.config import get_integration_config
 
@@ -127,7 +127,7 @@ def erp_example():
             amount=75000.0,
             fiscal_year=2025,
         )
-        print(f"✅ Budget validation:")
+        print("✅ Budget validation:")
         print(f"   Available: {budget_check['available']}")
         print(f"   Budget remaining: ${budget_check['budget_available']:,.2f}")
         

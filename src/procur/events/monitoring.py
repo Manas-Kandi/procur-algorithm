@@ -2,12 +2,11 @@
 
 import logging
 from datetime import datetime, timedelta
-from typing import Dict, List
+from typing import Dict
 
 from ..db import get_session
 from .bus import get_event_bus
 from .store import EventStore, EventRecord
-from .schemas import EventType
 
 logger = logging.getLogger(__name__)
 
@@ -103,7 +102,7 @@ class EventMonitor:
                 # Processed events
                 processed_query = select(func.count(EventRecord.id)).where(
                     EventRecord.timestamp >= cutoff,
-                    EventRecord.processed == True
+                    EventRecord.processed
                 )
                 processed = session.execute(processed_query).scalar()
                 
@@ -121,7 +120,7 @@ class EventMonitor:
                     )
                 ).where(
                     EventRecord.timestamp >= cutoff,
-                    EventRecord.processed == True
+                    EventRecord.processed
                 )
                 avg_time = session.execute(avg_time_query).scalar() or 0
                 

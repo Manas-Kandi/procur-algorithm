@@ -1,17 +1,13 @@
 #!/usr/bin/env python3
 """Generate initial Alembic migration without requiring database connection."""
 
-import os
 import sys
 from pathlib import Path
+from datetime import datetime
 
 # Add project root to path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
-
-from datetime import datetime
-from alembic import command
-from alembic.config import Config
 
 def generate_initial_migration():
     """Generate initial migration file manually."""
@@ -371,20 +367,3 @@ def downgrade() -> None:
     op.drop_table('requests')
     op.drop_table('user_accounts')
     op.drop_table('organizations')
-'''
-    
-    # Write migration file
-    versions_dir = project_root / "alembic" / "versions"
-    versions_dir.mkdir(exist_ok=True)
-    
-    migration_file = versions_dir / f"{revision_id}_initial_schema.py"
-    migration_file.write_text(migration_content)
-    
-    print(f"✅ Created migration: {migration_file.name}")
-    print(f"   Revision ID: {revision_id}")
-    print("\nNext steps:")
-    print("  1. Setup database: bash scripts/setup_database.sh")
-    print("  2. Run migration: alembic upgrade head")
-
-if __name__ == "__main__":
-    generate_initial_migration()

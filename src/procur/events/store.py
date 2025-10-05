@@ -1,6 +1,5 @@
 """Event store for event sourcing and audit trail."""
 
-import json
 import logging
 from datetime import datetime, timedelta
 from typing import List, Optional
@@ -161,7 +160,7 @@ class EventStore:
         limit: int = 100,
     ) -> List[EventRecord]:
         """Get unprocessed events."""
-        query = select(EventRecord).where(EventRecord.processed == False)
+        query = select(EventRecord).where(not EventRecord.processed)
         
         if event_type:
             query = query.where(EventRecord.event_type == event_type)

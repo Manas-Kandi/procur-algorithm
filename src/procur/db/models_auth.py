@@ -1,7 +1,6 @@
 """Enhanced authentication models for database."""
-
+from __future__ import annotations
 from datetime import datetime
-from typing import Optional
 
 from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, JSON, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -31,7 +30,7 @@ class UserSession(Base, TimestampMixin):
     expires_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     
     # Relationships
-    user: Mapped["UserAccount"] = relationship("UserAccount", back_populates="sessions")
+    user: Mapped[UserAccount] = relationship("UserAccount", back_populates="sessions")
     
     def __repr__(self) -> str:
         return f"<UserSession(id={self.id}, session_id='{self.session_id}', user_id={self.user_id})>"
@@ -63,7 +62,7 @@ class APIKey(Base, TimestampMixin):
     usage_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     
     # Relationships
-    user: Mapped["UserAccount"] = relationship("UserAccount", back_populates="api_keys")
+    user: Mapped[UserAccount] = relationship("UserAccount", back_populates="api_keys")
     
     def __repr__(self) -> str:
         return f"<APIKey(id={self.id}, key_id='{self.key_id}', name='{self.name}')>"
@@ -81,7 +80,7 @@ class PasswordHistory(Base, TimestampMixin):
     changed_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
     
     # Relationships
-    user: Mapped["UserAccount"] = relationship("UserAccount", back_populates="password_history")
+    user: Mapped[UserAccount] = relationship("UserAccount", back_populates="password_history")
     
     def __repr__(self) -> str:
         return f"<PasswordHistory(id={self.id}, user_id={self.user_id})>"
@@ -163,7 +162,7 @@ class OAuthConnection(Base, TimestampMixin):
     provider_data: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     
     # Relationships
-    user: Mapped["UserAccount"] = relationship("UserAccount", back_populates="oauth_connections")
+    user: Mapped[UserAccount] = relationship("UserAccount", back_populates="oauth_connections")
     
     def __repr__(self) -> str:
         return f"<OAuthConnection(id={self.id}, provider='{self.provider}', user_id={self.user_id})>"

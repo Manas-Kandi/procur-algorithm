@@ -6,7 +6,7 @@ import asyncio
 import json
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Dict, List, Optional
 
 from .base_scraper import VendorData, ScrapingConfig
 from .compliance_scraper import ComplianceScraper
@@ -411,7 +411,7 @@ if __name__ == "__main__":
         print("Enriching CRM vendors...")
         result = await pipeline.enrich_category("crm")
 
-        print(f"\nResults for CRM:")
+        print("\nResults for CRM:")
         print(f"  Found: {result.total_found}")
         print(f"  Enriched: {result.enriched_count}")
         print(f"  High Quality: {result.high_quality_count}")
@@ -424,13 +424,13 @@ if __name__ == "__main__":
 
         # Show sample vendors
         if result.seed_records:
-            print(f"\nSample vendors:")
+            print("\nSample vendors:")
             for record in result.seed_records[:3]:
                 print(f"  - {record.name}: ${record.list_price}")
 
         # Save results
         pipeline.save_enrichment_results({"crm": result}, "enrichment_output")
-        print(f"\nResults saved to enrichment_output/")
+        print("\nResults saved to enrichment_output/")
 
     # Run the example
     asyncio.run(main())

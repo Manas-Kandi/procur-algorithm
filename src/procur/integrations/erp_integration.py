@@ -1,6 +1,7 @@
 """Real ERP system integrations (SAP, Oracle, NetSuite)."""
 
 import logging
+import base64
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional
 from datetime import datetime

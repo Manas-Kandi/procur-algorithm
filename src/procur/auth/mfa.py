@@ -5,7 +5,6 @@ from typing import Optional
 
 import pyotp
 import qrcode
-from qrcode.image.pil import PilImage
 
 
 class MFAService:

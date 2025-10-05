@@ -1,6 +1,6 @@
 """Inventory, capacity, and resource constraints for seller agents."""
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional
 from enum import Enum

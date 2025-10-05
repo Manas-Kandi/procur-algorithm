@@ -9,16 +9,6 @@ from alembic import context
 
 # Import all models to ensure they're registered with Base.metadata
 from src.procur.db.base import Base
-from src.procur.db.models import (
-    UserAccount,
-    RequestRecord,
-    VendorProfileRecord,
-    OfferRecord,
-    ContractRecord,
-    NegotiationSessionRecord,
-    AuditLogRecord,
-    PolicyConfigRecord,
-)
 from src.procur.db.config import get_database_config
 
 # this is the Alembic Config object, which provides

@@ -24,7 +24,6 @@ from procur.observability import (
     trace_function,
     setup_metrics,
     get_metrics_collector,
-    setup_error_tracking,
 )
 from procur.observability.config import setup_observability
 from procur.observability.apm import get_apm_monitor

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
@@ -21,7 +21,7 @@ from ..integrations import (
     SlackIntegration,
     VendorDataScraper,
 )
-from ..models import Offer, OfferComponents, Request, RequestType, VendorProfile
+from ..models import Offer, Request, RequestType, VendorProfile
 from ..models.enums import PaymentTerms
 from ..services import (
     AuditTrailService,
@@ -38,8 +38,7 @@ from ..services.negotiation_engine import ExchangePolicy, ConcessionEngine
 from ..services.contract_generator import ContractGenerator, ContractGenerationError
 from ..services.vendor_matching import evaluate_vendor_against_request, VendorMatchSummary
 from ..services.compliance_service import ComplianceAssessment
-from ..services.scoring_service import ScoreWeights
-from ..utils.pricing import annualize_value, normalize_budget_total, price_fit_ratio
+from ..utils.pricing import annualize_value, normalize_budget_total
 from ..utils.input_sanitizer import (
     collect_allowed_feature_canonicals,
     sanitize_comma_separated_features,

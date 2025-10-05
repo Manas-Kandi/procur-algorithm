@@ -37,7 +37,7 @@ from ..services.negotiation_engine import (
     CompetingOffer,
 )
 from ..services.evaluation import detect_zopa
-from ..services.evaluation import compute_buyer_utility, compute_seller_utility, UtilityBreakdown
+from ..services.evaluation import compute_buyer_utility, compute_seller_utility
 from ..services.vendor_matching import VendorMatchSummary
 from ..llm import (
     LLMClient,

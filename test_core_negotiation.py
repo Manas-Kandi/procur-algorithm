@@ -113,23 +113,23 @@ class NegotiationTester:
         print(f"   Quantity: {request.quantity}")
         print(f"   Budget: ${request.budget_max:,.2f} (${request.budget_max/request.quantity:.2f}/unit)")
         
-        print(f"\n🏢 VENDORS:")
+        print("\n🏢 VENDORS:")
         for vendor in vendors:
             list_price = vendor.price_tiers[str(request.quantity)]
             print(f"   {vendor.name}: ${list_price:.2f}/unit (floor: ${vendor.guardrails.price_floor:.2f})")
         
         # Test core negotiation algorithms
-        print(f"\n🤖 RUNNING CORE NEGOTIATION ALGORITHMS...")
+        print("\n🤖 RUNNING CORE NEGOTIATION ALGORITHMS...")
         
         try:
             # This uses ALL the enhanced algorithms from the core platform
             offers = self.buyer_agent.negotiate(request, vendors)
             
-            print(f"\n📊 NEGOTIATION RESULTS:")
+            print("\n📊 NEGOTIATION RESULTS:")
             print(f"   Offers received: {len(offers)}")
             
             if len(offers) == 0:
-                print(f"   ⚠️  No offers generated - checking for issues...")
+                print("   ⚠️  No offers generated - checking for issues...")
                 # Let's test the individual components
                 for vendor in vendors:
                     print(f"   🔍 Testing {vendor.name}:")
@@ -243,8 +243,8 @@ def main():
         }]
     )
     
-    print(f"\n✅ All test scenarios completed!")
-    print(f"🧠 Core algorithms tested: opponent modeling, TCO calculation, strategy selection, stalemate detection")
+    print("\n✅ All test scenarios completed!")
+    print("🧠 Core algorithms tested: opponent modeling, TCO calculation, strategy selection, stalemate detection")
 
 
 if __name__ == "__main__":

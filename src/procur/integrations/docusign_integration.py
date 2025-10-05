@@ -2,7 +2,6 @@
 
 import base64
 import logging
-from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
 
 from docusign_esign import (

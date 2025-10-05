@@ -13,7 +13,7 @@ from ...db.repositories import (
     VendorRepository,
     NegotiationRepository,
 )
-from ..schemas import NegotiationResponse, AutoNegotiateRequest
+from ..schemas import NegotiationResponse
 from ..security import get_current_user
 
 router = APIRouter(prefix="/sourcing", tags=["Sourcing"])
@@ -59,7 +59,7 @@ async def _trigger_auto_negotiations(session_ids: List[str], user_id: int):
         traceback.print_exc()
     finally:
         db.close()
-        print(f"[Background] Auto-negotiations background task finished")
+        print("[Background] Auto-negotiations background task finished")
 
 
 @router.post(

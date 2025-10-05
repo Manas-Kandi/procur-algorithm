@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 """Seed vendors and test users from seeds.json for frontend-backend integration testing."""
 
-import asyncio
 import json
 import sys
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
 
 # Add parent directory to path for imports

@@ -31,7 +31,7 @@ class SessionRepository(BaseRepository[UserSession]):
     def get_active_sessions(self, user_id: int) -> List[UserSession]:
         query = select(UserSession).where(
             UserSession.user_id == user_id,
-            UserSession.is_active == True
+            UserSession.is_active
         )
         result = self.session.execute(query)
         return list(result.scalars().all())
@@ -65,7 +65,7 @@ class APIKeyRepository(BaseRepository[APIKey]):
     def get_active_keys(self, user_id: int) -> List[APIKey]:
         query = select(APIKey).where(
             APIKey.user_id == user_id,
-            APIKey.is_active == True
+            APIKey.is_active
         )
         result = self.session.execute(query)
         return list(result.scalars().all())
@@ -142,7 +142,7 @@ class OrganizationRepository(BaseRepository[Organization]):
         return result.scalar_one_or_none()
     
     def get_active_organizations(self) -> List[Organization]:
-        query = select(Organization).where(Organization.is_active == True)
+        query = select(Organization).where(Organization.is_active)
         result = self.session.execute(query)
         return list(result.scalars().all())
 

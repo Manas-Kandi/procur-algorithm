@@ -1,7 +1,5 @@
 """Dashboard endpoints."""
 
-from datetime import datetime, timedelta
-from typing import List
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session

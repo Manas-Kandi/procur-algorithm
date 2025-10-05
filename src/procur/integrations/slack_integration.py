@@ -352,7 +352,7 @@ class SlackIntegration:
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": f"*📄 Contract Ready for Signature*"
+                    "text": "*📄 Contract Ready for Signature*"
                 }
             },
             {

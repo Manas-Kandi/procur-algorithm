@@ -6,14 +6,11 @@ import asyncio
 import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Set
-from urllib.parse import urljoin, urlparse
+from typing import Dict, List, Optional
 
-import aiohttp
 import requests
 from bs4 import BeautifulSoup
 
-from ..models import VendorProfile
 from ..data.seeds_loader import SeedVendorRecord
 
 

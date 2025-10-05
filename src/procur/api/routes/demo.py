@@ -1,4 +1,10 @@
 from __future__ import annotations
+import uuid
+from datetime import datetime
+from typing import Any, Dict, List
+
+from fastapi import APIRouter
+
 
 """Demo endpoints that generate mock negotiations from the seed catalog.
 
@@ -9,11 +15,6 @@ They do NOT persist to the database. Data is stored in-memory for the
 server process lifetime only, suitable for demos.
 """
 
-import uuid
-from datetime import datetime
-from typing import Any, Dict, List
-
-from fastapi import APIRouter
 
 from ...data.seeds_loader import build_vendor_profiles, load_seed_catalog
 from ...models import (

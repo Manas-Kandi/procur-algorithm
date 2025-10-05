@@ -16,7 +16,6 @@ from .evaluation import (
     compute_tco,
     compute_buyer_utility,
     compute_seller_utility,
-    UtilityBreakdown,
     compute_feature_score,
     detect_zopa,
 )
@@ -236,12 +235,20 @@ class NegotiationEngine:
         self.advanced_strategies = AdvancedNegotiationStrategies(self)
 
     def _offer_to_tco_inputs(self, offer: OfferComponents) -> TCOInputs:
-        one_time_positive = sum(value for value in offer.one_time_fees.values() if value >= 0)
-        credits = -sum(value for value in offer.one_time_fees.values() if value < 0)
+        # Safely extract one_time_fees with None handling
+        one_time_fees_dict = offer.one_time_fees if offer.one_time_fees is not None else {}
+        one_time_positive = sum(value for value in one_time_fees_dict.values() if value >= 0)
+        credits = -sum(value for value in one_time_fees_dict.values() if value < 0)
+        
+        # Ensure all required fields have valid non-None values
+        unit_price = offer.unit_price if offer.unit_price is not None else 0.0
+        quantity = offer.quantity if offer.quantity is not None else 1
+        term_months = offer.term_months if offer.term_months is not None else 12
+        
         return TCOInputs(
-            unit_price=Decimal(str(offer.unit_price or 0.0)),
-            seats=offer.quantity or 1,
-            term_months=offer.term_months or 12,
+            unit_price=Decimal(str(unit_price)),
+            seats=quantity,
+            term_months=term_months,
             one_time_fees=Decimal(str(one_time_positive)),
             credits=Decimal(str(credits)),
             payment_prepaid=False,
@@ -639,7 +646,7 @@ class NegotiationEngine:
             )
             if not policy_result.valid:
                 return False, "policy_violation"
-        except:
+        except Exception:
             return False, "policy_validation_failed"
 
         # 5. Guardrails check (in production mode)
@@ -750,10 +757,11 @@ class NegotiationEngine:
         
         # Check if near floor price
         floor_price = state.vendor.guardrails.price_floor
-        if floor_price is not None and abs(buyer_offer.unit_price - floor_price) <= 1e-2:
-            return SellerStrategy.CLOSE_DEAL
-        if buyer_offer.unit_price <= floor_price * 1.1:
-            return SellerStrategy.REJECT_BELOW_FLOOR
+        if floor_price is not None:
+            if abs(buyer_offer.unit_price - floor_price) <= 1e-2:
+                return SellerStrategy.CLOSE_DEAL
+            if buyer_offer.unit_price <= floor_price * 1.1:
+                return SellerStrategy.REJECT_BELOW_FLOOR
             
         # If many rounds, try to close
         if state.round >= 5:
@@ -771,15 +779,18 @@ class NegotiationEngine:
         
         if strategy == SellerStrategy.ANCHOR_HIGH:
             # Start high to establish value perception
-            target_price = max(current_price * 1.15, floor_price * 1.3)
+            floor_multiplier = floor_price * 1.3 if floor_price else current_price * 1.15
+            target_price = max(current_price * 1.15, floor_multiplier)
             
         elif strategy == SellerStrategy.REJECT_BELOW_FLOOR:
             # Firm rejection, minimal movement
-            target_price = max(floor_price * 1.05, current_price * 1.02)
+            floor_multiplier = floor_price * 1.05 if floor_price else current_price * 1.02
+            target_price = max(floor_multiplier, current_price * 1.02)
             
         elif strategy == SellerStrategy.MINIMAL_CONCESSION:
             # Smallest possible concession
-            target_price = max(floor_price, current_price - policy.min_step_abs)
+            floor_val = floor_price if floor_price else current_price * 0.9
+            target_price = max(floor_val, current_price - policy.min_step_abs)
             
         elif strategy == SellerStrategy.TERM_VALUE:
             # Reward longer terms with better pricing
@@ -804,7 +815,8 @@ class NegotiationEngine:
             
         else:  # GRADUAL_CONCESSION
             # Standard incremental reduction
-            target_price = max(floor_price, current_price - policy.min_step_abs)
+            floor_val = floor_price if floor_price else current_price * 0.9
+            target_price = max(floor_val, current_price - policy.min_step_abs)
         
         return OfferComponents(
             unit_price=max(target_price, floor_price) if floor_price is not None else target_price,
@@ -820,8 +832,16 @@ class NegotiationEngine:
             return False
         budget_per_unit = request.budget_max / request.quantity
         tier_key = str(request.quantity)
-        list_price = vendor.price_tiers.get(tier_key, vendor.guardrails.price_floor * 1.2)
-        seller_floor = vendor.guardrails.price_floor or list_price
+        
+        # Handle None price_floor safely
+        price_floor = vendor.guardrails.price_floor
+        if price_floor is None:
+            # Estimate floor from list price or budget
+            estimated_floor = vendor.price_tiers.get(tier_key, budget_per_unit * 0.8)
+            price_floor = estimated_floor if estimated_floor else budget_per_unit * 0.8
+        
+        list_price = vendor.price_tiers.get(tier_key, price_floor * 1.2)
+        seller_floor = price_floor
 
         concessions = ConcessionEngine(
             {
@@ -847,12 +867,20 @@ class NegotiationEngine:
         if request.quantity <= 0:
             return bundles
         tier_key = str(request.quantity)
-        list_price = vendor.price_tiers.get(tier_key, vendor.guardrails.price_floor * 1.2)
         budget_per_unit = request.budget_max / request.quantity
+        
+        # Handle None price_floor safely
+        price_floor = vendor.guardrails.price_floor
+        if price_floor is None:
+            # Estimate floor from list price or budget
+            estimated_floor = vendor.price_tiers.get(tier_key, budget_per_unit * 0.8)
+            price_floor = estimated_floor if estimated_floor else budget_per_unit * 0.8
+        
+        list_price = vendor.price_tiers.get(tier_key, price_floor * 1.2)
         
         # A) Price anchor (aggressive but within policy)
         anchor_drop = min(0.15, max(0.05, (list_price - budget_per_unit) / list_price))
-        price_anchor = max(vendor.guardrails.price_floor, list_price * (1 - anchor_drop))
+        price_anchor = max(price_floor, list_price * (1 - anchor_drop))
         bundles.append(OfferBundle(
             price=price_anchor,
             term_months=12,
@@ -862,7 +890,7 @@ class NegotiationEngine:
         
         # B) Term trade (longer term for price reduction)
         term_discount = max(policy.term_trade.get(12, 0.0), 0.0)
-        price_term = max(vendor.guardrails.price_floor, list_price * (1 - term_discount))
+        price_term = max(price_floor, list_price * (1 - term_discount))
         bundles.append(OfferBundle(
             price=price_term,
             term_months=24,
@@ -872,7 +900,7 @@ class NegotiationEngine:
         
         # C) Payment trade (faster payment for small discount)
         payment_discount = self._payment_discount(policy, PaymentTerms.NET_15)
-        price_payment = max(vendor.guardrails.price_floor, list_price * (1 - payment_discount))
+        price_payment = max(price_floor, list_price * (1 - payment_discount))
         bundles.append(OfferBundle(
             price=price_payment,
             term_months=12,

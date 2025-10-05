@@ -13,7 +13,6 @@ from procur.integrations.enrichment_pipeline import VendorEnrichmentPipeline, En
 from procur.integrations.cache_manager import CacheManager
 from procur.data.seeds_loader import SeedsLoader, SeedVendorRecord
 from procur.models import VendorProfile, ProcurementRequest
-from procur.orchestration.pipeline import ProcurementPipeline
 
 
 class IntegrationTester:

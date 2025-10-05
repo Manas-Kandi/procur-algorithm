@@ -15,7 +15,7 @@ from ..db.repositories import (
     RequestRepository,
 )
 from ..events import EventPublisher, EventType
-from ..agents import BuyerAgent, SellerAgent
+from ..agents import BuyerAgent
 from ..services import (
     NegotiationEngine,
     PolicyEngine,
@@ -33,7 +33,7 @@ from ..integrations import (
     PricingScraper,
     ComplianceScraper,
 )
-from ..observability import get_logger, track_metric
+from ..observability import track_metric
 
 logger = logging.getLogger(__name__)
 

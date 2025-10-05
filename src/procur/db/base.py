@@ -1,9 +1,8 @@
 """SQLAlchemy declarative base and common mixins."""
 
 from datetime import datetime
-from typing import Any
 
-from sqlalchemy import DateTime, String
+from sqlalchemy import DateTime
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 

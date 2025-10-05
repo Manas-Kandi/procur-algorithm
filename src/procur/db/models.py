@@ -2,9 +2,8 @@
 
 from __future__ import annotations
 
-import json
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 from sqlalchemy import (
     Boolean,
@@ -22,9 +21,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from .base import Base, SoftDeleteMixin, TimestampMixin
 from .models_auth import (
     APIKey,
-    LoginAttempt,
     OAuthConnection,
-    Organization,
     PasswordHistory,
     UserSession,
 )

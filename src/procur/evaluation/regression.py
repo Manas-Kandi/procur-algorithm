@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Callable, Dict, Iterable, List, Optional, Sequence, Set, Tuple
+from typing import Callable, Dict, List, Optional, Sequence, Set
+from .curriculum import CurriculumPhase
 
 from ..agents import BuyerAgent, BuyerAgentConfig
 from ..models import (
@@ -89,9 +90,8 @@ class RegressionHarness:
         return RegressionReport(results=results)
 
     def run_curriculum(
-        self, phases: Sequence["CurriculumPhase"]
+        self, phases: Sequence[CurriculumPhase]
     ) -> Dict[str, RegressionReport]:
-        from .curriculum import CurriculumPhase
 
         reports: Dict[str, RegressionReport] = {}
         for phase in phases:

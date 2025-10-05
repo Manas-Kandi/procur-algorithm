@@ -13,6 +13,7 @@ class StreamingNegotiationWrapper:
         self.buyer_agent = buyer_agent
         self.session_id = session_id
         self._manager = None
+        self._event_loop = None
 
     async def _emit_event(self, event_type: str, data: Dict[str, Any]):
         """Emit event to WebSocket if manager is available."""
@@ -21,14 +22,12 @@ class StreamingNegotiationWrapper:
 
     def _sync_emit_event(self, event_type: str, data: Dict[str, Any]):
         """Synchronous wrapper for emitting events from within the agent."""
-        if self._manager:
-            # Create a coroutine and schedule it on the event loop
+        if self._manager and self._event_loop:
+            # Schedule coroutine on the stored event loop from the main thread
             try:
-                loop = asyncio.get_event_loop()
-                # Use call_soon_threadsafe since we're in a different thread
                 asyncio.run_coroutine_threadsafe(
                     self._manager.send_event(self.session_id, event_type, data),
-                    loop
+                    self._event_loop
                 )
             except Exception as e:
                 print(f"Error emitting event {event_type}: {e}")
@@ -46,6 +45,9 @@ class StreamingNegotiationWrapper:
         # Import manager here to avoid circular dependency
         from .websocket_manager import manager
         self._manager = manager
+        
+        # Store the current event loop for thread-safe event emission
+        self._event_loop = asyncio.get_event_loop()
 
         # Emit negotiation start event
         await self._emit_event("negotiation_start", {
@@ -58,8 +60,7 @@ class StreamingNegotiationWrapper:
         self.buyer_agent.event_callback = self._sync_emit_event
 
         # Run negotiation in thread pool (agent is synchronous)
-        loop = asyncio.get_event_loop()
-        offers = await loop.run_in_executor(
+        offers = await self._event_loop.run_in_executor(
             None,
             self.buyer_agent.negotiate,
             request,

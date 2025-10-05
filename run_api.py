@@ -1,9 +1,21 @@
 #!/usr/bin/env python
 """Run the Procur FastAPI server."""
 
+import os
+from pathlib import Path
+
 import uvicorn
+from dotenv import load_dotenv
 
 from src.procur.api.config import get_api_config
+
+# Load environment variables from .env file
+env_path = Path(__file__).parent / ".env"
+if env_path.exists():
+    load_dotenv(env_path)
+    print(f"Loaded environment variables from {env_path}")
+else:
+    print(f"Warning: .env file not found at {env_path}")
 
 
 def main():

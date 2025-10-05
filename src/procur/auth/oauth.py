@@ -3,7 +3,6 @@
 from typing import Dict, Optional
 from urllib.parse import urlencode
 
-from authlib.integrations.base_client import OAuthError
 from authlib.integrations.requests_client import OAuth2Session
 
 

@@ -2,11 +2,10 @@
 
 from __future__ import annotations
 
-import json
 import re
 from datetime import datetime
-from typing import Dict, List, Optional, Set, Tuple
-from urllib.parse import urljoin, quote
+from typing import Dict, List, Optional
+from urllib.parse import urljoin
 
 from .base_scraper import BaseScraper, VendorData
 

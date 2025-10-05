@@ -5,25 +5,15 @@ DELETE THIS FILE WHEN DONE TESTING.
 """
 
 import os
-import time
-import math
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 from dataclasses import dataclass
 
-from procur.agents import BuyerAgent, BuyerAgentConfig, SellerAgent, SellerAgentConfig
 from procur.llm.client import LLMClient
-from procur.llm.prompts import negotiation_prompt
 from procur.llm.validators import guarded_completion, parse_negotiation_message
 from procur.models import (
     VendorGuardrails, VendorProfile, Request, RequestType, 
-    NegotiationMessage, OfferComponents, PaymentTerms, ActorRole, NextStepHint,
-    MachineRationale
+    NegotiationMessage, OfferComponents, PaymentTerms, ActorRole
 )
-from procur.services import (
-    ComplianceService, ExplainabilityService, GuardrailService,
-    NegotiationEngine, PolicyEngine, ScoringService
-)
-from procur.services.scoring_service import ScoreWeights
 
 
 @dataclass
@@ -698,7 +688,7 @@ class NegotiationSimulator:
             payment_terms=PaymentTerms.NET_45
         )
         
-        print(f"\n📋 PROCUREMENT REQUEST")
+        print("\n📋 PROCUREMENT REQUEST")
         print(f"   Product: {request.description}")
         print(f"   Quantity: {request.quantity} seats")
         print(f"   Budget: ${request.budget_max:,.2f} (${request.budget_max/request.quantity:.2f}/seat)")
@@ -709,7 +699,7 @@ class NegotiationSimulator:
         print(f"   Price Floor: ${self.vendor.guardrails.price_floor:.2f}/seat")
         print(f"   Payment Terms: {self.vendor.guardrails.payment_terms_allowed}")
         
-        print(f"\n💰 SELLER'S OPENING OFFER")
+        print("\n💰 SELLER'S OPENING OFFER")
         print(f"   Price: ${initial_offer.unit_price:.2f}/seat")
         print(f"   Term: {initial_offer.term_months} months")
         print(f"   Payment: {initial_offer.payment_terms.value}")
@@ -748,7 +738,7 @@ class NegotiationSimulator:
                 break
                 
             # Seller's turn
-            print(f"\n🔴 SELLER'S RESPONSE")
+            print("\n🔴 SELLER'S RESPONSE")
             try:
                 seller_msg = self.generate_seller_message(request, buyer_msg.proposal, round_num)
                 self.negotiation_history.append(seller_msg)
@@ -766,11 +756,11 @@ class NegotiationSimulator:
                 
                 # Check for deal closure
                 if seller_msg.next_step_hint == "accept":
-                    print(f"\n🎉 DEAL CLOSED! Seller accepts buyer's offer.")
+                    print("\n🎉 DEAL CLOSED! Seller accepts buyer's offer.")
                     final_deal = buyer_msg.proposal
                     break
                 elif abs(seller_msg.proposal.unit_price - buyer_msg.proposal.unit_price) < 25:
-                    print(f"\n🤝 CONVERGENCE DETECTED - Offers within $25/seat")
+                    print("\n🤝 CONVERGENCE DETECTED - Offers within $25/seat")
                     
                 current_offer = seller_msg.proposal
                 
@@ -780,7 +770,7 @@ class NegotiationSimulator:
                 
             # Stalemate detection
             if self.detect_stalemate():
-                print(f"\n⚠️  STALEMATE DETECTED - No meaningful progress in recent rounds")
+                print("\n⚠️  STALEMATE DETECTED - No meaningful progress in recent rounds")
                 break
                 
             round_num += 1
@@ -800,14 +790,14 @@ class NegotiationSimulator:
                     
             if final_buyer_offer and final_seller_offer:
                 gap = abs(final_seller_offer.unit_price - final_buyer_offer.unit_price)
-                print(f"\n📊 FINAL ANALYSIS:")
+                print("\n📊 FINAL ANALYSIS:")
                 print(f"   Buyer's final offer: ${final_buyer_offer.unit_price:.2f}/seat")
                 print(f"   Seller's final offer: ${final_seller_offer.unit_price:.2f}/seat")
                 print(f"   Price gap: ${gap:.2f}/seat")
                 print(f"   Total rounds: {len(self.negotiation_history)}")
                 
                 # Opponent model insights
-                print(f"\n🧠 OPPONENT MODELING INSIGHTS:")
+                print("\n🧠 OPPONENT MODELING INSIGHTS:")
                 print(f"   Buyer's estimate of seller price floor: ${self.buyer_model.price_floor_estimate:.2f}")
                 print(f"   Seller's estimate of buyer budget ceiling: ${self.seller_model.price_ceiling_estimate:.2f}")
                 print(f"   Actual seller price floor: ${self.vendor.guardrails.price_floor:.2f}")
@@ -824,7 +814,6 @@ class NegotiationSimulator:
 
 def main():
     """Run the advanced negotiation simulation"""
-    import os
     from dotenv import load_dotenv
     
     load_dotenv()

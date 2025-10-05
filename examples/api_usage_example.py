@@ -238,7 +238,7 @@ def main():
     # 3. Login
     print("\n3. Logging in...")
     token_data = client.login("demo_user", "SecurePassword123!")
-    print(f"   ✅ Logged in successfully")
+    print("   ✅ Logged in successfully")
     print(f"   Token: {token_data['access_token'][:50]}...")
     
     # 4. Get current user

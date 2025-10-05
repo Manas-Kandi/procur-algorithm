@@ -13,15 +13,12 @@ This example shows:
 
 import sys
 from pathlib import Path
-from datetime import datetime
 
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from procur.agents.advanced_seller_agent import AdvancedSellerAgent, AdvancedSellerConfig
 from procur.agents.seller_personality import VendorPersonality, VendorContext
-from procur.agents.seller_competitive import CompetitiveIntelligence, CompetitorProfile, CompetitorTier
-from procur.agents.seller_constraints import MultiBuyerContext, InventoryConstraint, CapacityConstraint
+from procur.agents.seller_constraints import MultiBuyerContext
 
 
 def main():

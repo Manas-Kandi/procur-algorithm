@@ -3,26 +3,22 @@
 from datetime import datetime, timedelta
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Response, status
-from fastapi.responses import StreamingResponse
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from ...auth import MFAService, APIKeyService, PasswordValidator, validate_password
 from ...auth.permissions import Permission, PermissionChecker
 from ...db import get_session
 from ...db.models import UserAccount
-from ...db.models_auth import APIKey, Organization, UserSession
 from ...db.repositories import UserRepository
 from ...db.repositories.auth_repositories import (
     APIKeyRepository,
-    LoginAttemptRepository,
     OrganizationRepository,
     PasswordHistoryRepository,
     SessionRepository,
 )
 from ..config import get_api_config
-from ..schemas import UserResponse
-from ..security import create_access_token, get_current_user, get_password_hash
+from ..security import create_access_token, get_current_user
 
 router = APIRouter(prefix="/auth", tags=["Authentication Enhanced"])
 

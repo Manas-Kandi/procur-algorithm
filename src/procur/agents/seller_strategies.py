@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Dict, List, Optional, Tuple
+from typing import Optional, Tuple
 
 from ..models import OfferComponents
 from ..services.negotiation_engine import VendorNegotiationState
@@ -317,7 +317,7 @@ class SellerStrategyEngine:
             delivery_days=current_offer.delivery_days,
         )
         
-        rationale = f"Incremental concession to move toward agreement."
+        rationale = "Incremental concession to move toward agreement."
         return new_offer, rationale
     
     def _split_difference(

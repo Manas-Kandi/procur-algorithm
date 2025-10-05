@@ -86,7 +86,7 @@ class OfferRepository(BaseRepository[OfferRecord]):
         """
         query = select(OfferRecord).where(
             OfferRecord.request_id == request_id,
-            OfferRecord.accepted == True
+            OfferRecord.accepted
         )
         result = self.session.execute(query)
         return list(result.scalars().all())

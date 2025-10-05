@@ -266,7 +266,7 @@ def main():
         
         # Accept offer
         offer_repo.accept_offer(seller_counter.id)
-        print(f"   ✅ Offer accepted!")
+        print("   ✅ Offer accepted!")
         
         # Complete negotiation
         savings = (vendor.list_price - seller_counter.unit_price) * request.quantity * 24
@@ -343,12 +343,12 @@ def main():
         print("✅ Example completed successfully!")
         print("=" * 80)
         print("\nSummary:")
-        print(f"  • Created 1 user account")
-        print(f"  • Created 1 procurement request")
-        print(f"  • Created 2 vendor profiles")
-        print(f"  • Ran 2 negotiation sessions")
+        print("  • Created 1 user account")
+        print("  • Created 1 procurement request")
+        print("  • Created 2 vendor profiles")
+        print("  • Ran 2 negotiation sessions")
         print(f"  • Generated {len(all_offers)} offers")
-        print(f"  • Created 1 contract")
+        print("  • Created 1 contract")
         print(f"  • Logged {len(user_audit_logs)} audit events")
         print(f"  • Total savings: ${savings:,.2f}")
         print("\nAll data persisted to PostgreSQL database!")

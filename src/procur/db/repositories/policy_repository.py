@@ -35,7 +35,7 @@ class PolicyRepository(BaseRepository[PolicyConfigRecord]):
         """
         query = select(PolicyConfigRecord).where(
             PolicyConfigRecord.policy_name == policy_name,
-            PolicyConfigRecord.is_active == True,
+            PolicyConfigRecord.is_active,
         )
         
         if organization_id is not None:
@@ -61,7 +61,7 @@ class PolicyRepository(BaseRepository[PolicyConfigRecord]):
         """
         query = select(PolicyConfigRecord).where(
             PolicyConfigRecord.policy_type == policy_type,
-            PolicyConfigRecord.is_active == True,
+            PolicyConfigRecord.is_active,
         )
         
         if organization_id is not None:
@@ -82,7 +82,7 @@ class PolicyRepository(BaseRepository[PolicyConfigRecord]):
         """
         query = select(PolicyConfigRecord).where(
             PolicyConfigRecord.organization_id == organization_id,
-            PolicyConfigRecord.is_active == True,
+            PolicyConfigRecord.is_active,
         )
         result = self.session.execute(query)
         return list(result.scalars().all())

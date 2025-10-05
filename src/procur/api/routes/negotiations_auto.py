@@ -3,8 +3,7 @@
 from __future__ import annotations
 
 import asyncio
-import json
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict
 
 from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect, status
 from sqlalchemy.orm import Session
@@ -19,27 +18,23 @@ from ...db.repositories import (
     RequestRepository,
     VendorRepository,
 )
-from ...models import NegotiationDecision, OfferComponents, PaymentTerms, Request, VendorProfile
+from ...models import PaymentTerms, Request, VendorProfile
 from ...services import (
-    AuditTrailService,
     ComplianceService,
     ExplainabilityService,
     GuardrailService,
-    MemoryService,
     NegotiationEngine,
     PolicyEngine,
     ScoringService,
 )
 from ...services.negotiation_engine import (
     ExchangePolicy,
-    VendorNegotiationState,
 )
 from ...services.vendor_matching import VendorMatchSummary
 from ...services.evaluation import FeatureMatchResult, ComplianceScore
 from ...llm import LLMClient
 from ..schemas import (
     AutoNegotiateRequest,
-    NegotiationEventResponse,
     NegotiationProgressResponse,
 )
 from ..security import get_current_user
@@ -51,6 +46,7 @@ def _convert_db_request_to_model(db_request: Any) -> Request:
     """Convert database request record to domain model."""
     return Request(
         request_id=db_request.request_id,
+        requester_id=str(db_request.user_id),
         type=db_request.request_type,
         description=db_request.description,
         quantity=db_request.quantity or 1,
@@ -325,23 +321,23 @@ async def auto_negotiate(
             )
 
         # Save final offer to database
+        import uuid
         offer_record = offer_repo.create(
+            offer_id=f"offer-{uuid.uuid4().hex[:12]}",
             request_id=request_record.id,
             vendor_id=vendor_record.id,
             negotiation_session_id=negotiation.id,
-            components={
-                "unit_price": final_offer.components.unit_price,
-                "currency": final_offer.components.currency,
-                "quantity": final_offer.components.quantity,
-                "term_months": final_offer.components.term_months,
-                "payment_terms": final_offer.components.payment_terms.value,
-            },
-            score={
-                "utility": final_offer.score.utility,
-                "risk": final_offer.score.risk,
-                "savings": final_offer.score.savings,
-            },
-            status="pending" if final_offer.accepted else "rejected",
+            unit_price=final_offer.components.unit_price,
+            quantity=final_offer.components.quantity,
+            term_months=final_offer.components.term_months,
+            payment_terms=final_offer.components.payment_terms.value,
+            currency=final_offer.components.currency,
+            score=final_offer.score.utility if hasattr(final_offer.score, 'utility') else None,
+            utility_buyer=final_offer.score.utility if hasattr(final_offer.score, 'utility') else None,
+            tco=buyer_agent.negotiation_engine.calculate_tco(final_offer.components),
+            accepted=final_offer.accepted,
+            rejected=not final_offer.accepted,
+            actor="buyer",
         )
 
         # Get audit trail for round count

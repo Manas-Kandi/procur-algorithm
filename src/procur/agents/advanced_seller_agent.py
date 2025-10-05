@@ -8,7 +8,7 @@ from ..models import Offer, OfferComponents, Request, VendorProfile
 from ..services import GuardrailService, NegotiationEngine, PolicyEngine, ScoringService
 from ..services.policy_engine import PolicyResult
 from ..services.guardrail_service import GuardrailAlert
-from ..services.negotiation_engine import SellerStrategy, VendorNegotiationState
+from ..services.negotiation_engine import VendorNegotiationState
 
 from .seller_personality import (
     VendorPersonality,

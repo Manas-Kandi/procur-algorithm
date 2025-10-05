@@ -10,15 +10,13 @@ This example shows how to:
 """
 
 import sys
-import time
 from pathlib import Path
 
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from procur.events import EventPublisher, EventConsumer, EventType
+from procur.events import EventPublisher
 from procur.events.monitoring import EventMonitor
-from procur.events.schemas import Event, EventPriority
 
 
 def main():
@@ -88,13 +86,13 @@ def main():
     
     # Get event type stats
     type_stats = monitor.get_event_type_stats(hours=1)
-    print(f"   • Event types (last hour):")
+    print("   • Event types (last hour):")
     for event_type, count in type_stats.items():
         print(f"      - {event_type}: {count}")
     
     # Get processing stats
     processing_stats = monitor.get_processing_stats(hours=1)
-    print(f"   • Processing stats:")
+    print("   • Processing stats:")
     print(f"      - Total events: {processing_stats.get('total_events', 0)}")
     print(f"      - Processed: {processing_stats.get('processed_events', 0)}")
     print(f"      - Failed: {processing_stats.get('failed_events', 0)}")

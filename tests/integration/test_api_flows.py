@@ -1,8 +1,6 @@
 """Integration tests for API endpoints with database."""
 
-import os
 import pytest
-from datetime import datetime, timezone
 from fastapi.testclient import TestClient
 
 from src.procur.api.app import app

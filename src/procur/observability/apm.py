@@ -3,7 +3,7 @@
 import logging
 import time
 from contextlib import contextmanager
-from typing import Any, Dict, Optional
+from typing import Optional
 
 from .metrics import get_metrics_collector
 from .tracing import add_span_attributes, add_span_event

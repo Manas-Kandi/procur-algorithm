@@ -13,7 +13,6 @@ import json
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from sqlalchemy.orm import Session
 
 from procur.db.session import get_session
 from procur.db.repositories import (
@@ -22,7 +21,6 @@ from procur.db.repositories import (
     RequestRepository,
     ContractRepository,
 )
-from procur.api.security import get_password_hash
 from passlib.context import CryptContext
 
 

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Dict, Iterable
+from typing import Dict
 
 from .curriculum import CurriculumPhase
 from .regression import RegressionReport

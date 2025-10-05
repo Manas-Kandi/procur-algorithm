@@ -24,7 +24,7 @@ export function Login() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
 
-  const loginMutation = useMutation<LoginData, AxiosError<{ detail: string }>>({
+  const loginMutation = useMutation<LoginData, AxiosError<{ detail: string | any[] }>>({
     mutationFn: async () => {
       const tokenData = await api.login(email, password)
       // Store token first
@@ -44,7 +44,17 @@ export function Login() {
       void navigate(data.user.role === 'seller' ? '/seller' : '/')
     },
     onError: (err) => {
-      setError(err.response?.data?.detail ?? 'Login failed')
+      // Handle validation errors (422) which return an array of error objects
+      const detail = err.response?.data?.detail
+      if (Array.isArray(detail)) {
+        // Extract first error message from validation errors
+        const firstError = detail[0]
+        setError(firstError?.msg || 'Validation error')
+      } else if (typeof detail === 'string') {
+        setError(detail)
+      } else {
+        setError('Login failed')
+      }
     },
   })
 

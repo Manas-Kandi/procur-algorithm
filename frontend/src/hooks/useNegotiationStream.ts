@@ -50,6 +50,11 @@ export function useNegotiationStream(sessionId: string | null) {
 
     ws.onmessage = (event) => {
       try {
+        // Ignore ping/pong messages
+        if (event.data === 'ping' || event.data === 'pong') {
+          return
+        }
+
         const data = JSON.parse(event.data) as NegotiationEvent
 
         setState((prev) => {

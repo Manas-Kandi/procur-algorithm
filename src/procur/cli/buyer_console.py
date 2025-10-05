@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import os
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Dict
 
 from ..llm.client import LLMClient
 from ..orchestration.pipeline import PipelineServices, SaaSProcurementPipeline

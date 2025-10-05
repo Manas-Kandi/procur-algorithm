@@ -2,8 +2,7 @@
 
 from __future__ import annotations
 
-import asyncio
-from typing import Any, Dict, List
+from typing import Any, Dict
 
 from sqlalchemy.orm import Session
 
@@ -16,18 +15,16 @@ from ...db.repositories import (
     VendorRepository,
 )
 from ...llm import LLMClient
-from ...models import NegotiationDecision, OfferComponents, PaymentTerms, Request, VendorProfile
+from ...models import PaymentTerms, Request, VendorProfile
 from ...services import (
-    AuditTrailService,
     ComplianceService,
     ExplainabilityService,
     GuardrailService,
-    MemoryService,
     NegotiationEngine,
     PolicyEngine,
     ScoringService,
 )
-from ...services.negotiation_engine import ExchangePolicy, VendorNegotiationState
+from ...services.negotiation_engine import ExchangePolicy
 from ...services.vendor_matching import VendorMatchSummary
 from ...services.evaluation import FeatureMatchResult, ComplianceScore
 
@@ -225,23 +222,23 @@ async def run_auto_negotiation(
             }
 
         # Save final offer to database
+        import uuid
         offer_record = offer_repo.create(
+            offer_id=f"offer-{uuid.uuid4().hex[:12]}",
             request_id=request_record.id,
             vendor_id=vendor_record.id,
             negotiation_session_id=negotiation.id,
-            components={
-                "unit_price": final_offer.components.unit_price,
-                "currency": final_offer.components.currency,
-                "quantity": final_offer.components.quantity,
-                "term_months": final_offer.components.term_months,
-                "payment_terms": final_offer.components.payment_terms.value,
-            },
-            score={
-                "utility": final_offer.score.utility,
-                "risk": final_offer.score.risk,
-                "savings": final_offer.score.savings,
-            },
-            status="pending" if final_offer.accepted else "rejected",
+            unit_price=final_offer.components.unit_price,
+            quantity=final_offer.components.quantity,
+            term_months=final_offer.components.term_months,
+            payment_terms=final_offer.components.payment_terms.value,
+            currency=final_offer.components.currency,
+            score=final_offer.score.utility if hasattr(final_offer.score, 'utility') else None,
+            utility_buyer=final_offer.score.utility if hasattr(final_offer.score, 'utility') else None,
+            tco=buyer_agent.negotiation_engine.calculate_tco(final_offer.components),
+            accepted=final_offer.accepted,
+            rejected=not final_offer.accepted,
+            actor="buyer",
         )
 
         # Get audit trail for round count
