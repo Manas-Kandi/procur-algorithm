@@ -3,7 +3,6 @@ import { Home, FilePlus, Briefcase, ChevronsRight } from 'lucide-react'
 import { Box, VStack, Button, Icon, IconButton, Flex, Text } from '@chakra-ui/react'
 import { Tooltip } from '../shared/Tooltip'
 import { useAuthStore } from '../../store/auth'
-import { ColorModeButton } from './color-mode'
 
 export interface ProcurSidebarProps {
   open: boolean
@@ -49,11 +48,10 @@ export function ProcurSidebar({
           {open && (
             <Box minW={0}>
               <Text fontSize="sm" fontWeight="semibold" color="fg">Procur</Text>
-              <Text fontSize="xs" color="fg.muted">AI Procurement</Text>
             </Box>
           )}
         </Flex>
-        {open ? <ColorModeButton size="xs" /> : null}
+        {/* Theme switcher removed per request */}
       </Flex>
 
       <VStack align="stretch" px={2} gap={1.5}>

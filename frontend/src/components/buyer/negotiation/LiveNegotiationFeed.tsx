@@ -23,12 +23,16 @@ export function LiveNegotiationFeed({
     switch (type) {
       case 'connected':
         return FiCheck
+      case 'negotiation_start':
+        return FiZap
       case 'round_start':
         return FiZap
       case 'buyer_offer':
         return FiArrowRight
+      case 'seller_response':
       case 'seller_counter':
         return FiArrowRight
+      case 'negotiation_complete':
       case 'completed':
         return FiCheck
       case 'error':
@@ -41,11 +45,14 @@ export function LiveNegotiationFeed({
   const getEventColor = (type: string) => {
     switch (type) {
       case 'connected':
+      case 'negotiation_start':
         return 'green'
       case 'buyer_offer':
         return 'blue'
+      case 'seller_response':
       case 'seller_counter':
         return 'purple'
+      case 'negotiation_complete':
       case 'completed':
         return 'green'
       case 'error':

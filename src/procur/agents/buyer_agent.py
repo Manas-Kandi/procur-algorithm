@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Dict, Iterable, List, Optional
+from typing import Callable, Dict, Iterable, List, Optional, Any
+import asyncio
 
 from ..models import (
     ActorRole,
@@ -81,6 +82,7 @@ class BuyerAgent:
         memory_service: MemoryService | None = None,
         retrieval_service: RetrievalService | None = None,
         seller_config: SellerAgentConfig | None = None,
+        event_callback: Optional[Callable[[str, Dict[str, Any]], None]] = None,
     ) -> None:
         self.policy_engine = policy_engine
         self.compliance_service = compliance_service
@@ -95,6 +97,29 @@ class BuyerAgent:
         self.retrieval_service = retrieval_service
         self.seller_config = seller_config or SellerAgentConfig()
         self._last_audit_export: Optional[Dict[str, dict]] = None
+        self.event_callback = event_callback
+
+    def _emit_event(self, event_type: str, data: Dict[str, Any]) -> None:
+        """Emit a streaming event if callback is available."""
+        if self.event_callback:
+            try:
+                # If we're in an async context, schedule the callback
+                loop = asyncio.get_event_loop()
+                if loop.is_running():
+                    asyncio.create_task(self._async_emit(event_type, data))
+                else:
+                    # Fallback for sync context
+                    self.event_callback(event_type, data)
+            except RuntimeError:
+                # No event loop, call synchronously
+                self.event_callback(event_type, data)
+
+    async def _async_emit(self, event_type: str, data: Dict[str, Any]) -> None:
+        """Async wrapper for event emission."""
+        if asyncio.iscoroutinefunction(self.event_callback):
+            await self.event_callback(event_type, data)
+        else:
+            self.event_callback(event_type, data)
 
     def intake_request(self, raw_text: str, policy_summary: str) -> Request:
         messages = intake_prompt(raw_text, policy_summary)
@@ -878,6 +903,21 @@ class BuyerAgent:
             (prev_tco - selected_evaluation.tco) if prev_tco is not None else 0.0
         )
 
+        # Emit buyer offer event
+        self._emit_event("buyer_offer", {
+            "round_number": round_number,
+            "actor": "buyer",
+            "strategy": strategy.value,
+            "offer": {
+                "unit_price": buyer_components.unit_price,
+                "term_months": buyer_components.term_months,
+                "payment_terms": buyer_components.payment_terms.value,
+            },
+            "rationale": buyer_rationale[:3],  # First 3 rationale points for UI
+            "utility": buyer_utility,
+            "tco": buyer_tco,
+        })
+
         if self.audit_service:
             self.audit_service.record_move(
                 request_id=request.request_id,
@@ -956,6 +996,21 @@ class BuyerAgent:
         seller_tco = seller_evaluation.tco
         seller_utility = seller_evaluation.seller_utility or 0.0
         buyer_view = seller_evaluation.buyer_utility
+
+        # Emit seller response event
+        self._emit_event("seller_response", {
+            "round_number": round_number,
+            "actor": "seller",
+            "strategy": seller_strategy.value,
+            "offer": {
+                "unit_price": seller_offer.components.unit_price,
+                "term_months": seller_offer.components.term_months,
+                "payment_terms": seller_offer.components.payment_terms.value,
+            },
+            "rationale": [f"Strategy {seller_strategy.value}"] + seller_exchange_notes[:2],
+            "utility": buyer_view,
+            "tco": seller_tco,
+        })
 
         if self.audit_service:
             self.audit_service.record_move(
