@@ -33,10 +33,23 @@ def create_request(
     import uuid
     request_id = f"req-{uuid.uuid4().hex[:12]}"
     
+    # Parse timeline_deadline if provided
+    from datetime import datetime
+    timeline_deadline = None
+    if request_data.timeline_deadline:
+        try:
+            timeline_deadline = datetime.fromisoformat(request_data.timeline_deadline.replace('Z', '+00:00'))
+        except (ValueError, AttributeError):
+            pass
+
     # Create request
     request = request_repo.create(
         request_id=request_id,
         user_id=current_user.id,
+        procurement_goal=request_data.procurement_goal,
+        timeline_deadline=timeline_deadline,
+        timeline_urgency=request_data.timeline_urgency,
+        risk_notes=request_data.risk_notes,
         description=request_data.description,
         request_type=request_data.request_type,
         category=request_data.category,

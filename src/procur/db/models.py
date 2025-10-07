@@ -105,11 +105,17 @@ class RequestRecord(Base, TimestampMixin, SoftDeleteMixin):
     # User relationship
     user_id: Mapped[int] = mapped_column(Integer, ForeignKey("user_accounts.id"), nullable=False)
     
+    # Structured intake fields
+    procurement_goal: Mapped[str | None] = mapped_column(Text, nullable=True)
+    timeline_deadline: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    timeline_urgency: Mapped[str | None] = mapped_column(String(50), nullable=True)  # low, medium, high, critical
+    risk_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+
     # Request details
     description: Mapped[str] = mapped_column(Text, nullable=False)
     request_type: Mapped[str] = mapped_column(String(50), nullable=False)
     category: Mapped[str | None] = mapped_column(String(100), nullable=True, index=True)
-    
+
     # Budget and quantity
     budget_min: Mapped[float | None] = mapped_column(Float, nullable=True)
     budget_max: Mapped[float | None] = mapped_column(Float, nullable=True)

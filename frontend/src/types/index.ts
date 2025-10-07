@@ -14,6 +14,12 @@ export interface User {
 export interface Request {
   request_id: string
   requester_id: string
+  // Structured intake fields
+  procurement_goal?: string
+  timeline_deadline?: string
+  timeline_urgency?: 'low' | 'medium' | 'high' | 'critical'
+  risk_notes?: string
+  // Core fields
   type: string
   description: string
   specs: Record<string, any>

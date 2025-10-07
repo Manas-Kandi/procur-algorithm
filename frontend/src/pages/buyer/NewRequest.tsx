@@ -9,6 +9,7 @@ import {
   BudgetSelector,
   type BudgetMode,
 } from '../../components/buyer/request/BudgetSelector'
+import { ProcurementGoal } from '../../components/buyer/request/ProcurementGoal'
 import { ScopeDetails } from '../../components/buyer/request/ScopeDetails'
 import { RequirementChecklist } from '../../components/buyer/request/RequirementChecklist'
 import { PolicyPreview } from '../../components/buyer/request/PolicyPreview'
@@ -18,6 +19,10 @@ interface RequestDraft {
   budgetMode: BudgetMode
   budgetMin?: number
   budgetMax?: number
+  procurementGoal?: string
+  timelineDeadline?: string
+  timelineUrgency?: 'low' | 'medium' | 'high' | 'critical'
+  riskNotes?: string
   description?: string
   quantity?: number
   type?: string
@@ -27,6 +32,7 @@ interface RequestDraft {
 }
 
 const STEP_ORDER: Array<{ id: StepKey; label: string; description: string }> = [
+  { id: 'goal', label: 'Procurement goal', description: '' },
   { id: 'budget', label: 'Budget context', description: '' },
   { id: 'scope', label: 'What & how many', description: '' },
   { id: 'requirements', label: 'Requirements refinement', description: '' },
@@ -34,12 +40,12 @@ const STEP_ORDER: Array<{ id: StepKey; label: string; description: string }> = [
   { id: 'launch', label: 'Launch AI sourcing', description: '' },
 ]
 
-type StepKey = 'budget' | 'scope' | 'requirements' | 'policy' | 'launch'
+type StepKey = 'goal' | 'budget' | 'scope' | 'requirements' | 'policy' | 'launch'
 
 export function NewRequest(): JSX.Element {
   const navigate = useNavigate()
   const location = useLocation() as { state?: { description?: string } }
-  const [currentStep, setCurrentStep] = useState<StepKey>('budget')
+  const [currentStep, setCurrentStep] = useState<StepKey>('goal')
   const [draft, setDraft] = useState<RequestDraft>({
     budgetMode: 'see-pricing',
     mustHaves: [],
@@ -48,12 +54,12 @@ export function NewRequest(): JSX.Element {
   })
   const [showSourcingProgress, setShowSourcingProgress] = useState(false)
 
-  // Prefill description from hero input and move to Scope step
+  // Prefill description from hero input and move to Goal step
   useEffect(() => {
     const prefill = location.state?.description?.trim()
     if (prefill) {
       setDraft((prev) => ({ ...prev, description: prefill }))
-      setCurrentStep('scope')
+      setCurrentStep('goal')
     }
   }, [location.state])
 
@@ -63,6 +69,10 @@ export function NewRequest(): JSX.Element {
       // Create the request
       const request = await api.createRequest({
         ...payload,
+        procurement_goal: payload.procurementGoal,
+        timeline_deadline: payload.timelineDeadline,
+        timeline_urgency: payload.timelineUrgency,
+        risk_notes: payload.riskNotes,
         budget_min: payload.budgetMin,
         budget_max: payload.budgetMax,
         must_haves: payload.mustHaves,
@@ -86,6 +96,8 @@ export function NewRequest(): JSX.Element {
 
   const canGoNext = (): boolean => {
     switch (currentStep) {
+      case 'goal':
+        return Boolean(draft.procurementGoal && draft.procurementGoal.trim().length >= 20)
       case 'budget':
         if (draft.budgetMode === 'exact') return Boolean(draft.budgetMax)
         if (draft.budgetMode === 'range')
@@ -158,6 +170,24 @@ export function NewRequest(): JSX.Element {
         padding="lg"
         className="space-y-8 border-[var(--core-color-border-default)] bg-[var(--core-color-surface-canvas)]"
       >
+        {currentStep === 'goal' && (
+          <ProcurementGoal
+            goal={draft.procurementGoal}
+            timeline_deadline={draft.timelineDeadline}
+            timeline_urgency={draft.timelineUrgency}
+            risk_notes={draft.riskNotes}
+            onChange={({ goal, timeline_deadline, timeline_urgency, risk_notes }) => {
+              setDraft((prev) => ({
+                ...prev,
+                procurementGoal: goal,
+                timelineDeadline: timeline_deadline,
+                timelineUrgency: timeline_urgency,
+                riskNotes: risk_notes,
+              }))
+            }}
+          />
+        )}
+
         {currentStep === 'budget' && (
           <BudgetSelector
             mode={draft.budgetMode}

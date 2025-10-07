@@ -57,6 +57,13 @@ class UserResponse(BaseModel):
 
 class RequestCreate(BaseModel):
     """Create procurement request."""
+    # Structured intake fields
+    procurement_goal: Optional[str] = Field(None, description="Primary procurement objective or business outcome")
+    timeline_deadline: Optional[str] = Field(None, description="Target deadline (ISO format)")
+    timeline_urgency: Optional[str] = Field(None, description="Urgency level: low, medium, high, critical")
+    risk_notes: Optional[str] = Field(None, description="Risk or compliance notes")
+
+    # Core request details
     description: str = Field(..., min_length=10, description="Request description")
     request_type: str = Field(default="saas", description="Request type")
     category: Optional[str] = Field(None, description="Category")
@@ -98,6 +105,12 @@ class RequestResponse(BaseModel):
     id: int
     request_id: str
     user_id: int
+    # Structured intake fields
+    procurement_goal: Optional[str]
+    timeline_deadline: Optional[datetime]
+    timeline_urgency: Optional[str]
+    risk_notes: Optional[str]
+    # Core fields
     description: str
     request_type: str
     category: Optional[str]
@@ -112,7 +125,7 @@ class RequestResponse(BaseModel):
     status: str
     created_at: datetime
     updated_at: datetime
-    
+
     model_config = {"from_attributes": True}
 
 
