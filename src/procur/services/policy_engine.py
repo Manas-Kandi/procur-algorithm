@@ -109,8 +109,10 @@ class PolicyEngine:
             )
 
         if vendor and vendor.guardrails.payment_terms_allowed:
-            allowed = set(vendor.guardrails.payment_terms_allowed)
-            if offer.payment_terms.value not in allowed:
+            # Normalize to lowercase for case-insensitive comparison
+            allowed = {term.lower() for term in vendor.guardrails.payment_terms_allowed}
+            offered_term = offer.payment_terms.value.lower()
+            if offered_term not in allowed:
                 violations.append(
                     PolicyViolation(
                         code="payment_terms_not_allowed",

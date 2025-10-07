@@ -159,9 +159,16 @@ class BuyerAgent:
         request: Request,
         vendors: List[VendorProfile],
     ) -> Dict[str, Offer]:
+        print(f"\n🤖 BuyerAgent.negotiate() called")
+        print(f"   Request: {request.request_id}")
+        print(f"   Vendors: {[v.vendor_id for v in vendors]}")
+        
         offers: Dict[str, Offer] = {}
         competing_context = self._build_competing_offers(request, vendors)
+        print(f"   Competing offers built: {len(competing_context)}")
+        
         for vendor in vendors:
+            print(f"\n   🏢 Negotiating with vendor: {vendor.vendor_id} ({vendor.name})")
             competitor_set = [
                 offer
                 for offer in competing_context
@@ -217,7 +224,10 @@ class BuyerAgent:
             elif state.fsm_state == NegotiationLifecycle.INIT.value:
                 state.fsm_state = NegotiationLifecycle.NEGOTIATING.value
 
+            print(f"      📊 Max rounds: {max_rounds}, FSM state: {state.fsm_state}")
+            
             for round_number in range(1, max_rounds + 1):
+                print(f"      🔄 Round {round_number}/{max_rounds}")
                 round_result = self._run_round(
                     request=request,
                     state=state,
@@ -232,31 +242,43 @@ class BuyerAgent:
                 decision: NegotiationDecision = round_result["decision"]
                 should_close: bool = round_result["should_close"]
                 close_reason = round_result["close_reason"]
+                print(f"         Decision: {decision}, Should close: {should_close}, Reason: {close_reason}")
+                
                 if decision == NegotiationDecision.DROP:
                     final_offer = state.best_offer or round_result["buyer_offer"]
                     outcome = state.outcome_state or "dropped"
                     close_reason = state.outcome_reason or close_reason or "buyer_drop"
+                    print(f"         ❌ Dropping negotiation: {outcome}")
                     break
                 if should_close or decision == NegotiationDecision.ACCEPT:
                     final_offer = round_result["seller_offer"]
                     outcome = state.outcome_state or "accepted"
                     close_reason = state.outcome_reason or close_reason
+                    print(f"         ✅ Accepting offer: {outcome}")
                     break
 
             if final_offer is None:
+                print(f"      ⚠️ No final offer after rounds, using fallback")
                 if state.best_offer:
                     final_offer = state.best_offer
+                    print(f"         Using best_offer")
                 elif round_result:
                     final_offer = round_result["buyer_offer"]
+                    print(f"         Using buyer_offer from last round")
 
             if state.outcome_state:
                 outcome = state.outcome_state
+                print(f"      🎯 Final outcome state: {outcome}")
 
             if final_offer:
                 outcome_marker = state.outcome_state or outcome
                 if outcome_marker in {"accepted", "accepted_no_concession"}:
                     final_offer.accepted = True
+                    print(f"      ✅ Marking offer as accepted")
                 offers[vendor.vendor_id] = final_offer
+                print(f"      💾 Stored offer for vendor {vendor.vendor_id}")
+            else:
+                print(f"      ❌ NO FINAL OFFER for vendor {vendor.vendor_id}")
 
             if self.audit_service:
                 summary = self._build_summary(request, vendor, final_offer, state)
@@ -297,6 +319,10 @@ class BuyerAgent:
         if self.audit_service:
             self._last_audit_export = self.audit_service.export_sessions(request.request_id)
 
+        print(f"\n   ✅ BuyerAgent.negotiate() complete")
+        print(f"      Final offers: {list(offers.keys())}")
+        print(f"      Offers dict: {offers}")
+        
         return offers
 
     def _build_competing_offers(
@@ -890,6 +916,11 @@ class BuyerAgent:
 
         forced_drop = False
         if not selected_evaluation.valid:
+            print(f"         ⚠️ POLICY BLOCKED:")
+            print(f"            Policy result: {policy_result}")
+            print(f"            Violations: {policy_result.violations if hasattr(policy_result, 'violations') else 'N/A'}")
+            print(f"            Guardrail alerts: {guardrail_alerts}")
+            print(f"            Buyer components: {buyer_components}")
             state.outcome_state = "policy_blocked"
             state.outcome_reason = "blocking_policy_or_guardrail"
             forced_drop = True

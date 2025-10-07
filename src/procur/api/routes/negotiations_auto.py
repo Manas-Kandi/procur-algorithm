@@ -257,6 +257,15 @@ async def auto_negotiate(
     # Convert to domain models
     request_model = _convert_db_request_to_model(request_record)
     vendor_model = _convert_db_vendor_to_model(vendor_record)
+    
+    print(f"\n{'='*80}")
+    print(f"AUTO-NEGOTIATE START: session_id={session_id}")
+    print(f"Request: {request_model.request_id} - {request_model.description}")
+    print(f"Vendor: {vendor_model.vendor_id} - {vendor_model.name}")
+    print(f"Budget: ${request_model.budget_min} - ${request_model.budget_max}")
+    print(f"Quantity: {request_model.quantity}")
+    print(f"Vendor guardrails: {vendor_model.guardrails}")
+    print(f"{'='*80}\n")
 
     # Attach match summary to vendor (if available from negotiation metadata)
     if negotiation.metadata and "match_summary" in negotiation.metadata:
@@ -296,16 +305,30 @@ async def auto_negotiate(
 
         # Wrap agent for streaming
         streaming_wrapper = StreamingNegotiationWrapper(buyer_agent, session_id)
+        print(f"🚀 Starting negotiation with streaming wrapper...")
+        
         offers_dict = await streaming_wrapper.negotiate_with_streaming(
             request_model,
             [vendor_model]
         )
+        
+        print(f"📊 Negotiation complete. Offers received: {list(offers_dict.keys())}")
+        print(f"📦 Offers dict content: {offers_dict}")
 
         # Get the final offer for this vendor
         final_offer = offers_dict.get(vendor_model.vendor_id)
+        print(f"🎯 Final offer for {vendor_model.vendor_id}: {final_offer}")
 
         if not final_offer:
             # No deal reached
+            print(f"❌ NO FINAL OFFER FOUND for vendor {vendor_model.vendor_id}")
+            print(f"   Available vendor IDs in offers_dict: {list(offers_dict.keys())}")
+            print(f"   Looking for vendor_id: {vendor_model.vendor_id}")
+            
+            # Check audit trail
+            audit_data = buyer_agent.export_audit()
+            print(f"📋 Audit data: {audit_data}")
+            
             neg_repo.complete_session(
                 negotiation.id,
                 outcome="no_agreement",
@@ -342,10 +365,16 @@ async def auto_negotiate(
 
         # Get audit trail for round count
         audit_data = buyer_agent.export_audit()
+        print(f"📋 Full audit data: {audit_data}")
+        
         rounds_completed = 0
         if audit_data and vendor_model.vendor_id in audit_data:
             session_data = audit_data[vendor_model.vendor_id]
             rounds_completed = len(session_data.get("rounds", []))
+            print(f"✅ Found {rounds_completed} rounds in audit for vendor {vendor_model.vendor_id}")
+        else:
+            print(f"⚠️ No audit data found for vendor {vendor_model.vendor_id}")
+            print(f"   Available vendors in audit: {list(audit_data.keys()) if audit_data else 'None'}")
 
         # Complete negotiation
         outcome = "accepted" if final_offer.accepted else "no_agreement"
@@ -373,6 +402,12 @@ async def auto_negotiate(
 
     except Exception as e:
         # Handle negotiation errors
+        print(f"\n❌ NEGOTIATION ERROR:")
+        print(f"   Error type: {type(e).__name__}")
+        print(f"   Error message: {str(e)}")
+        import traceback
+        print(f"   Traceback:\n{traceback.format_exc()}")
+        
         neg_repo.complete_session(
             negotiation.id,
             outcome="error",
