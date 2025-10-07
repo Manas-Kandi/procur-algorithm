@@ -166,3 +166,6 @@ class PolicyEngine:
                 ],
             )
         return PolicyResult.ok()
+
+    def new_code(self):
+        print("Executing new code")
