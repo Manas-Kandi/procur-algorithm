@@ -22,12 +22,13 @@ router = APIRouter(prefix="/sourcing", tags=["Sourcing"])
 async def _trigger_auto_negotiations(session_ids: List[str], user_id: int):
     """Background task to trigger auto-negotiations for all sessions."""
     from ..services.auto_negotiation import run_auto_negotiation
-    from ...db import SessionLocal
+    from ...db.session import get_db_session
 
     print(f"[Background] Starting auto-negotiations for {len(session_ids)} sessions")
 
     # Create new DB session for background task
-    db = SessionLocal()
+    db_manager = get_db_session()
+    db = db_manager.session_factory()
     try:
         # Trigger negotiations for all sessions in parallel
         tasks = []

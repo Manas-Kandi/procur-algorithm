@@ -12,6 +12,10 @@ import { HeroInput } from '../../components/buyer/dashboard/HeroInput'
 import { BreathingNumber } from '../../components/ui/BreathingNumber'
 import { OverviewCards } from '../../components/ui/OverviewCards'
 import { ActiveRequestsList } from '../../components/ui/ActiveRequestsList'
+import { OutcomesPanel } from '../../components/buyer/dashboard/OutcomesPanel'
+import { AgentActionsTimeline, type AgentAction } from '../../components/buyer/dashboard/AgentActionsTimeline'
+import { RoleBasedPanel } from '../../components/buyer/dashboard/RoleBasedPanel'
+import { StatusBadge } from '../../components/shared/StatusBadge'
 import type { Request, DashboardMetrics } from '../../types'
 import { useAuthStore } from '../../store/auth'
 
@@ -100,6 +104,24 @@ export function BuyerDashboard(): JSX.Element {
     [approvals]
   )
 
+  // Mock agent actions for demo (replace with real API data)
+  const mockAgentActions: AgentAction[] = useMemo(() => {
+    if (!Array.isArray(requests) || requests.length === 0) return []
+
+    return requests.slice(0, 5).map((req, idx) => ({
+      id: `action-${req.request_id}-${idx}`,
+      timestamp: req.updated_at || req.created_at || new Date().toISOString(),
+      actor: idx % 2 === 0 ? 'buyer_agent' as const : 'seller_agent' as const,
+      action: idx % 2 === 0 ? 'Auto-negotiated offer' : 'Received counter-offer',
+      description: idx % 2 === 0
+        ? `Negotiated ${req.description} - achieved $${Math.floor(Math.random() * 5000)} savings`
+        : `Vendor responded to ${req.description}`,
+      requestId: req.request_id,
+      vendorName: idx % 3 === 0 ? 'OrbitCRM' : idx % 3 === 1 ? 'ApolloCRM' : 'ZenDesk',
+      status: req.status === 'negotiating' ? 'pending' as const : req.status === 'completed' ? 'success' as const : 'info' as const,
+    }))
+  }, [requests])
+
   // Count repeated activity entries by normalized key for subtle repetition chip (×n)
   const activityCounts = useMemo(() => {
     const list: Request[] = Array.isArray(requests) ? requests : []
@@ -162,6 +184,17 @@ export function BuyerDashboard(): JSX.Element {
             />
           </Box>
 
+          {/* Outcomes & Savings Panel */}
+          <Box my={6}>
+            <OutcomesPanel
+              totalSavings={(metrics as any)?.total_savings || 125000}
+              avgSavingsPercent={(metrics as any)?.avg_savings_percent || 18.5}
+              avgClosingTime={(metrics as any)?.avg_closing_time_days || 12}
+              complianceCoverage={(metrics as any)?.compliance_coverage_percent || 95}
+              contractsApproved={(metrics as any)?.contracts_approved || activeCount}
+            />
+          </Box>
+
           {/* Recent activity */}
           <SurfaceCard
             title="Recent activity"
@@ -216,9 +249,9 @@ export function BuyerDashboard(): JSX.Element {
                           )}
                         </Box>
 
-                        {/* Stage as a soft badge */}
-                        <Box as="span" justifySelf="start" px={2} py={0.5} fontSize="xs" opacity={0.9} color="fg.muted" bg="bg.subtle" borderWidth="1px" borderColor="border" borderRadius="sm">
-                          {r.status}
+                        {/* Stage as enhanced status badge */}
+                        <Box justifySelf="start">
+                          <StatusBadge status={r.status} size="sm" showIcon={true} />
                         </Box>
 
                         {/* Budget */}
@@ -263,6 +296,34 @@ export function BuyerDashboard(): JSX.Element {
                 compact
               />
             )}
+          </Box>
+
+          {/* Agent Actions Timeline */}
+          <SurfaceCard
+            title="Recent Agent Actions"
+            actions={(
+              <Text fontSize="xs" color="fg.muted">Live updates</Text>
+            )}
+            my={6}
+          >
+            <AgentActionsTimeline
+              actions={mockAgentActions}
+              maxItems={5}
+              onActionClick={(action) => {
+                if (action.requestId) {
+                  void navigate(`/requests/${action.requestId}/negotiate`)
+                }
+              }}
+            />
+          </SurfaceCard>
+
+          {/* Role-Based Panel */}
+          <Box my={6}>
+            <RoleBasedPanel
+              role={user?.role === 'approver' ? 'approver' : 'buyer'}
+              requests={requests || []}
+              approvals={approvals || []}
+            />
           </Box>
 
           {/* Active requests - subtle list */}
