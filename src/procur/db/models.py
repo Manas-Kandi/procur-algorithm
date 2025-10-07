@@ -438,3 +438,17 @@ class PolicyConfigRecord(Base, TimestampMixin, SoftDeleteMixin):
     
     def __repr__(self) -> str:
         return f"<PolicyConfigRecord(id={self.id}, policy_name='{self.policy_name}', version={self.version})>"
+
+
+class NegotiationEvent(Base, TimestampMixin):
+    """Store real-time negotiation events for streaming and audit."""
+    
+    __tablename__ = "negotiation_events"
+    
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    session_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    event_type: Mapped[str] = mapped_column(String(100), nullable=False)
+    event_data: Mapped[Dict[str, Any]] = mapped_column(JSON, nullable=False)
+    
+    def __repr__(self) -> str:
+        return f"<NegotiationEvent(session_id={self.session_id}, event_type={self.event_type}, timestamp={self.created_at})>"

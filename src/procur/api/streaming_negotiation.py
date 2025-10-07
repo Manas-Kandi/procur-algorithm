@@ -4,7 +4,8 @@ import asyncio
 from typing import Dict, Any, List
 from ..agents.buyer_agent import BuyerAgent
 from ..models import Request, VendorProfile
-
+from ..db.models import NegotiationEvent
+from ..db.session import get_session
 
 class StreamingNegotiationWrapper:
     """Wraps BuyerAgent to emit real-time events via WebSocket."""
@@ -19,6 +20,22 @@ class StreamingNegotiationWrapper:
         """Emit event to WebSocket if manager is available."""
         if self._manager:
             await self._manager.send_event(self.session_id, event_type, data)
+        
+        # Store event in database
+        try:
+            db = next(get_session())
+            event = NegotiationEvent(
+                session_id=self.session_id,
+                event_type=event_type,
+                event_data=data
+            )
+            db.add(event)
+            db.commit()
+            db.refresh(event)
+        except Exception as e:
+            print(f"Error storing negotiation event: {e}")
+        finally:
+            db.close()
 
     def _sync_emit_event(self, event_type: str, data: Dict[str, Any]):
         """Synchronous wrapper for emitting events from within the agent."""
