@@ -1,4 +1,4 @@
-import { useParams } from 'react-router-dom'
+import { useParams, Link as RouterLink } from 'react-router-dom'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { Box, Heading, SimpleGrid, Text, VStack, Badge, HStack, Button } from '@chakra-ui/react'
 import { FiPlay } from 'react-icons/fi'
@@ -8,11 +8,13 @@ import { NegotiationFeedWrapper } from '../../components/buyer/negotiation/Negot
 import { NegotiationControl } from '../../components/buyer/negotiation/NegotiationControl'
 import { SmartAlert } from '../../components/shared/SmartAlert'
 import { useEffect, useState, useMemo } from 'react'
+import { toaster } from '@/components/ui/toaster'
 
 export function NegotiationTheater(): JSX.Element {
   const { requestId } = useParams<{ requestId: string }>()
   const [activeStreams, setActiveStreams] = useState<Set<string>>(new Set())
   const [activeNegotiatingSession, setActiveNegotiatingSession] = useState<string | null>(null)
+  
 
   const { data: sessions, isLoading, refetch } = useQuery({
     queryKey: ['negotiations', requestId],
@@ -30,20 +32,29 @@ export function NegotiationTheater(): JSX.Element {
     },
     onSuccess: (data) => {
       console.log('Negotiation completed:', data)
-      
-      // Show result to user
-      const outcome = data.outcome === 'agreement' ? 'Deal reached!' : 'No agreement reached'
+      // Non-blocking toast feedback
+      const outcome = data.outcome === 'agreement' ? 'Deal reached' : 'No agreement'
       const rounds = data.rounds_completed || 0
-      const message = `${outcome}\n\nRounds: ${rounds}\nStatus: ${data.status}`
-      
-      alert(message)
-      
+      toaster.create({
+        title: 'Negotiation completed',
+        description: `${outcome}. Rounds: ${rounds}. Status: ${data.status}.`,
+        type: data.outcome === 'agreement' ? 'success' : 'info',
+        duration: 5000,
+        closable: true,
+      })
+
       setActiveNegotiatingSession(null)
       refetch()
     },
     onError: (error: any) => {
       console.error('Negotiation failed:', error)
-      alert(`Negotiation failed: ${error.response?.data?.detail || error.message}`)
+      toaster.create({
+        title: 'Negotiation failed',
+        description: error.response?.data?.detail || error.message,
+        type: 'error',
+        duration: 6000,
+        closable: true,
+      })
       setActiveNegotiatingSession(null)
     },
   })
@@ -77,7 +88,7 @@ export function NegotiationTheater(): JSX.Element {
   if (isLoading) {
     return (
       <Box py={12} textAlign="center">
-        <Text fontSize="sm" color="var(--core-color-text-muted)">
+        <Text fontSize="sm" color="fg.muted">
           Loading negotiation insights…
         </Text>
       </Box>
@@ -87,7 +98,7 @@ export function NegotiationTheater(): JSX.Element {
   if (!sessions || sessions.length === 0) {
     return (
       <VStack gap={6} align="stretch">
-        <Heading size="lg" color="var(--core-color-text-primary)">
+        <Heading size="lg" color="fg">
           Negotiation theater
         </Heading>
         <SmartAlert
@@ -95,6 +106,11 @@ export function NegotiationTheater(): JSX.Element {
           title="No negotiations in progress"
           message="Launch AI sourcing to start negotiating with vendors."
         />
+        <RouterLink to="/requests/new">
+          <Button colorPalette="blue" size="sm" width="fit-content">
+            Create new request
+          </Button>
+        </RouterLink>
       </VStack>
     )
   }
@@ -109,23 +125,22 @@ export function NegotiationTheater(): JSX.Element {
     <VStack gap={10} align="stretch">
       {/* Page header */}
       <Box>
-        <Heading size="lg" color="var(--core-color-text-primary)">
+        <Heading size="lg" color="fg">
           Negotiation theater
         </Heading>
-        <Text mt={1} fontSize="sm" color="var(--core-color-text-muted)">
+        <Text mt={1} fontSize="sm" color="fg.muted">
           Watch your agent orchestrate offers in real-time. Intervene when needed.
         </Text>
       </Box>
-
-      <Box as="hr" borderTopWidth="1px" borderColor="var(--core-color-border-default)" />
+      <Box as="hr" borderTopWidth="1px" borderColor="border" />
 
       {/* Current best offers */}
       <VStack gap={4} align="stretch">
         <Box>
-          <Heading size="md" color="var(--core-color-text-primary)">
+          <Heading size="md" color="fg">
             Current best offers
           </Heading>
-          <Text mt={1} fontSize="sm" color="var(--core-color-text-muted)">
+          <Text mt={1} fontSize="sm" color="fg.muted">
             AI ranks offers based on budget fit, feature coverage, and risk.
           </Text>
         </Box>
@@ -140,7 +155,7 @@ export function NegotiationTheater(): JSX.Element {
               clickable={false}
               actions={
                 <Button
-                  colorScheme="blue"
+                  colorPalette="blue"
                   size="sm"
                   width="full"
                   loading={autoNegotiateMutation.isPending && activeNegotiatingSession === session.session_id}
@@ -165,20 +180,20 @@ export function NegotiationTheater(): JSX.Element {
       {/* Live negotiation feed - only show when negotiating */}
       {activeNegotiatingSession && (
         <>
-          <Box as="hr" borderTopWidth="1px" borderColor="var(--core-color-border-default)" />
+          <Box as="hr" borderTopWidth="1px" borderColor="border" />
 
           <VStack gap={4} align="stretch">
             <Box>
               <HStack justify="space-between">
                 <Box>
-                  <Heading size="md" color="var(--core-color-text-primary)">
+                  <Heading size="md" color="fg">
                     Live negotiation feed
                   </Heading>
-                  <Text mt={1} fontSize="sm" color="var(--core-color-text-muted)">
+                  <Text mt={1} fontSize="sm" color="fg.muted">
                     Real-time AI negotiations with full transparency
                   </Text>
                 </Box>
-                <Badge colorScheme="green" fontSize="sm">
+                <Badge colorPalette="green" fontSize="sm">
                   Live
                 </Badge>
               </HStack>
@@ -192,11 +207,11 @@ export function NegotiationTheater(): JSX.Element {
         </>
       )}
 
-      <Box as="hr" borderTopWidth="1px" borderColor="var(--core-color-border-default)" />
+      <Box as="hr" borderTopWidth="1px" borderColor="border" />
 
       {/* Control panel */}
       <VStack gap={3} align="stretch">
-        <Heading size="md" color="var(--core-color-text-primary)">
+        <Heading size="md" color="fg">
           Control panel
         </Heading>
         <NegotiationControl

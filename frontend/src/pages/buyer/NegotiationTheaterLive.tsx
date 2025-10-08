@@ -9,7 +9,6 @@ import {
   VStack,
   Text,
   Badge,
-  useToast,
 } from '@chakra-ui/react'
 import { FiPlay, FiPause } from 'react-icons/fi'
 import { api } from '../../services/api'
@@ -18,10 +17,10 @@ import { LiveNegotiationFeed } from '../../components/buyer/negotiation/LiveNego
 import { OfferCard } from '../../components/buyer/negotiation/OfferCard'
 import { SmartAlert } from '../../components/shared/SmartAlert'
 import type { NegotiationSession } from '../../types'
+import { toaster } from '@/components/ui/toaster'
 
 export function NegotiationTheaterLive(): JSX.Element {
   const { requestId } = useParams<{ requestId: string }>()
-  const toast = useToast()
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null)
 
   const { data: sessions, isLoading, refetch } = useQuery({
@@ -42,20 +41,22 @@ export function NegotiationTheaterLive(): JSX.Element {
       return await api.autoNegotiate(sessionId, 8)
     },
     onSuccess: () => {
-      toast({
+      toaster.create({
         title: 'Negotiation completed',
         description: 'The AI has finished negotiating with the vendor.',
-        status: 'success',
+        type: 'success',
         duration: 5000,
+        closable: true,
       })
       refetch()
     },
     onError: (error: any) => {
-      toast({
+      toaster.create({
         title: 'Negotiation failed',
         description: error.response?.data?.detail || 'Failed to complete negotiation',
-        status: 'error',
+        type: 'error',
         duration: 5000,
+        closable: true,
       })
     },
   })
@@ -101,13 +102,13 @@ export function NegotiationTheaterLive(): JSX.Element {
   }
 
   return (
-    <VStack align="stretch" spacing={8}>
+    <VStack align="stretch" gap={8}>
       {/* Header */}
       <Box>
-        <Text fontSize="2xl" fontWeight="bold" color="var(--core-color-text-primary)">
+        <Text fontSize="2xl" fontWeight="bold" color="fg">
           Negotiation Theater
         </Text>
-        <Text fontSize="sm" color="var(--core-color-text-muted)">
+        <Text fontSize="sm" color="fg.muted">
           Watch your AI agent orchestrate offers in real-time. Intervene when needed.
         </Text>
       </Box>
@@ -116,21 +117,21 @@ export function NegotiationTheaterLive(): JSX.Element {
       {activeSessionId && (
         <HStack
           p={3}
-          bg="var(--core-color-surface-secondary)"
+          bg="bg.panel"
           borderRadius="md"
           border="1px solid"
-          borderColor={streamState.connected ? 'var(--core-color-green-300)' : 'var(--core-color-border-subtle)'}
+          borderColor={streamState.connected ? 'green.emphasized' : 'border'}
         >
-          <Badge colorScheme={streamState.connected ? 'green' : 'gray'}>
+          <Badge colorPalette={streamState.connected ? 'green' : 'gray'}>
             {streamState.connected ? 'Connected' : 'Disconnected'}
           </Badge>
-          <Text fontSize="sm" color="var(--core-color-text-secondary)">
+          <Text fontSize="sm" color="fg.muted">
             {streamState.isNegotiating
               ? 'Negotiation in progress...'
               : 'Ready to negotiate'}
           </Text>
           {streamState.error && (
-            <Text fontSize="sm" color="var(--core-color-red-500)">
+            <Text fontSize="sm" color="red.fg">
               {streamState.error}
             </Text>
           )}
@@ -139,10 +140,10 @@ export function NegotiationTheaterLive(): JSX.Element {
 
       {/* Top Offers Section */}
       <Box>
-        <Text fontSize="lg" fontWeight="semibold" color="var(--core-color-text-primary)" mb={2}>
+        <Text fontSize="lg" fontWeight="semibold" color="fg" mb={2}>
           Current Best Offers
         </Text>
-        <Text fontSize="sm" color="var(--core-color-text-muted)" mb={4}>
+        <Text fontSize="sm" color="fg.muted" mb={4}>
           AI ranks offers based on budget fit, feature coverage, and risk.
         </Text>
         <Grid templateColumns={{ base: '1fr', md: 'repeat(2, 1fr)', xl: 'repeat(3, 1fr)' }} gap={4}>
@@ -156,15 +157,19 @@ export function NegotiationTheaterLive(): JSX.Element {
               <HStack mt={3} justify="center">
                 <Button
                   size="sm"
-                  leftIcon={streamState.isNegotiating && activeSessionId === session.session_id ? <FiPause /> : <FiPlay />}
-                  colorScheme="blue"
-                  isLoading={autoNegotiateMutation.isPending && activeSessionId === session.session_id}
-                  isDisabled={streamState.isNegotiating && activeSessionId !== session.session_id}
+                  colorPalette="blue"
+                  loading={autoNegotiateMutation.isPending && activeSessionId === session.session_id}
+                  disabled={streamState.isNegotiating && activeSessionId !== session.session_id}
                   onClick={() => handleStartNegotiation(session.session_id)}
                 >
-                  {activeSessionId === session.session_id
-                    ? 'Negotiating...'
-                    : 'Start Auto-Negotiate'}
+                  <HStack gap={2}>
+                    {streamState.isNegotiating && activeSessionId === session.session_id ? <FiPause /> : <FiPlay />}
+                    <span>
+                      {activeSessionId === session.session_id
+                        ? 'Negotiating...'
+                        : 'Auto-negotiate'}
+                    </span>
+                  </HStack>
                 </Button>
               </HStack>
             </Box>
@@ -175,10 +180,10 @@ export function NegotiationTheaterLive(): JSX.Element {
       {/* Live Negotiation Feed */}
       {activeSessionId && (
         <Box>
-          <Text fontSize="lg" fontWeight="semibold" color="var(--core-color-text-primary)" mb={2}>
+          <Text fontSize="lg" fontWeight="semibold" color="fg" mb={2}>
             Live Negotiation Feed
           </Text>
-          <Text fontSize="sm" color="var(--core-color-text-muted)" mb={4}>
+          <Text fontSize="sm" color="fg.muted" mb={4}>
             Real-time stream of negotiation rounds with full reasoning transparency.
           </Text>
           <LiveNegotiationFeed
@@ -210,14 +215,14 @@ export function NegotiationTheaterLive(): JSX.Element {
                 borderColor="var(--core-color-border-subtle)"
               >
                 <HStack justify="space-between" mb={2}>
-                  <Text fontSize="sm" fontWeight="semibold" color="var(--core-color-text-primary)">
+                  <Text fontSize="sm" fontWeight="semibold" color="fg">
                     {session.vendor_name}
                   </Text>
-                  <Badge colorScheme="gray" fontSize="xs">
+                  <Badge colorPalette="gray" fontSize="xs">
                     {session.status}
                   </Badge>
                 </HStack>
-                <Text fontSize="xs" color="var(--core-color-text-muted)">
+                <Text fontSize="xs" color="fg.muted">
                   Click "Start Auto-Negotiate" above to see live negotiation
                 </Text>
               </Box>

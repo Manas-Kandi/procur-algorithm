@@ -21,6 +21,7 @@ import { EnhancedInterventionPanel } from '../../components/buyer/negotiation/En
 import { CommunicationFeed, type Message } from '../../components/buyer/negotiation/CommunicationFeed'
 import { AuditLogModal, type AuditEntry } from '../../components/buyer/negotiation/AuditLogModal'
 import { OfferDetailsPanel } from '../../components/buyer/negotiation/OfferDetailsPanel'
+import { toaster } from '@/components/ui/toaster'
 
 export function NegotiationTheaterEnhanced(): JSX.Element {
   const { requestId } = useParams<{ requestId: string }>()
@@ -105,7 +106,7 @@ export function NegotiationTheaterEnhanced(): JSX.Element {
       actor: event.event_type.includes('buyer') ? 'agent' : event.event_type.includes('policy') ? 'policy' : 'system',
       action: event.event_type.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()),
       details: event.event_data?.message || JSON.stringify(event.event_data),
-      level: event.event_type.includes('error') ? 'error' : event.event_type.includes('success') ? 'success' : 'info',
+      level: event.event_type.includes('error') ? 'warning' : event.event_type.includes('success') ? 'success' : 'info',
       metadata: event.event_data,
     }))
   }, [events, selectedSession])
@@ -175,7 +176,7 @@ export function NegotiationTheaterEnhanced(): JSX.Element {
   if (isLoading) {
     return (
       <Box py={12} textAlign="center">
-        <Text>Loading negotiation theater...</Text>
+        <Text color="fg.muted">Loading negotiation theater...</Text>
       </Box>
     )
   }
@@ -186,11 +187,13 @@ export function NegotiationTheaterEnhanced(): JSX.Element {
       <Button
         variant="ghost"
         size="sm"
-        leftIcon={<ArrowLeft className="h-4 w-4" />}
-        onClick={() => navigate('/dashboard')}
+        onClick={() => navigate('/')}
         mb={4}
       >
-        Back to Dashboard
+        <HStack gap={2}>
+          <ArrowLeft className="h-4 w-4" />
+          <span>Back to Dashboard</span>
+        </HStack>
       </Button>
 
       <VStack align="stretch" gap={6}>
@@ -213,7 +216,7 @@ export function NegotiationTheaterEnhanced(): JSX.Element {
             <VStack align="stretch" gap={6}>
               {/* Vendor Cards */}
               <Box>
-                <Heading size="md" mb={4} color="var(--core-color-text-primary)">
+                <Heading size="md" mb={4} color="fg">
                   Active Negotiations
                 </Heading>
                 <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
@@ -226,10 +229,22 @@ export function NegotiationTheaterEnhanced(): JSX.Element {
                       mustHaves={request?.must_haves}
                       onClick={() => setSelectedSessionId(session.session_id)}
                       onAccept={() => {
-                        alert(`Accepting offer from ${session.vendor_name}`)
+                        toaster.create({
+                          title: 'Accept offer',
+                          description: `Accepting offer from ${session.vendor_name}`,
+                          type: 'success',
+                          duration: 4000,
+                          closable: true,
+                        })
                       }}
                       onIntervene={() => {
-                        alert('Opening intervention panel')
+                        toaster.create({
+                          title: 'Intervention',
+                          description: 'Opening intervention panel',
+                          type: 'info',
+                          duration: 3000,
+                          closable: true,
+                        })
                       }}
                     />
                   ))}
@@ -243,7 +258,7 @@ export function NegotiationTheaterEnhanced(): JSX.Element {
                   <HStack
                     gap={0}
                     borderBottomWidth="1px"
-                    borderColor="var(--core-color-border-default)"
+                    borderColor="border"
                   >
                     {[
                       { id: 'details', label: 'Offer Details' },
@@ -257,21 +272,11 @@ export function NegotiationTheaterEnhanced(): JSX.Element {
                         size="md"
                         borderRadius="0"
                         borderBottomWidth="2px"
-                        borderBottomColor={
-                          activeTab === tab.id
-                            ? 'var(--core-color-brand-primary)'
-                            : 'transparent'
-                        }
-                        color={
-                          activeTab === tab.id
-                            ? 'var(--core-color-brand-primary)'
-                            : 'var(--core-color-text-secondary)'
-                        }
+                        borderBottomColor={activeTab === tab.id ? 'brand.emphasized' : 'transparent'}
+                        color={activeTab === tab.id ? 'brand.fg' : 'fg.muted'}
                         fontWeight={activeTab === tab.id ? 'semibold' : 'normal'}
                         onClick={() => setActiveTab(tab.id as any)}
-                        _hover={{
-                          bg: 'var(--core-color-surface-subtle)',
-                        }}
+                        _hover={{ bg: 'bg.subtle' }}
                       >
                         {tab.label}
                       </Button>
@@ -360,35 +365,26 @@ export function NegotiationTheaterEnhanced(): JSX.Element {
             />
 
             {/* Audit Log Button */}
-            <Button
-              variant="outline"
-              leftIcon={<FileText className="h-4 w-4" />}
-              onClick={openAudit}
-              w="full"
-            >
-              View Complete Audit Trail
+            <Button variant="outline" onClick={openAudit} w="full">
+              <HStack gap={2}>
+                <FileText className="h-4 w-4" />
+                <span>View Complete Audit Trail</span>
+              </HStack>
             </Button>
 
             {/* Quick Actions */}
-            <Box
-              p={4}
-              borderWidth="1px"
-              borderColor="var(--core-color-border-default)"
-              borderRadius="lg"
-              bg="var(--core-color-surface-canvas)"
-            >
-              <Text fontSize="sm" fontWeight="semibold" mb={3} color="var(--core-color-text-primary)">
+            <Box p={4} borderWidth="1px" borderColor="border" borderRadius="lg" bg="bg.panel">
+              <Text fontSize="sm" fontWeight="semibold" mb={3} color="fg">
                 Quick Actions
               </Text>
               <VStack align="stretch" gap={2}>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  justifyContent="start"
-                  leftIcon={<Play className="h-4 w-4" />}
-                  onClick={() => alert('Re-running auto-negotiate')}
-                >
-                  Re-run Auto-Negotiate
+                <Button size="sm" variant="ghost" justifyContent="start" onClick={() =>
+                  toaster.create({ title: 'Auto-negotiate', description: 'Re-running auto-negotiate', type: 'info', duration: 3000, closable: true })
+                }>
+                  <HStack gap={2}>
+                    <Play className="h-4 w-4" />
+                    <span>Re-run Auto-Negotiate</span>
+                  </HStack>
                 </Button>
               </VStack>
             </Box>
@@ -397,12 +393,7 @@ export function NegotiationTheaterEnhanced(): JSX.Element {
       </VStack>
 
       {/* Audit Log Modal */}
-      <AuditLogModal
-        isOpen={isAuditOpen}
-        onClose={closeAudit}
-        sessionId={selectedSession?.session_id || 'unknown'}
-        entries={auditEntries}
-      />
+      <AuditLogModal isOpen={isAuditOpen} onClose={closeAudit} sessionId={selectedSession?.session_id || 'unknown'} entries={auditEntries} />
     </Box>
   )
 }

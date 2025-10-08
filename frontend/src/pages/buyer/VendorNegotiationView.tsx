@@ -40,10 +40,10 @@ export function VendorNegotiationView(): JSX.Element {
   }
 
   const handleApprove = async () => {
-    if (!session?.final_offer_id) return
+    if (!session?.best_offer) return
     try {
       // TODO: Implement approve offer API call
-      console.log('Approve offer:', session.final_offer_id)
+      console.log('Approve offer:', session.best_offer.offer_id)
     } catch (error) {
       console.error('Failed to approve offer:', error)
     }
@@ -73,12 +73,15 @@ export function VendorNegotiationView(): JSX.Element {
     return (
       <VStack gap={6} align="stretch">
         <SmartAlert
-          severity="error"
+          severity="critical"
           title="Negotiation not found"
           message="The requested negotiation session could not be found."
         />
-        <Button onClick={handleBack} leftIcon={<FiArrowLeft />}>
-          Back to Theater
+        <Button onClick={handleBack}>
+          <HStack gap={2}>
+            <FiArrowLeft />
+            <span>Back to Theater</span>
+          </HStack>
         </Button>
       </VStack>
     )
@@ -95,34 +98,36 @@ export function VendorNegotiationView(): JSX.Element {
 
   const isActive = session.status === 'active'
   const isCompleted = session.status === 'completed'
-  const hasOffer = session.final_offer_id !== null
+  const hasOffer = Boolean(session.best_offer)
 
   return (
     <VStack gap={6} align="stretch" h="calc(100vh - 100px)">
       {/* Header */}
       <HStack justify="space-between" align="start">
-        <VStack align="start" spacing={1}>
+        <VStack align="start" gap={1}>
           <Button
             variant="ghost"
             size="sm"
-            leftIcon={<FiArrowLeft />}
             onClick={handleBack}
-            color="var(--core-color-text-muted)"
+            color="fg.muted"
           >
-            Back to Theater
+            <HStack gap={2}>
+              <FiArrowLeft />
+              <span>Back to Theater</span>
+            </HStack>
           </Button>
           <Heading size="lg" color="var(--core-color-text-primary)">
             {session.vendor_name || 'Unknown Vendor'}
           </Heading>
-          <HStack spacing={2}>
+          <HStack gap={2}>
             <Badge
-              colorScheme={isActive ? 'blue' : isCompleted ? 'green' : 'gray'}
+              colorPalette={isActive ? 'blue' : isCompleted ? 'green' : 'gray'}
               fontSize="sm"
             >
               {session.status}
             </Badge>
             {streamState.connected && (
-              <Badge colorScheme="green" fontSize="sm">
+              <Badge colorPalette="green" fontSize="sm">
                 Connected
               </Badge>
             )}
@@ -130,36 +135,40 @@ export function VendorNegotiationView(): JSX.Element {
         </VStack>
 
         {isCompleted && hasOffer && (
-          <HStack spacing={3}>
+          <HStack gap={3}>
             <Button
-              colorScheme="red"
+              colorPalette="red"
               variant="outline"
-              leftIcon={<FiX />}
               onClick={handleReject}
             >
-              Reject
+              <HStack gap={2}>
+                <FiX />
+                <span>Reject</span>
+              </HStack>
             </Button>
             <Button
-              colorScheme="green"
-              leftIcon={<FiCheck />}
+              colorPalette="green"
               onClick={handleApprove}
             >
-              Approve Offer
+              <HStack gap={2}>
+                <FiCheck />
+                <span>Approve Offer</span>
+              </HStack>
             </Button>
           </HStack>
         )}
       </HStack>
 
-      <Box as="hr" borderTopWidth="1px" borderColor="var(--core-color-border-default)" />
+      <Box as="hr" borderTopWidth="1px" borderColor="border" />
 
       {/* Stats */}
       <SimpleGrid columns={{ base: 1, md: 4 }} gap={4}>
         <Box
           p={4}
-          bg="var(--core-color-surface-secondary)"
+          bg="bg.panel"
           borderRadius="md"
           border="1px solid"
-          borderColor="var(--core-color-border-subtle)"
+          borderColor="border"
         >
           <Text fontSize="xs" color="var(--core-color-text-muted)" mb={1}>
             Current Price
@@ -174,10 +183,10 @@ export function VendorNegotiationView(): JSX.Element {
 
         <Box
           p={4}
-          bg="var(--core-color-surface-secondary)"
+          bg="bg.panel"
           borderRadius="md"
           border="1px solid"
-          borderColor="var(--core-color-border-subtle)"
+          borderColor="border"
         >
           <Text fontSize="xs" color="var(--core-color-text-muted)" mb={1}>
             Total Cost
@@ -241,7 +250,7 @@ export function VendorNegotiationView(): JSX.Element {
       {/* Error state */}
       {streamState.error && (
         <SmartAlert
-          severity="error"
+          severity="critical"
           title="Connection Error"
           message={streamState.error}
         />

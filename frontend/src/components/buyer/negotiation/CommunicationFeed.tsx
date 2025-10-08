@@ -1,4 +1,4 @@
-import { Box, Text, VStack, HStack, Badge, Textarea, Button, Avatar } from '@chakra-ui/react'
+import { Box, Text, VStack, HStack, Badge, Textarea, Button } from '@chakra-ui/react'
 import { formatDistanceToNow } from 'date-fns'
 import { Bot, User, MessageSquare, Send, Tag } from 'lucide-react'
 import { useState } from 'react'
@@ -83,23 +83,19 @@ export function CommunicationFeed({
           </Text>
           <HStack gap={2}>
             {onTagApprover && (
-              <Button
-                size="xs"
-                variant="ghost"
-                leftIcon={<Tag className="h-3 w-3" />}
-                onClick={onTagApprover}
-              >
-                Tag Approver
+              <Button size="xs" variant="ghost" onClick={onTagApprover}>
+                <HStack gap={1}>
+                  <Tag className="h-3 w-3" />
+                  <span>Tag Approver</span>
+                </HStack>
               </Button>
             )}
             {onTagLegal && (
-              <Button
-                size="xs"
-                variant="ghost"
-                leftIcon={<Tag className="h-3 w-3" />}
-                onClick={onTagLegal}
-              >
-                Tag Legal
+              <Button size="xs" variant="ghost" onClick={onTagLegal}>
+                <HStack gap={1}>
+                  <Tag className="h-3 w-3" />
+                  <span>Tag Legal</span>
+                </HStack>
               </Button>
             )}
           </HStack>
@@ -225,12 +221,14 @@ export function CommunicationFeed({
               </Text>
               <Button
                 size="sm"
-                colorScheme="blue"
-                leftIcon={<Send className="h-4 w-4" />}
+                colorPalette="blue"
                 onClick={handleSend}
-                isDisabled={!newMessage.trim()}
+                disabled={!newMessage.trim()}
               >
-                Send
+                <HStack gap={2}>
+                  <Send className="h-4 w-4" />
+                  <span>Send</span>
+                </HStack>
               </Button>
             </HStack>
           </VStack>

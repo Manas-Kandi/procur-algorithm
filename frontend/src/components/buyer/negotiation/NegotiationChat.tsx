@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { Box, VStack, HStack, Text, Avatar, Badge, Spinner } from '@chakra-ui/react'
+import { Box, VStack, HStack, Text, Badge, Spinner } from '@chakra-ui/react'
 import { FiUser, FiCpu } from 'react-icons/fi'
 import type { NegotiationEvent } from '../../../hooks/useNegotiationStream'
 
@@ -52,7 +52,7 @@ export function NegotiationChat({
         msgs.push({
           id: `${index}-start`,
           actor: 'system',
-          content: `Starting AI negotiation with ${event.data.vendor_name || vendorName}`,
+          content: `Starting AI negotiation with ${vendorName}`,
           timestamp: event.timestamp,
         })
         break
@@ -188,7 +188,7 @@ export function NegotiationChat({
         borderColor="var(--core-color-border-subtle)"
         justify="space-between"
       >
-        <VStack align="start" spacing={0}>
+        <VStack align="start" gap={0}>
           <Text fontSize="md" fontWeight="semibold" color="var(--core-color-text-primary)">
             {vendorName}
           </Text>
@@ -197,9 +197,9 @@ export function NegotiationChat({
           </Text>
         </VStack>
         {isNegotiating && (
-          <HStack spacing={2}>
+          <HStack gap={2}>
             <Spinner size="sm" color="var(--core-color-blue-500)" />
-            <Badge colorScheme="blue" fontSize="xs">
+            <Badge colorPalette="blue" fontSize="xs">
               Negotiating...
             </Badge>
           </HStack>
@@ -210,10 +210,10 @@ export function NegotiationChat({
       <VStack
         flex={1}
         align="stretch"
-        spacing={0}
+        gap={0}
         overflowY="auto"
         p={4}
-        sx={{
+        css={{
           '&::-webkit-scrollbar': {
             width: '8px',
           },
@@ -242,7 +242,7 @@ export function NegotiationChat({
           if (isSystem) {
             // System messages: centered, minimal
             return (
-              <HStack key={message.id} justify="center" py={2}>
+              <HStack key={message.id} justify="center" gap={2}>
                 <Text fontSize="xs" color="var(--core-color-text-muted)" fontStyle="italic">
                   {message.content}
                 </Text>
@@ -258,25 +258,31 @@ export function NegotiationChat({
             <HStack
               key={message.id}
               align="start"
-              spacing={3}
+              gap={3}
               justify={isBuyer ? 'flex-end' : 'flex-start'}
               py={2}
             >
               {!isBuyer && ActorIcon && (
-                <Avatar
-                  size="sm"
-                  icon={<ActorIcon />}
+                <Box
+                  w={8}
+                  h={8}
+                  display="flex"
+                  alignItems="center"
+                  justifyContent="center"
+                  rounded="full"
                   bg={getActorColor(message.actor)}
                   color="white"
-                />
+                >
+                  <ActorIcon />
+                </Box>
               )}
 
               <VStack
                 align={isBuyer ? 'end' : 'start'}
-                spacing={1}
+                gap={1}
                 maxW="70%"
               >
-                <HStack spacing={2}>
+                <HStack gap={2}>
                   <Text fontSize="xs" fontWeight="semibold" color={getActorColor(message.actor)}>
                     {message.actor === 'buyer' ? 'Your AI Agent' : vendorName}
                   </Text>
@@ -298,9 +304,9 @@ export function NegotiationChat({
                   </Text>
 
                   {message.metadata && (
-                    <VStack align="start" spacing={1} mt={2} pt={2} borderTopWidth="1px" borderColor="var(--core-color-border-subtle)">
+                    <VStack align="start" gap={1} mt={2} pt={2} borderTopWidth="1px" borderColor="var(--core-color-border-subtle)">
                       {message.metadata.price && (
-                        <HStack spacing={2} fontSize="xs">
+                        <HStack gap={2} fontSize="xs">
                           <Text color="var(--core-color-text-muted)">Price:</Text>
                           <Text fontWeight="semibold" color="var(--core-color-text-primary)">
                             {formatPrice(message.metadata.price)}/unit
@@ -308,7 +314,7 @@ export function NegotiationChat({
                         </HStack>
                       )}
                       {message.metadata.term && (
-                        <HStack spacing={2} fontSize="xs">
+                        <HStack gap={2} fontSize="xs">
                           <Text color="var(--core-color-text-muted)">Term:</Text>
                           <Text fontWeight="semibold" color="var(--core-color-text-primary)">
                             {message.metadata.term} months
@@ -316,15 +322,15 @@ export function NegotiationChat({
                         </HStack>
                       )}
                       {message.metadata.strategy && (
-                        <HStack spacing={2} fontSize="xs">
+                        <HStack gap={2} fontSize="xs">
                           <Text color="var(--core-color-text-muted)">Strategy:</Text>
-                          <Badge colorScheme="blue" fontSize="xs">
+                          <Badge colorPalette="blue" fontSize="xs">
                             {message.metadata.strategy}
                           </Badge>
                         </HStack>
                       )}
                       {message.metadata.utility !== undefined && (
-                        <HStack spacing={2} fontSize="xs">
+                        <HStack gap={2} fontSize="xs">
                           <Text color="var(--core-color-text-muted)">Utility:</Text>
                           <Text fontWeight="semibold" color="var(--core-color-text-primary)">
                             {(message.metadata.utility * 100).toFixed(1)}%
@@ -337,12 +343,18 @@ export function NegotiationChat({
               </VStack>
 
               {isBuyer && ActorIcon && (
-                <Avatar
-                  size="sm"
-                  icon={<ActorIcon />}
+                <Box
+                  w={8}
+                  h={8}
+                  display="flex"
+                  alignItems="center"
+                  justifyContent="center"
+                  rounded="full"
                   bg={getActorColor(message.actor)}
                   color="white"
-                />
+                >
+                  <ActorIcon />
+                </Box>
               )}
             </HStack>
           )

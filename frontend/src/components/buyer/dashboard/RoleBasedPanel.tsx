@@ -167,7 +167,7 @@ export function RoleBasedPanel({
               <Text fontSize="sm" color="var(--core-color-text-muted)" mb={3}>
                 No active requests
               </Text>
-              <Button size="sm" colorScheme="blue" onClick={() => navigate('/requests/new')}>
+              <Button size="sm" colorPalette="blue" onClick={() => navigate('/requests/new')}>
                 Create New Request
               </Button>
             </Box>

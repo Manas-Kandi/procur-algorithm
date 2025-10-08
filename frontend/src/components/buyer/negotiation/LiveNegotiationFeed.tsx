@@ -86,25 +86,25 @@ export function LiveNegotiationFeed({
   return (
     <Box
       p={4}
-      bg="var(--core-color-surface-primary)"
+      bg="bg.panel"
       borderRadius="md"
       border="1px solid"
-      borderColor="var(--core-color-border-subtle)"
+      borderColor="border"
       maxH="600px"
       overflowY="auto"
     >
       <HStack justify="space-between" mb={4}>
-        <Text fontSize="sm" fontWeight="semibold" color="var(--core-color-text-primary)">
+        <Text fontSize="sm" fontWeight="semibold" color="fg">
           Live Feed: {vendorName}
         </Text>
-        <Badge colorScheme="green" fontSize="xs">
+        <Badge colorPalette="green" fontSize="xs">
           {events.length} events
         </Badge>
       </HStack>
 
-      <VStack align="stretch" spacing={3}>
+      <VStack align="stretch" gap={3}>
         {events.length === 0 && (
-          <Text fontSize="sm" color="var(--core-color-text-muted)" textAlign="center" py={8}>
+          <Text fontSize="sm" color="fg.muted" textAlign="center" py={8}>
             Waiting for negotiation to start...
           </Text>
         )}
@@ -115,31 +115,31 @@ export function LiveNegotiationFeed({
 
           return (
             <Box key={index}>
-              <HStack align="start" spacing={3}>
+              <HStack align="start" gap={3}>
                 <Icon
                   as={EventIcon}
-                  color={`var(--core-color-${color}-500)`}
+                  color={`${color}.500`}
                   mt={1}
                   flexShrink={0}
                 />
-                <VStack align="start" spacing={1} flex={1}>
+                <VStack align="start" gap={1} flex={1}>
                   <HStack justify="space-between" w="full">
-                    <Badge colorScheme={color} fontSize="xs">
+                    <Badge colorPalette={color as any} fontSize="xs">
                       {event.type.replace('_', ' ')}
                     </Badge>
-                    <Text fontSize="xs" color="var(--core-color-text-muted)">
+                    <Text fontSize="xs" color="fg.muted">
                       {formatTime(event.timestamp)}
                     </Text>
                   </HStack>
 
                   {event.data.message && (
-                    <Text fontSize="sm" color="var(--core-color-text-secondary)">
+                    <Text fontSize="sm" color="fg.muted">
                       {event.data.message}
                     </Text>
                   )}
 
                   {event.data.round_number && (
-                    <Text fontSize="xs" fontWeight="semibold" color="var(--core-color-text-primary)">
+                    <Text fontSize="xs" fontWeight="semibold" color="fg">
                       Round {event.data.round_number}
                       {event.data.actor && ` • ${event.data.actor}`}
                       {event.data.strategy && ` • Strategy: ${event.data.strategy}`}
@@ -148,34 +148,34 @@ export function LiveNegotiationFeed({
 
                   {event.data.offer && (
                     <HStack
-                      spacing={4}
+                      gap={4}
                       p={2}
-                      bg="var(--core-color-surface-secondary)"
+                      bg="bg.subtle"
                       borderRadius="sm"
                       w="full"
                     >
-                      <VStack align="start" spacing={0}>
-                        <Text fontSize="xs" color="var(--core-color-text-muted)">
+                      <VStack align="start" gap={0}>
+                        <Text fontSize="xs" color="fg.muted">
                           Price
                         </Text>
-                        <Text fontSize="sm" fontWeight="semibold" color="var(--core-color-text-primary)">
+                        <Text fontSize="sm" fontWeight="semibold" color="fg">
                           {formatPrice(event.data.offer.unit_price)}
                         </Text>
                       </VStack>
-                      <VStack align="start" spacing={0}>
-                        <Text fontSize="xs" color="var(--core-color-text-muted)">
+                      <VStack align="start" gap={0}>
+                        <Text fontSize="xs" color="fg.muted">
                           Term
                         </Text>
-                        <Text fontSize="sm" fontWeight="semibold" color="var(--core-color-text-primary)">
+                        <Text fontSize="sm" fontWeight="semibold" color="fg">
                           {event.data.offer.term_months} months
                         </Text>
                       </VStack>
                       {event.data.utility !== undefined && (
-                        <VStack align="start" spacing={0}>
-                          <Text fontSize="xs" color="var(--core-color-text-muted)">
+                        <VStack align="start" gap={0}>
+                          <Text fontSize="xs" color="fg.muted">
                             Utility
                           </Text>
-                          <Text fontSize="sm" fontWeight="semibold" color="var(--core-color-text-primary)">
+                          <Text fontSize="sm" fontWeight="semibold" color="fg">
                             {(event.data.utility * 100).toFixed(1)}%
                           </Text>
                         </VStack>
@@ -184,9 +184,9 @@ export function LiveNegotiationFeed({
                   )}
 
                   {event.data.rationale && event.data.rationale.length > 0 && (
-                    <VStack align="start" spacing={1} pl={2} borderLeftWidth={2} borderColor={`var(--core-color-${color}-300)`}>
+                    <VStack align="start" gap={1} pl={2} borderLeftWidth={2} borderColor={`${color}.300`}>
                       {event.data.rationale.map((reason, idx) => (
-                        <Text key={idx} fontSize="xs" color="var(--core-color-text-muted)">
+                        <Text key={idx} fontSize="xs" color="fg.muted">
                           • {reason}
                         </Text>
                       ))}
@@ -196,7 +196,7 @@ export function LiveNegotiationFeed({
               </HStack>
 
               {index < events.length - 1 && (
-                <Box as="hr" borderTopWidth="1px" borderColor="var(--core-color-border-default)" my={2} />
+                <Box as="hr" borderTopWidth="1px" borderColor="border" my={2} />
               )}
             </Box>
           )

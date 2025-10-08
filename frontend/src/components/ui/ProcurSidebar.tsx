@@ -1,5 +1,5 @@
 import React from 'react'
-import { Home, FilePlus, Briefcase, ChevronsRight } from 'lucide-react'
+import { Home, FilePlus, Briefcase, ChevronsRight, ShieldCheck } from 'lucide-react'
 import { Box, VStack, Button, Icon, IconButton, Flex, Text } from '@chakra-ui/react'
 import { Tooltip } from '../shared/Tooltip'
 import { useAuthStore } from '../../store/auth'
@@ -11,11 +11,7 @@ export interface ProcurSidebarProps {
   onToggle?: () => void
 }
 
-const items = [
-  { key: 'dashboard', label: 'Dashboard', Icon: Home, color: '#60A5FA' }, // blue
-  { key: 'new-request', label: 'New Request', Icon: FilePlus, color: '#34D399' }, // green
-  { key: 'portfolio', label: 'Portfolio', Icon: Briefcase, color: '#A78BFA' }, // purple
-]
+type Item = { key: string; label: string; Icon: any }
 
 export function ProcurSidebar({
   open,
@@ -25,6 +21,16 @@ export function ProcurSidebar({
 }: ProcurSidebarProps) {
   const { user } = useAuthStore()
   const initial = (user?.full_name ?? user?.username ?? 'U').trim().charAt(0).toUpperCase()
+  const role = user?.role
+
+  // Minimal, role-aware items
+  const items: Item[] = [
+    { key: 'dashboard', label: 'Dashboard', Icon: Home },
+    { key: 'new-request', label: 'New Request', Icon: FilePlus },
+    // Approvals visible for approver/admin roles
+    ...(role === 'approver' || role === 'admin' ? [{ key: 'approvals', label: 'Approvals', Icon: ShieldCheck }] : []),
+    { key: 'portfolio', label: 'Portfolio', Icon: Briefcase },
+  ]
 
   return (
     <Box

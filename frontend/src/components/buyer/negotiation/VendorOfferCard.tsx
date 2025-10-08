@@ -261,7 +261,7 @@ export function VendorOfferCard({
           {onAccept && isBestDeal && (
             <Button
               size="sm"
-              colorScheme="green"
+              colorPalette="green"
               onClick={(e) => {
                 e.stopPropagation()
                 onAccept()

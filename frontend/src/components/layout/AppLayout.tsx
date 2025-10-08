@@ -15,6 +15,7 @@ export function AppLayout({ children }: PropsWithChildren): JSX.Element {
   const selectedKey = useMemo(() => {
     const p = location.pathname
     if (p.startsWith('/portfolio')) return 'portfolio'
+    if (p.startsWith('/approvals')) return 'approvals'
     if (p.startsWith('/requests/new')) return 'new-request'
     return 'dashboard'
   }, [location.pathname])
@@ -35,6 +36,7 @@ export function AppLayout({ children }: PropsWithChildren): JSX.Element {
             onSelect={(key) => {
               if (key === 'dashboard') void navigate('/')
               else if (key === 'new-request') void navigate('/requests/new')
+              else if (key === 'approvals') void navigate('/approvals')
               else if (key === 'portfolio') void navigate('/portfolio')
             }}
           />

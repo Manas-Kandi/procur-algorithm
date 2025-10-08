@@ -70,12 +70,14 @@ export function EnhancedInterventionPanel({
           <Button
             size="sm"
             variant="outline"
-            leftIcon={<DollarSign className="h-4 w-4" />}
             onClick={toggleBudget}
             w="full"
             justifyContent="start"
           >
-            Adjust Budget Ceiling
+            <HStack gap={2}>
+              <DollarSign className="h-4 w-4" />
+              <span>Adjust Budget Ceiling</span>
+            </HStack>
           </Button>
           {isBudgetOpen && (
             <Box
@@ -112,7 +114,7 @@ export function EnhancedInterventionPanel({
                   />
                 </Box>
                 <HStack gap={2}>
-                  <Button size="sm" colorScheme="blue" onClick={handleBudgetSave}>
+                  <Button size="sm" colorPalette="blue" onClick={handleBudgetSave}>
                     Save
                   </Button>
                   <Button size="sm" variant="ghost" onClick={toggleBudget}>
@@ -129,12 +131,14 @@ export function EnhancedInterventionPanel({
           <Button
             size="sm"
             variant="outline"
-            leftIcon={<Plus className="h-4 w-4" />}
             onClick={toggleRequirement}
             w="full"
             justifyContent="start"
           >
-            Add Requirement
+            <HStack gap={2}>
+              <Plus className="h-4 w-4" />
+              <span>Add Requirement</span>
+            </HStack>
           </Button>
           {isRequirementOpen && (
             <Box
@@ -178,13 +182,15 @@ export function EnhancedInterventionPanel({
         <Button
           size="sm"
           variant="outline"
-          leftIcon={<Pause className="h-4 w-4" />}
           onClick={onPauseNegotiations}
           w="full"
           justifyContent="start"
-          colorScheme="yellow"
+          colorPalette="yellow"
         >
-          Pause All Negotiations
+          <HStack gap={2}>
+            <Pause className="h-4 w-4" />
+            <span>Pause All Negotiations</span>
+          </HStack>
         </Button>
 
         {/* Accept Best Offer */}
@@ -192,21 +198,23 @@ export function EnhancedInterventionPanel({
           <Box
             p={3}
             borderRadius="md"
-            bg="var(--core-color-success-bg)"
+            bg="green.subtle"
             borderWidth="1px"
-            borderColor="var(--core-color-success-border)"
+            borderColor="green.emphasized"
           >
-            <Text fontSize="sm" fontWeight="medium" color="var(--core-color-success)" mb={2}>
+            <Text fontSize="sm" fontWeight="medium" color="green.fg" mb={2}>
               ✓ Best offer identified
             </Text>
             <Button
               size="sm"
-              leftIcon={<CheckCircle className="h-4 w-4" />}
               onClick={() => onAcceptOffer(bestSessionId)}
               w="full"
-              colorScheme="green"
+              colorPalette="green"
             >
-              Accept Best Offer
+              <HStack gap={2}>
+                <CheckCircle className="h-4 w-4" />
+                <span>Accept Best Offer</span>
+              </HStack>
             </Button>
           </Box>
         )}
@@ -215,11 +223,11 @@ export function EnhancedInterventionPanel({
         <Box
           p={3}
           borderRadius="md"
-          bg="var(--core-color-info-bg)"
+          bg="blue.subtle"
           borderWidth="1px"
-          borderColor="var(--core-color-info-border)"
+          borderColor="blue.emphasized"
         >
-          <Text fontSize="xs" color="var(--core-color-info)">
+          <Text fontSize="xs" color="blue.fg">
             💡 <strong>Tip:</strong> All interventions are logged in the audit trail and agents
             will immediately adapt their strategy based on your input.
           </Text>
