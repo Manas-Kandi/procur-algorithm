@@ -177,10 +177,11 @@ export function BuyerDashboard(): JSX.Element {
           {/* Overview */}
           <Box my={6}>
             <OverviewCards
-              income={metrics?.total_savings ? `$${Math.round(metrics.total_savings).toLocaleString()}` : null}
+              income={metrics?.total_savings ? Math.round(metrics.total_savings) : null}
               paid={metrics?.completed_requests || null}
               active={<BreathingNumber base={activeCount || 0} amplitude={2} periodMs={2400} />}
               avatarName={user?.full_name ?? user?.username}
+              variant="plain"
             />
           </Box>
 
@@ -204,6 +205,7 @@ export function BuyerDashboard(): JSX.Element {
               </CButton>
             )}
             my={6}
+            variant="plain"
           >
             <Box borderWidth="1px" borderColor="border" bg="bg.panel">
               <Box display="grid" gridTemplateColumns={{ base: 'minmax(0, 1fr) 120px 120px 140px', md: 'minmax(0, 1fr) 180px 140px 160px' }} borderBottomWidth="1px" borderColor="border" px={3} py={2} fontSize="xs" color="fg.muted">
@@ -312,6 +314,7 @@ export function BuyerDashboard(): JSX.Element {
               <Text fontSize="xs" color="fg.muted">Live updates</Text>
             )}
             my={6}
+            variant="plain"
           >
             <AgentActionsTimeline
               actions={mockAgentActions}
@@ -352,6 +355,7 @@ export function BuyerDashboard(): JSX.Element {
               </Box>
             )}
             my={6}
+            variant="plain"
           >
             <ActiveRequestsList
               items={topActiveRequests.map((r) => ({

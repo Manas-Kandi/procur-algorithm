@@ -7,14 +7,19 @@ export interface OverviewCardsProps {
   paid?: number | null
   active: ReactNode
   avatarName?: string
+  variant?: 'card' | 'plain'
 }
 
-function MetricCard({ icon: IconCmp, label, value }: { icon: any; label: string; value: ReactNode }) {
+function MetricCard({ icon: IconCmp, label, value, variant = 'card' }: { icon: any; label: string; value: ReactNode; variant?: 'card' | 'plain' }) {
   return (
-    <Box layerStyle="card" px={5} py={5}>
+    <Box
+      px={variant === 'card' ? 5 : 0}
+      py={variant === 'card' ? 5 : 0}
+      layerStyle={variant === 'card' ? 'card' : undefined}
+    >
       <HStack align="center" justify="space-between">
         <HStack align="center" gap={3}>
-          <Box w={9} h={9} display="flex" alignItems="center" justifyContent="center" borderRadius="full" bg="bg.subtle" borderWidth="1px" borderColor="border">
+          <Box w={9} h={9} display="flex" alignItems="center" justifyContent="center" borderRadius="full" bg={variant === 'card' ? 'bg.subtle' : 'transparent'} borderWidth={variant === 'card' ? '1px' : '0'} borderColor="border">
             <Icon as={IconCmp} boxSize={4} color="fg.muted" />
           </Box>
           <Text fontSize="xs" color="fg.muted">{label}</Text>
@@ -25,7 +30,7 @@ function MetricCard({ icon: IconCmp, label, value }: { icon: any; label: string;
   )
 }
 
-export function OverviewCards({ income, paid, active, avatarName }: OverviewCardsProps) {
+export function OverviewCards({ income, paid, active, avatarName, variant = 'card' }: OverviewCardsProps) {
   const fmtCurrency = (n?: number | null) => (typeof n === 'number' ? `$${n.toLocaleString()}` : '—')
   const initial = (avatarName || 'You').trim().charAt(0).toUpperCase()
 
@@ -39,10 +44,10 @@ export function OverviewCards({ income, paid, active, avatarName }: OverviewCard
           </Box>
         </HStack>
       </Flex>
-      <SimpleGrid columns={{ base: 1, sm: 3 }} gap={6}>
-        <MetricCard icon={DollarSign} label="Income" value={fmtCurrency(income)} />
-        <MetricCard icon={CheckCircle2} label="Paid" value={fmtCurrency(paid)} />
-        <MetricCard icon={ListChecks} label="Active requests" value={active} />
+      <SimpleGrid columns={{ base: 1, sm: 3 }} gap={variant === 'card' ? 6 : 4}>
+        <MetricCard variant={variant} icon={DollarSign} label="Income" value={fmtCurrency(income)} />
+        <MetricCard variant={variant} icon={CheckCircle2} label="Paid" value={fmtCurrency(paid)} />
+        <MetricCard variant={variant} icon={ListChecks} label="Active requests" value={active} />
       </SimpleGrid>
     </>
   )

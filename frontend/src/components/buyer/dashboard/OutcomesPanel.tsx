@@ -1,4 +1,4 @@
-import { Box, Heading, Text, SimpleGrid, VStack, HStack } from '@chakra-ui/react'
+import { Box, Heading, Text, SimpleGrid, VStack, HStack, Icon } from '@chakra-ui/react'
 import { TrendingUp, Clock, Shield, CheckCircle } from 'lucide-react'
 
 interface OutcomeMetric {
@@ -60,88 +60,46 @@ export function OutcomesPanel({
   ]
 
   return (
-    <Box
-      borderWidth="1px"
-      borderColor="var(--core-color-border-default)"
-      borderRadius="lg"
-      bg="var(--core-color-surface-canvas)"
-      p={6}
-    >
+    <Box bg="bg.panel" borderWidth="0" borderRadius="lg" p={4}>
       <VStack align="stretch" gap={4}>
         <Box>
-          <Heading size="md" color="var(--core-color-text-primary)">
+          <Heading size="md" color="fg">
             Outcomes & Savings
           </Heading>
-          <Text fontSize="sm" color="var(--core-color-text-muted)" mt={1}>
+          <Text fontSize="sm" color="fg.muted" mt={1}>
             Key metrics from AI-driven procurement
           </Text>
         </Box>
 
         <SimpleGrid columns={{ base: 1, md: 2, xl: 4 }} gap={4}>
           {metrics.map((metric, index) => (
-            <Box
-              key={index}
-              borderWidth="1px"
-              borderColor="var(--core-color-border-subtle)"
-              borderRadius="md"
-              bg="var(--core-color-surface-subtle)"
-              p={4}
-              _hover={{
-                borderColor: 'var(--core-color-border-default)',
-                boxShadow: 'sm',
-              }}
-              transition="all 0.2s"
-            >
-              <HStack justify="space-between" mb={3}>
-                <Box className={metric.color}>{metric.icon}</Box>
-                {metric.trend && metric.trendValue && (
-                  <Text
-                    fontSize="xs"
-                    fontWeight="medium"
-                    color={
-                      metric.trend === 'up'
-                        ? 'var(--core-color-success)'
-                        : metric.trend === 'down'
-                        ? 'var(--core-color-danger)'
-                        : 'var(--core-color-text-muted)'
-                    }
-                  >
-                    {metric.trendValue}
-                  </Text>
-                )}
-              </HStack>
-              <VStack align="stretch" gap={1}>
-                <Text
-                  fontSize="2xl"
-                  fontWeight="bold"
-                  color="var(--core-color-text-primary)"
-                >
+            <HStack key={index} align="start" gap={3}>
+              <Box w={8} h={8} borderRadius="full" bg="bg.subtle" display="flex" alignItems="center" justifyContent="center">
+                <Icon as={(metric.icon as any).type ?? TrendingUp} color="fg.muted" boxSize={4} />
+              </Box>
+              <VStack align="start" gap={0}>
+                <Text fontSize="2xl" fontWeight="bold" color="fg" lineHeight="short">
                   {metric.value}
                 </Text>
-                <Text fontSize="xs" color="var(--core-color-text-muted)">
-                  {metric.label}
-                </Text>
+                <HStack gap={2}>
+                  <Text fontSize="xs" color="fg.muted">{metric.label}</Text>
+                  {metric.trend && metric.trendValue && (
+                    <Text fontSize="xs" color={metric.trend === 'up' ? 'green.fg' : metric.trend === 'down' ? 'red.fg' : 'fg.muted'}>
+                      {metric.trendValue}
+                    </Text>
+                  )}
+                </HStack>
               </VStack>
-            </Box>
+            </HStack>
           ))}
         </SimpleGrid>
 
-        {/* Quick summary */}
         {totalSavings > 0 && (
-          <Box
-            mt={2}
-            p={3}
-            borderRadius="md"
-            bg="var(--core-color-ai-bg)"
-            borderWidth="1px"
-            borderColor="var(--core-color-ai-border)"
-          >
+          <Box mt={1} p={3} borderRadius="md" bg="blue.subtle">
             <HStack gap={2}>
-              <Text fontSize="sm" fontWeight="medium" color="var(--core-color-ai-primary)">
-                💡 AI Impact:
-              </Text>
-              <Text fontSize="sm" color="var(--core-color-text-muted)">
-                Your agents have saved you an average of {avgSavingsPercent.toFixed(1)}% per contract
+              <Text fontSize="sm" fontWeight="medium" color="blue.fg">💡 AI Impact:</Text>
+              <Text fontSize="sm" color="fg.muted">
+                Your agents have saved an average of {avgSavingsPercent.toFixed(1)}% per contract
                 {avgClosingTime > 0 && `, closing deals ${Math.round((30 - avgClosingTime) / 30 * 100)}% faster than industry average`}.
               </Text>
             </HStack>
