@@ -279,5 +279,56 @@ def reject_negotiation(
         outcome="rejected",
         outcome_reason=reason,
     )
-    
+
     return updated_negotiation
+
+
+@router.get(
+    "/{session_id}/events",
+    summary="Get negotiation events",
+    description="Get all events for a negotiation session (for timeline and audit)",
+)
+def get_negotiation_events(
+    session_id: str,
+    current_user: UserAccount = Depends(get_current_user),
+    db_session: Session = Depends(get_session),
+):
+    """Get all events for a negotiation session."""
+    from ...db.models import NegotiationEvent
+
+    neg_repo = NegotiationRepository(db_session)
+    request_repo = RequestRepository(db_session)
+
+    # Check if negotiation exists and user has access
+    negotiation = neg_repo.get_by_session_id(session_id)
+    if not negotiation:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Negotiation not found",
+        )
+
+    request = request_repo.get_by_id(negotiation.request_id)
+    if request.user_id != current_user.id and not current_user.is_superuser:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to view this negotiation",
+        )
+
+    # Get all events for this session
+    events = (
+        db_session.query(NegotiationEvent)
+        .filter(NegotiationEvent.session_id == session_id)
+        .order_by(NegotiationEvent.created_at)
+        .all()
+    )
+
+    return [
+        {
+            "id": str(event.id),
+            "session_id": event.session_id,
+            "event_type": event.event_type,
+            "event_data": event.event_data,
+            "timestamp": event.created_at.isoformat(),
+        }
+        for event in events
+    ]

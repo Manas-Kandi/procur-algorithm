@@ -177,8 +177,8 @@ export function BuyerDashboard(): JSX.Element {
           {/* Overview */}
           <Box my={6}>
             <OverviewCards
-              income={(metrics as any)?.income_total ?? null}
-              paid={(metrics as any)?.paid_total ?? null}
+              income={metrics?.total_savings ? `$${Math.round(metrics.total_savings).toLocaleString()}` : null}
+              paid={metrics?.completed_requests || null}
               active={<BreathingNumber base={activeCount || 0} amplitude={2} periodMs={2400} />}
               avatarName={user?.full_name ?? user?.username}
             />
@@ -187,11 +187,11 @@ export function BuyerDashboard(): JSX.Element {
           {/* Outcomes & Savings Panel */}
           <Box my={6}>
             <OutcomesPanel
-              totalSavings={(metrics as any)?.total_savings || 125000}
-              avgSavingsPercent={(metrics as any)?.avg_savings_percent || 18.5}
-              avgClosingTime={(metrics as any)?.avg_closing_time_days || 12}
-              complianceCoverage={(metrics as any)?.compliance_coverage_percent || 95}
-              contractsApproved={(metrics as any)?.contracts_approved || activeCount}
+              totalSavings={metrics?.total_savings || 0}
+              avgSavingsPercent={metrics?.savings_percentage || 0}
+              avgClosingTime={metrics?.avg_cycle_time_days || 0}
+              complianceCoverage={95} // TODO: Add to backend metrics
+              contractsApproved={metrics?.completed_requests || 0}
             />
           </Box>
 
@@ -223,7 +223,14 @@ export function BuyerDashboard(): JSX.Element {
                       <Box
                         as="button"
                         key={r.request_id}
-                        onClick={() => void navigate(`/requests/${r.request_id}/negotiate`)}
+                        onClick={() => {
+                          // Navigate to enhanced theater if negotiating, otherwise regular negotiate view
+                          if (r.status === 'negotiating') {
+                            void navigate(`/requests/${r.request_id}/theater`)
+                          } else {
+                            void navigate(`/requests/${r.request_id}/negotiate`)
+                          }
+                        }}
                         display="grid"
                         gridTemplateColumns={{ base: 'minmax(0, 1fr) 120px 120px 140px', md: 'minmax(0, 1fr) 180px 140px 160px' }}
                         alignItems="center"
@@ -311,7 +318,13 @@ export function BuyerDashboard(): JSX.Element {
               maxItems={5}
               onActionClick={(action) => {
                 if (action.requestId) {
-                  void navigate(`/requests/${action.requestId}/negotiate`)
+                  // Find the request to check its status
+                  const req = requests?.find((r) => r.request_id === action.requestId)
+                  if (req?.status === 'negotiating') {
+                    void navigate(`/requests/${action.requestId}/theater`)
+                  } else {
+                    void navigate(`/requests/${action.requestId}/negotiate`)
+                  }
                 }
               }}
             />
@@ -349,7 +362,14 @@ export function BuyerDashboard(): JSX.Element {
                 nextAction: r.status === 'approving' ? 'Awaiting approval' : undefined,
                 preview: r.status === 'negotiating' ? 'Agent offered $930 · vendor counter pending' : undefined,
               }))}
-              onRowClick={(id) => void navigate(`/requests/${id}/negotiate`)}
+              onRowClick={(id) => {
+                const req = topActiveRequests.find((r) => r.request_id === id)
+                if (req?.status === 'negotiating') {
+                  void navigate(`/requests/${id}/theater`)
+                } else {
+                  void navigate(`/requests/${id}/negotiate`)
+                }
+              }}
             />
           </SurfaceCard>
         </>

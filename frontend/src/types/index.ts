@@ -134,13 +134,20 @@ export interface Contract {
 }
 
 export interface DashboardMetrics {
-  active_requests: number
+  total_requests: number
+  active_negotiations: number
   pending_approvals: number
-  upcoming_renewals: number
-  monthly_spend: number
-  budget_available: number
-  negotiations_in_progress: number
-  avg_savings_percent: number
+  completed_requests: number
+  avg_cycle_time_days: number
+  total_savings: number
+  savings_percentage: number
+  // Legacy fields (keep for compatibility)
+  active_requests?: number
+  upcoming_renewals?: number
+  monthly_spend?: number
+  budget_available?: number
+  negotiations_in_progress?: number
+  avg_savings_percent?: number
 }
 
 export interface RenewalAlert {

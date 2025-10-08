@@ -11,6 +11,7 @@ import { Login } from '../pages/auth/Login'
 import { BuyerDashboard } from '../pages/buyer/Dashboard'
 import { NewRequest } from '../pages/buyer/NewRequest'
 import { NegotiationTheater } from '../pages/buyer/NegotiationTheater'
+import { NegotiationTheaterEnhanced } from '../pages/buyer/NegotiationTheaterEnhanced'
 import { VendorNegotiationView } from '../pages/buyer/VendorNegotiationView'
 import { ApprovalWorkspace } from '../pages/buyer/ApprovalWorkspace'
 import { Portfolio } from '../pages/buyer/Portfolio'
@@ -47,6 +48,10 @@ export function AppRoutes(): JSX.Element {
             <Route
               path=":requestId/negotiate"
               element={<NegotiationTheater />}
+            />
+            <Route
+              path=":requestId/theater"
+              element={<NegotiationTheaterEnhanced />}
             />
           </Route>
           <Route path="negotiations">

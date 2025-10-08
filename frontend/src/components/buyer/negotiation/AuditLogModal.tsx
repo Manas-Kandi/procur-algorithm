@@ -1,16 +1,11 @@
 import {
-  Modal,
-  ModalOverlay,
-  ModalContent,
-  ModalHeader,
-  ModalBody,
-  ModalCloseButton,
   Box,
   Text,
   VStack,
   HStack,
   Badge,
-  Divider,
+  Button,
+  Portal,
 } from '@chakra-ui/react'
 import { formatDistanceToNow } from 'date-fns'
 import { FileText, User, Bot, Shield, CheckCircle2, AlertTriangle } from 'lucide-react'
@@ -80,20 +75,64 @@ export function AuditLogModal({
   sessionId,
   entries,
 }: AuditLogModalProps): JSX.Element {
+  if (!isOpen) return <></>
+
   return (
-    <Modal isOpen={isOpen} onClose={onClose} size="2xl">
-      <ModalOverlay />
-      <ModalContent maxH="80vh">
-        <ModalHeader>
-          <VStack align="start" gap={1}>
-            <Text>Audit Log</Text>
-            <Text fontSize="sm" fontWeight="normal" color="var(--core-color-text-muted)">
-              Step-by-step agent decisions for session {sessionId.slice(0, 8)}
-            </Text>
-          </VStack>
-        </ModalHeader>
-        <ModalCloseButton />
-        <ModalBody pb={6} overflowY="auto">
+    <Portal>
+      {/* Overlay */}
+      <Box
+        position="fixed"
+        top={0}
+        left={0}
+        right={0}
+        bottom={0}
+        bg="blackAlpha.600"
+        zIndex={1400}
+        onClick={onClose}
+      />
+
+      {/* Modal Content */}
+      <Box
+        position="fixed"
+        top="50%"
+        left="50%"
+        transform="translate(-50%, -50%)"
+        maxW="800px"
+        w="90%"
+        maxH="80vh"
+        bg="var(--core-color-surface-canvas)"
+        borderRadius="lg"
+        borderWidth="1px"
+        borderColor="var(--core-color-border-default)"
+        boxShadow="2xl"
+        zIndex={1500}
+        display="flex"
+        flexDirection="column"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <Box
+          p={6}
+          borderBottomWidth="1px"
+          borderColor="var(--core-color-border-default)"
+        >
+          <HStack justify="space-between" align="start">
+            <VStack align="start" gap={1}>
+              <Text fontSize="xl" fontWeight="semibold" color="var(--core-color-text-primary)">
+                Audit Log
+              </Text>
+              <Text fontSize="sm" color="var(--core-color-text-muted)">
+                Step-by-step agent decisions for session {sessionId.slice(0, 8)}
+              </Text>
+            </VStack>
+            <Button size="sm" variant="ghost" onClick={onClose}>
+              ✕
+            </Button>
+          </HStack>
+        </Box>
+
+        {/* Body */}
+        <Box flex="1" overflowY="auto" p={6}>
           {entries.length === 0 ? (
             <Box
               p={6}
@@ -213,14 +252,20 @@ export function AuditLogModal({
                         )}
                       </Box>
                     </Box>
-                    {!isLast && <Divider my={2} borderColor="var(--core-color-border-subtle)" />}
+                    {!isLast && (
+                      <Box
+                        my={2}
+                        h="1px"
+                        bg="var(--core-color-border-subtle)"
+                      />
+                    )}
                   </Box>
                 )
               })}
             </VStack>
           )}
-        </ModalBody>
-      </ModalContent>
-    </Modal>
+        </Box>
+      </Box>
+    </Portal>
   )
 }

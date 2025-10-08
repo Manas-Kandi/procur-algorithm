@@ -5,9 +5,7 @@ import {
   VStack,
   HStack,
   Badge,
-  Divider,
   SimpleGrid,
-  Progress,
 } from '@chakra-ui/react'
 import { Check, X, Info, TrendingUp, TrendingDown } from 'lucide-react'
 import type { NegotiationSession } from '../../../types'
@@ -141,17 +139,20 @@ export function OfferDetailsPanel({
                     {budgetFit.toFixed(0)}%
                   </Text>
                 </HStack>
-                <Progress
-                  value={budgetFit}
-                  size="sm"
-                  colorScheme={budgetFit > 80 ? 'green' : budgetFit > 50 ? 'yellow' : 'red'}
-                  borderRadius="full"
-                />
+                <Box h="6px" bg="var(--core-color-background-tertiary)" borderRadius="full" overflow="hidden">
+                  <Box
+                    h="100%"
+                    w={`${budgetFit}%`}
+                    bg={budgetFit > 80 ? 'var(--core-color-success)' : budgetFit > 50 ? 'var(--core-color-warning)' : 'var(--core-color-error)'}
+                    borderRadius="full"
+                    transition="width 0.3s"
+                  />
+                </Box>
               </Box>
             )}
           </Box>
 
-          <Divider borderColor="var(--core-color-border-subtle)" />
+          <Box h="1px" bg="var(--core-color-border-subtle)" />
 
           {/* Feature Coverage */}
           <Box>
@@ -163,13 +164,15 @@ export function OfferDetailsPanel({
                 {featureCoverage.toFixed(0)}%
               </Text>
             </HStack>
-            <Progress
-              value={featureCoverage}
-              size="sm"
-              colorScheme={featureCoverage > 80 ? 'green' : featureCoverage > 50 ? 'yellow' : 'red'}
-              borderRadius="full"
-              mb={3}
-            />
+            <Box h="6px" bg="var(--core-color-background-tertiary)" borderRadius="full" overflow="hidden" mb={3}>
+              <Box
+                h="100%"
+                w={`${featureCoverage}%`}
+                bg={featureCoverage > 80 ? 'var(--core-color-success)' : featureCoverage > 50 ? 'var(--core-color-warning)' : 'var(--core-color-error)'}
+                borderRadius="full"
+                transition="width 0.3s"
+              />
+            </Box>
             <VStack align="stretch" gap={2}>
               {mustHaves.slice(0, 5).map((feature, index) => (
                 <HStack key={index} gap={2}>
@@ -193,7 +196,7 @@ export function OfferDetailsPanel({
             </VStack>
           </Box>
 
-          <Divider borderColor="var(--core-color-border-subtle)" />
+          <Box h="1px" bg="var(--core-color-border-subtle)" />
 
           {/* Compliance */}
           <Box>
@@ -205,13 +208,15 @@ export function OfferDetailsPanel({
                 {complianceMet}/{complianceTotal} met
               </Text>
             </HStack>
-            <Progress
-              value={compliancePercent}
-              size="sm"
-              colorScheme={compliancePercent >= 75 ? 'green' : 'yellow'}
-              borderRadius="full"
-              mb={3}
-            />
+            <Box h="6px" bg="var(--core-color-background-tertiary)" borderRadius="full" overflow="hidden" mb={3}>
+              <Box
+                h="100%"
+                w={`${compliancePercent}%`}
+                bg={compliancePercent >= 75 ? 'var(--core-color-success)' : 'var(--core-color-warning)'}
+                borderRadius="full"
+                transition="width 0.3s"
+              />
+            </Box>
             <SimpleGrid columns={2} gap={2}>
               {complianceItems.map((item, index) => (
                 <HStack key={index} gap={2}>
@@ -235,7 +240,7 @@ export function OfferDetailsPanel({
             </SimpleGrid>
           </Box>
 
-          <Divider borderColor="var(--core-color-border-subtle)" />
+          <Box h="1px" bg="var(--core-color-border-subtle)" />
 
           {/* Negotiation History */}
           <Box>

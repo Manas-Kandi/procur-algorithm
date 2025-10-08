@@ -218,6 +218,11 @@ class ApiClient {
     return response.data
   }
 
+  async getNegotiationEvents(sessionId: string): Promise<any[]> {
+    const response = await this.client.get(`/negotiations/${sessionId}/events`)
+    return response.data
+  }
+
   async autoNegotiate(sessionId: string, maxRounds: number = 8) {
     const response = await this.client.post(
       `/negotiations/${sessionId}/auto-negotiate`,
