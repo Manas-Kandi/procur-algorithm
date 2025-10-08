@@ -25,8 +25,8 @@ export function AppLayout({ children }: PropsWithChildren): JSX.Element {
   return (
     <Box minH="100vh" bg="bg" color="fg">
       <Flex minH="100vh">
-        {/* Desktop sidebar (Procur variant) */}
-        <Box display={{ base: 'none', lg: 'block' }}>
+        {/* Sidebar (Chakra) */}
+        <Box display={{ base: 'block' }}>
           <ProcurSidebar
             open={sidebarOpen}
             onToggle={() => {

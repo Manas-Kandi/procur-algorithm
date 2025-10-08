@@ -42,8 +42,8 @@ export function ProcurSidebar({
       borderRightWidth="1px"
       borderColor="border"
       transition="width 0.3s ease-in-out"
-      w={open ? '16rem' : '4rem'}
-      bg="bg.panel"
+      w={open ? '14rem' : '4.25rem'}
+      bg="bg.subtle"
     >
       {/* Title / Brand */}
       <Flex align="center" justify="space-between" gap={2} px={3} py={4}>
@@ -60,6 +60,18 @@ export function ProcurSidebar({
         {/* Theme switcher removed per request */}
       </Flex>
 
+      {/* Divider */}
+      <Box as="hr" borderTopWidth="1px" borderColor="border" />
+
+      {/* Section label */}
+      {open && (
+        <Box px={3} py={3}>
+          <Text fontSize="xs" color="fg.muted" textTransform="uppercase" letterSpacing="0.08em">
+            Workspace
+          </Text>
+        </Box>
+      )}
+
       <VStack align="stretch" px={2} gap={1.5}>
         {items.map(({ key, label, Icon: LIcon }) => {
           const selected = key === selectedKey
@@ -68,23 +80,22 @@ export function ProcurSidebar({
               key={key}
               onClick={() => onSelect?.(key)}
               justifyContent="flex-start"
-              variant={selected ? 'solid' : 'ghost'}
-              colorPalette={selected ? 'gray' : undefined}
+              variant={selected ? 'subtle' : 'ghost'}
               h="48px"
               px={3.5}
-              borderRadius="md"
+              borderRadius="sm"
               position="relative"
-              color={selected ? 'bg.inverted' : 'fg.muted'}
+              color={selected ? 'brand.fg' : 'fg.muted'}
               bg={selected ? 'brand.subtle' : undefined}
               _hover={{ bg: selected ? 'brand.subtle' : 'bg.subtle' }}
               _focusVisible={{ outline: '2px solid', outlineColor: 'blue.focusRing', outlineOffset: '2px' }}
               aria-current={selected ? 'page' : undefined}
             >
-              {/* Active accent bar */}
+              {/* Active accent bar (left) */}
               {selected && (
-                <Box position="absolute" right={1} top={2} bottom={2} w="2px" bg="brand.emphasized" borderRadius="full" />
+                <Box position="absolute" left={1} top={2} bottom={2} w="3px" bg="brand.emphasized" borderRadius="full" />
               )}
-              <Icon as={LIcon} boxSize={5} mr={open ? 3 : 0} />
+              <Icon as={LIcon} boxSize={5} mr={open ? 3 : 0} color={selected ? 'brand.fg' : 'fg.muted'} />
               {open ? (
                 <Text as="span" fontSize="sm" fontWeight={selected ? 'semibold' : 'normal'}>
                   {label}
