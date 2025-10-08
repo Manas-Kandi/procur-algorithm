@@ -29,37 +29,36 @@ export function HeroInput({ onSubmit }: HeroInputProps) {
       <form onSubmit={handleSubmit}>
         <HStack
           gap={3}
+          bg="bg.subtle"
+          px={3}
+          py={2}
+          borderRadius="lg"
           borderWidth="1px"
-          borderColor="border"
-          bg="bg.panel"
-          p={2}
-          rounded="0"
-          _focusWithin={{
-            borderColor: 'blue.focusRing',
-          }}
+          borderColor="transparent"
+          transition="background-color 0.2s ease, border-color 0.2s ease"
+          _focusWithin={{ bg: 'bg.panel', borderColor: 'border' }}
         >
           <Input
             type="text"
             value={value}
             onChange={(e: ChangeEvent<HTMLInputElement>) => setValue(e.target.value)}
-            placeholder="Need 200 design seats · Budget $1,000/seat/year · SOC2 required"
-            variant="outline"
+            placeholder="Describe what you need (e.g., 200 design seats, SOC2, $1k/seat/yr)"
+            variant="subtle"
             py={2}
             fontSize="md"
-            border="none"
             color="fg"
             _placeholder={{ color: 'fg.muted' }}
-            _focus={{ border: 'none', boxShadow: 'none' }}
           />
           <Button
             type="submit"
+            size="sm"
+            colorPalette="blue"
             disabled={!value.trim()}
-            height={11}
-            bgGradient="linear(to-r, teal.400, cyan.400)"
-            color="white"
-            _hover={{ bgGradient: 'linear(to-r, teal.500, cyan.500)' }}
           >
-            Describe <Icon as={ArrowRight} boxSize={4} ml={2} />
+            <HStack gap={2}>
+              <span>Describe</span>
+              <Icon as={ArrowRight} boxSize={4} />
+            </HStack>
           </Button>
         </HStack>
       </form>

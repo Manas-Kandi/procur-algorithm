@@ -20,26 +20,10 @@ interface AgentActionsTimelineProps {
 }
 
 const ACTION_CONFIG = {
-  success: {
-    icon: CheckCircle,
-    color: 'var(--core-color-success)',
-    bgColor: 'var(--core-color-success-bg)',
-  },
-  pending: {
-    icon: Info,
-    color: 'var(--core-color-brand-primary)',
-    bgColor: 'var(--core-color-brand-bg)',
-  },
-  info: {
-    icon: Info,
-    color: 'var(--core-color-info)',
-    bgColor: 'var(--core-color-info-bg)',
-  },
-  warning: {
-    icon: AlertCircle,
-    color: 'var(--core-color-warning)',
-    bgColor: 'var(--core-color-warning-bg)',
-  },
+  success: { icon: CheckCircle, color: 'green.fg' },
+  pending: { icon: Info, color: 'blue.fg' },
+  info: { icon: Info, color: 'blue.fg' },
+  warning: { icon: AlertCircle, color: 'yellow.fg' },
 }
 
 const ACTOR_LABELS = {
@@ -57,15 +41,8 @@ export function AgentActionsTimeline({
 
   if (displayActions.length === 0) {
     return (
-      <Box
-        p={6}
-        textAlign="center"
-        borderWidth="1px"
-        borderColor="var(--core-color-border-subtle)"
-        borderRadius="md"
-        bg="var(--core-color-surface-subtle)"
-      >
-        <Text fontSize="sm" color="var(--core-color-text-muted)">
+      <Box p={6} textAlign="center" bg="bg.subtle" borderRadius="md">
+        <Text fontSize="sm" color="fg.muted">
           No recent agent activity
         </Text>
       </Box>
@@ -84,19 +61,10 @@ export function AgentActionsTimeline({
             key={action.id}
             position="relative"
             pl={12}
-            pb={isLast ? 0 : 6}
+            pb={isLast ? 0 : 5}
             cursor={onActionClick ? 'pointer' : 'default'}
             onClick={() => onActionClick?.(action)}
-            _hover={
-              onActionClick
-                ? {
-                    '& .action-content': {
-                      borderColor: 'var(--core-color-border-default)',
-                      bg: 'var(--core-color-surface-subtle)',
-                    },
-                  }
-                : undefined
-            }
+            _hover={onActionClick ? { '& .action-content': { bg: 'bg.subtle' } } : undefined}
             transition="all 0.2s"
           >
             {/* Timeline line */}
@@ -106,8 +74,8 @@ export function AgentActionsTimeline({
                 left="20px"
                 top="32px"
                 bottom="0"
-                width="2px"
-                bg="var(--core-color-border-subtle)"
+                width="1px"
+                bg="border"
               />
             )}
 
@@ -119,62 +87,38 @@ export function AgentActionsTimeline({
               w={10}
               h={10}
               borderRadius="full"
-              bg={config.bgColor}
-              borderWidth="2px"
-              borderColor="var(--core-color-surface-canvas)"
+              bg="bg.subtle"
               display="flex"
               alignItems="center"
               justifyContent="center"
             >
-              <Icon className="h-5 w-5" style={{ color: config.color }} />
+              <Icon className="h-5 w-5" style={{ color: 'currentColor' }} color={config.color as any} />
             </Box>
 
             {/* Content */}
-            <Box
-              className="action-content"
-              p={4}
-              borderWidth="1px"
-              borderColor="var(--core-color-border-subtle)"
-              borderRadius="md"
-              bg="var(--core-color-surface-canvas)"
-              transition="all 0.2s"
-            >
+            <Box className="action-content" p={4} borderRadius="md" bg="transparent" transition="all 0.2s" borderBottomWidth={isLast ? '0' : '1px'} borderColor="border">
               <HStack justify="space-between" align="start" mb={2}>
                 <HStack gap={2}>
                   <Bot className="h-4 w-4" style={{ color: 'var(--core-color-ai-primary)' }} />
-                  <Text fontSize="sm" fontWeight="semibold" color="var(--core-color-text-primary)">
+                  <Text fontSize="sm" fontWeight="semibold" color="fg">
                     {action.action}
                   </Text>
                 </HStack>
-                <Text fontSize="xs" color="var(--core-color-text-tertiary)">
+                <Text fontSize="xs" color="fg.muted">
                   {formatDistanceToNow(new Date(action.timestamp), { addSuffix: true })}
                 </Text>
               </HStack>
 
-              <Text fontSize="sm" color="var(--core-color-text-muted)" mb={2}>
+              <Text fontSize="sm" color="fg.muted" mb={2}>
                 {action.description}
               </Text>
 
               <HStack gap={2} flexWrap="wrap">
-                <Badge
-                  fontSize="xs"
-                  px={2}
-                  py={0.5}
-                  borderRadius="sm"
-                  bg="var(--core-color-background-tertiary)"
-                  color="var(--core-color-text-secondary)"
-                >
+                <Badge fontSize="xs" px={2} py={0.5} borderRadius="sm" bg="transparent" borderWidth="1px" borderColor="border" color="fg.muted">
                   {ACTOR_LABELS[action.actor]}
                 </Badge>
                 {action.vendorName && (
-                  <Badge
-                    fontSize="xs"
-                    px={2}
-                    py={0.5}
-                    borderRadius="sm"
-                    bg="var(--core-color-brand-bg)"
-                    color="var(--core-color-brand-primary)"
-                  >
+                  <Badge fontSize="xs" px={2} py={0.5} borderRadius="sm" bg="transparent" borderWidth="1px" borderColor="border" color="fg.muted">
                     {action.vendorName}
                   </Badge>
                 )}

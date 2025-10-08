@@ -207,7 +207,7 @@ export function BuyerDashboard(): JSX.Element {
             my={6}
             variant="plain"
           >
-            <Box borderWidth="1px" borderColor="border" bg="bg.panel">
+            <Box bg="bg.panel">
               <Box display="grid" gridTemplateColumns={{ base: 'minmax(0, 1fr) 120px 120px 140px', md: 'minmax(0, 1fr) 180px 140px 160px' }} borderBottomWidth="1px" borderColor="border" px={3} py={2} fontSize="xs" color="fg.muted">
                 <Box>Name</Box>
                 <Box>Stage</Box>

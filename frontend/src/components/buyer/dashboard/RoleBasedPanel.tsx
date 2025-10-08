@@ -227,34 +227,32 @@ export function RoleBasedPanel({
     )
   }
 
-  // Default buyer view - can show quick stats
+  // Default buyer view - minimal quick actions
   return (
-    <Box
-      borderWidth="1px"
-      borderColor="var(--core-color-border-default)"
-      borderRadius="lg"
-      bg="var(--core-color-surface-canvas)"
-      p={6}
-    >
-      <Text fontSize="md" fontWeight="semibold" color="var(--core-color-text-primary)">
+    <Box bg="transparent" p={0}>
+      <Text fontSize="sm" fontWeight="semibold" color="fg" mb={2}>
         Quick Actions
       </Text>
-      <VStack align="stretch" gap={2} mt={4}>
+      <VStack align="stretch" gap={1}>
         <Button
           size="sm"
-          variant="outline"
+          variant="plain"
+          colorPalette="gray"
           onClick={() => navigate('/requests/new')}
-          w="full"
+          w="fit-content"
           justifyContent="start"
+          _hover={{ textDecoration: 'underline' }}
         >
           Create New Request
         </Button>
         <Button
           size="sm"
-          variant="outline"
+          variant="plain"
+          colorPalette="gray"
           onClick={() => navigate('/portfolio')}
-          w="full"
+          w="fit-content"
           justifyContent="start"
+          _hover={{ textDecoration: 'underline' }}
         >
           View Portfolio
         </Button>
