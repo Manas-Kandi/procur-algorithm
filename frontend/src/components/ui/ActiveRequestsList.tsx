@@ -44,8 +44,8 @@ export function ActiveRequestsList({ items, onRowClick, hoverMs = 250 }: ActiveR
             align="center"
             justify="space-between"
             px={3}
-            py={3}
-            mt={idx === 0 ? 0 : 1.5}
+            py={2}
+            mt={idx === 0 ? 0 : 1}
             _hover={{ bg: 'bg.subtle' }}
             cursor="pointer"
             onClick={() => onRowClick?.(it.id)}
@@ -70,7 +70,7 @@ export function ActiveRequestsList({ items, onRowClick, hoverMs = 250 }: ActiveR
                 <Flex
                   align="center"
                   gap={3}
-                  mt={1}
+                  mt={0.5}
                   color="fg.muted"
                   fontSize="xs"
                   transition={`all ${hoverMs}ms ease`}

@@ -16,6 +16,7 @@ interface OutcomesPanelProps {
   avgClosingTime?: number
   complianceCoverage?: number
   contractsApproved?: number
+  compact?: boolean
 }
 
 export function OutcomesPanel({
@@ -24,6 +25,7 @@ export function OutcomesPanel({
   avgClosingTime = 0,
   complianceCoverage = 0,
   contractsApproved = 0,
+  compact = true,
 }: OutcomesPanelProps): JSX.Element {
   const metrics: OutcomeMetric[] = [
     {
@@ -60,25 +62,25 @@ export function OutcomesPanel({
   ]
 
   return (
-    <Box bg="bg.panel" borderWidth="0" borderRadius="lg" p={4}>
-      <VStack align="stretch" gap={4}>
+    <Box bg="bg.panel" borderWidth="0" borderRadius="lg" p={compact ? 3 : 4}>
+      <VStack align="stretch" gap={compact ? 3 : 4}>
         <Box>
           <Heading size="md" color="fg">
             Outcomes & Savings
           </Heading>
-          <Text fontSize="sm" color="fg.muted" mt={1}>
+          <Text fontSize="sm" color="fg.muted" mt={0.5}>
             Key metrics from AI-driven procurement
           </Text>
         </Box>
 
-        <SimpleGrid columns={{ base: 1, md: 2, xl: 4 }} gap={4}>
+        <SimpleGrid columns={{ base: 1, md: 2, xl: 4 }} gap={compact ? 3 : 4}>
           {metrics.map((metric, index) => (
             <HStack key={index} align="start" gap={3}>
-              <Box w={8} h={8} borderRadius="full" bg="bg.subtle" display="flex" alignItems="center" justifyContent="center">
-                <Icon as={(metric.icon as any).type ?? TrendingUp} color="fg.muted" boxSize={4} />
+              <Box w={7} h={7} borderRadius="full" bg="bg.subtle" display="flex" alignItems="center" justifyContent="center">
+                <Icon as={(metric.icon as any).type ?? TrendingUp} color="fg.muted" boxSize={3.5} />
               </Box>
               <VStack align="start" gap={0}>
-                <Text fontSize="2xl" fontWeight="bold" color="fg" lineHeight="short">
+                <Text fontSize={index === 0 ? '3xl' : '2xl'} fontWeight="bold" color="fg" lineHeight="shorter">
                   {metric.value}
                 </Text>
                 <HStack gap={2}>
@@ -95,7 +97,7 @@ export function OutcomesPanel({
         </SimpleGrid>
 
         {totalSavings > 0 && (
-          <Box mt={1} p={3} borderRadius="md" bg="blue.subtle">
+          <Box mt={0.5} p={compact ? 2.5 : 3} borderRadius="md" bg="blue.subtle">
             <HStack gap={2}>
               <Text fontSize="sm" fontWeight="medium" color="blue.fg">💡 AI Impact:</Text>
               <Text fontSize="sm" color="fg.muted">
